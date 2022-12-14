@@ -1,5 +1,6 @@
-use implicit_newton::diffusion::diffusion;
+use implicit_newton::{diffusion::diffusion, hydro::hydro};
 
 fn main() {
-    diffusion()
+    diffusion();
+    hydro();
 }

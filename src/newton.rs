@@ -1,7 +1,20 @@
 use sparse21::Matrix;
 pub type Boundary<'a> = &'a dyn Fn(i32, usize) -> usize;
 pub type Fun<'a, const F: usize, const V: usize> =
-    &'a dyn Fn(&[[f64; F]; V], Boundary<'a>, i32) -> [f64; F];
+    &'a dyn Fn(&[[f64; F]; V], Boundary, i32) -> [f64; F];
+
+pub struct Context<'a, 'b, const F: usize, const V: usize, const S: usize> {
+    pub fun: Fun<'a, F, V>,
+    pub boundary: Boundary<'b>,
+    pub local_interaction: i32,
+    pub vs: [[f64; V]; F],
+    pub integrated: [bool; F],
+    pub r: [[f64; S]; S],
+    pub dt: f64,
+    pub er: f64,
+    pub tbeg: f64,
+    pub tend: f64,
+}
 
 fn sub<const F: usize>(a: [f64; F], b: [f64; F]) -> [f64; F] {
     let mut res = [0.0; F];
@@ -24,13 +37,23 @@ fn flat<const F: usize, const V: usize, const S: usize>(a: [[[f64; F]; V]; S]) -
     res
 }
 
-pub fn newton<'a, const F: usize, const V: usize, const S: usize>(
-    (fun, boundary, size): (Fun<'a, F, V>, Boundary<'a>, i32),
-    mut vs: [[f64; V]; F],
-    dt: f64,
-    er: f64,
-    r: &[[f64; S]; S],
+pub fn newton<const F: usize, const V: usize, const S: usize>(
+    Context {
+        fun,
+        boundary,
+        local_interaction,
+        vs,
+        integrated,
+        r,
+        dt,
+        er,
+        tbeg: _,
+        tend: _,
+    }: &Context<F, V, S>,
 ) -> ([[f64; V]; F], usize) {
+    let size = *local_interaction;
+    let er = *er;
+    let mut vs = vs.clone();
     let mut k = [[[0.0; F]; V]; S];
     let ff = |vdtk: &[[[f64; F]; V]; S], k: &[[[f64; F]; V]; S], p: i32, all: bool| {
         let mut tmp = [[[0.0; F]; V]; S];
@@ -41,7 +64,7 @@ pub fn newton<'a, const F: usize, const V: usize, const S: usize>(
                 (-size..=size).map(|l| boundary(l + p, V)).collect()
             };
             for v in ids {
-                tmp[s][v] = sub(fun(&vdtk[s], boundary, v as i32), k[s][v]);
+                tmp[s][v] = sub(fun(&vdtk[s], *boundary, v as i32), k[s][v]);
             }
         }
         tmp
@@ -55,8 +78,12 @@ pub fn newton<'a, const F: usize, const V: usize, const S: usize>(
         for f in 0..F {
             for v in 0..V {
                 for s in 0..S {
-                    for s1 in 0..S {
-                        vdtk[s][v][f] += vs[f][v] + dt * r[s][s1] * k[s1][v][f];
+                    if integrated[f] {
+                        for s1 in 0..S {
+                            vdtk[s][v][f] += vs[f][v] + dt * r[s][s1] * k[s1][v][f];
+                        }
+                    } else {
+                        vdtk[s][v][f] = k[s][v][f];
                     }
                 }
             }
@@ -71,7 +98,11 @@ pub fn newton<'a, const F: usize, const V: usize, const S: usize>(
                     let u = vdtk[s0][v0][f0];
                     let uk = k[s0][v0][f0];
                     let c = r[s0][s0];
-                    vdtk[s0][v0][f0] = u + dt * c * e;
+                    if integrated[f0] {
+                        vdtk[s0][v0][f0] = u + dt * c * e;
+                    } else {
+                        vdtk[s0][v0][f0] = u + e;
+                    }
                     k[s0][v0][f0] = uk + e;
 
                     let fpu = ff(&vdtk, &k, v0 as i32, false);
@@ -113,8 +144,12 @@ pub fn newton<'a, const F: usize, const V: usize, const S: usize>(
     }
     for f in 0..F {
         for v in 0..V {
-            for s in 0..S {
-                vs[f][v] += dt * r[S - 1][s] * k[s][v][f];
+            if integrated[f] {
+                for s in 0..S {
+                    vs[f][v] += dt * r[S - 1][s] * k[s][v][f];
+                }
+            } else {
+                vs[f][v] = k[S - 1][v][f];
             }
         }
     }
