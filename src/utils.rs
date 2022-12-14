@@ -1,3 +1,7 @@
+pub fn noboundary(j: i32, _n: usize) -> usize {
+    j as usize
+}
+
 pub fn periodic(j: i32, n: usize) -> usize {
     if j >= n as i32 {
         j as usize - n
