@@ -29,9 +29,10 @@ pub fn diffusion() {
     let tot = vs[0].iter().fold(0.0, |acc, i| acc + i);
     //let r = vec![vec![5.0 / 12.0, -1.0 / 12.0], vec![3.0 / 4.0, 1.0 / 4.0]];
     let r = [[1.0]];
-    let dt = 0.1;
+    let dt = 10.0;
+    let er = 1e-10;
     let tbeg = 0.0;
-    let tend = 10.0;
-    run(f, vs, r, dt, tbeg, tend);
+    let tend = 1000.0;
+    run(f, vs, r, dt, er, tbeg, tend);
     println!("expected mean: {}", tot / V as f64);
 }

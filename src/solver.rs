@@ -5,6 +5,7 @@ pub fn run<'a, const F: usize, const V: usize, const S: usize>(
     mut vs: [[f64; V]; F],
     r: [[f64; S]; S],
     dt: f64,
+    er: f64,
     tbeg: f64,
     tend: f64,
 ) {
@@ -12,7 +13,7 @@ pub fn run<'a, const F: usize, const V: usize, const S: usize>(
     let tsteps = ((tend - tbeg) / dt) as usize;
     let mut tot_f = 0;
     for i in 0..tsteps {
-        let (nvs, c) = newton(f, vs, dt, &r);
+        let (nvs, c) = newton(f, vs, dt, er, &r);
         let c = c * (mul as usize + 1); // *(mul+1) because newton needs mul=2*'max distance interaction'+1 for the finite difference plus 1 for the reference
         vs = nvs;
         tot_f += c;

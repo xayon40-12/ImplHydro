@@ -28,6 +28,7 @@ pub fn newton<'a, const F: usize, const V: usize, const S: usize>(
     (fun, boundary, size): (Fun<'a, F, V>, Boundary<'a>, i32),
     mut vs: [[f64; V]; F],
     dt: f64,
+    er: f64,
     r: &[[f64; S]; S],
 ) -> ([[f64; V]; F], usize) {
     let mut k = [[[0.0; F]; V]; S];
@@ -47,8 +48,8 @@ pub fn newton<'a, const F: usize, const V: usize, const S: usize>(
     };
     let mut err = 1.0;
     let mut iterations = 0;
-    while err > dt {
-        let e = dt / S as f64; // devide by 2 because 2 stages
+    while err > er {
+        let e = dt / S as f64; // devide by S because S stages
         iterations += 1;
         let mut vdtk = [[[0.0; F]; V]; S];
         for f in 0..F {
