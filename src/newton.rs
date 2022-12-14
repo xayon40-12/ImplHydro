@@ -1,4 +1,6 @@
+use itertools::Itertools;
 use sparse21::Matrix;
+
 pub type Boundary<'a> = &'a dyn Fn(i32, usize) -> usize;
 pub type Fun<'a, const F: usize, const VX: usize, const VY: usize> =
     &'a dyn Fn(&[[[f64; F]; VX]; VY], &[Boundary; 2], [i32; 2]) -> [f64; F];
@@ -69,8 +71,14 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
                 ((0..VX).collect(), (0..VY).collect())
             } else {
                 (
-                    (-sizex..=sizex).map(|l| boundary[0](l + px, VX)).collect(),
-                    (-sizey..=sizey).map(|l| boundary[1](l + py, VY)).collect(),
+                    (-sizex..=sizex)
+                        .map(|l| boundary[0](l + px, VX))
+                        .unique()
+                        .collect(),
+                    (-sizey..=sizey)
+                        .map(|l| boundary[1](l + py, VY))
+                        .unique()
+                        .collect(),
                 )
             };
             for vy in idsy {
@@ -127,10 +135,13 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
                         let fpu = ff(&vdtk, &k, [vx0 as i32, vy0 as i32], false);
                         for s1 in 0..S {
                             for f1 in 0..F {
-                                for vy1 in (-sizey..=sizey).map(|l| boundary[1](l + vy0 as i32, VY))
+                                for vy1 in (-sizey..=sizey)
+                                    .map(|l| boundary[1](l + vy0 as i32, VY))
+                                    .unique()
                                 {
-                                    for vx1 in
-                                        (-sizex..=sizex).map(|l| boundary[0](l + vx0 as i32, VX))
+                                    for vx1 in (-sizex..=sizex)
+                                        .map(|l| boundary[0](l + vx0 as i32, VX))
+                                        .unique()
                                     {
                                         let d = (fpu[s1][vy1][vx1][f1] - fu[s1][vy1][vx1][f1]) / e;
                                         if d != 0.0 {

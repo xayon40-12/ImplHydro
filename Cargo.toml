@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 sparse21 = "0.2.1"
+itertools = "*"
