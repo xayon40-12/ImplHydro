@@ -1,3 +1,5 @@
+use textplots::{Chart, Plot, Shape};
+
 use crate::{
     kt::{kt, Dir},
     newton::{Boundary, Context},
@@ -30,16 +32,16 @@ fn eigenvalues([_t00, _t01, e, ut, ux]: [f64; 5]) -> f64 {
     (a.abs() + b.sqrt()) / d
 }
 
-fn f01([_, _, e, ux, ut]: [f64; 5]) -> f64 {
+fn f01([_, _, e, ut, ux]: [f64; 5]) -> f64 {
     (e + p(e)) * ut * ux
 }
-fn f11([_, _, e, ux, _]: [f64; 5]) -> f64 {
+fn f11([_, _, e, _, ux]: [f64; 5]) -> f64 {
     (e + p(e)) * ux * ux + p(e)
 }
 
 fn flux<const V: usize>(v: &[[[f64; 3]; V]; 1], bound: &[Boundary; 2], pos: [i32; 2]) -> [f64; 3] {
-    let dx = 0.1;
-    let theta = 1.1;
+    let dx = 0.2;
+    let theta = 1.5;
 
     let divf0 = kt(
         v,
@@ -59,26 +61,25 @@ fn flux<const V: usize>(v: &[[[f64; 3]; V]; 1], bound: &[Boundary; 2], pos: [i32
     [rt0[0], rt0[1], re]
 }
 
-pub fn hydro() {
-    const V: usize = 100;
-    let mut vs = [[[0.0; V]], [[0.0; V]], [[0.0; V]]];
+pub fn hydro1d() {
+    const V: usize = 50;
+    let mut vs = [[[0.0; 3]; V]];
     let k = [[[[0.0; 3]; V]]];
     let integrated = [true, true, false];
     for i in 0..V {
-        let e = if i < V / 2 { 10.0 } else { 1.0 };
-        vs[0][0][i] = e;
-        vs[2][0][i] = e;
+        let e = if i == V / 2 { 10.0 } else { 1.0 };
+        vs[0][i] = [e, 0.0, e];
     }
     let context = Context {
         fun: &flux,
         boundary: &[&ghost, &noboundary], // use noboundary to emulate 1D
-        local_interaction: [3, 0],        // use a distance of 0 to emulate 1D
+        local_interaction: [2, 0],        // use a distance of 0 to emulate 1D
         vs,
         k,
         integrated,
         r: [[1.0]],
-        dt: 0.01,
-        er: 1e-10,
+        dt: 0.1,
+        er: 1e-5,
         tbeg: 0.0,
         tend: 5.0,
     };
@@ -89,7 +90,15 @@ pub fn hydro() {
         tsteps,
         tot_f as f64 / tsteps as f64
     );
-    // println!("t00: {:?}", vs[0][0]);
-    // println!("t01: {:?}", vs[1][0]);
-    println!("e: {:?}", vs[2][0]);
+    let mut es = [(0.0, 0.0); V];
+    let mut vxs = [(0.0, 0.0); V];
+    for v in 0..V {
+        let [_t00, _t01, e, ut, ux] = constraints(vs[0][v]);
+        let x = (v as f32 / V as f32) * 2.0 - 1.0;
+        es[v] = (x, e as _);
+        vxs[v] = (x, (ux / ut) as _);
+    }
+    Chart::new(400, 200, -1.0, 1.0)
+        .lineplot(&Shape::Lines(&es))
+        .display();
 }

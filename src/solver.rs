@@ -2,7 +2,7 @@ use crate::newton::{newton, Context};
 
 pub fn run<const F: usize, const VX: usize, const VY: usize, const S: usize>(
     mut context: Context<F, VX, VY, S>,
-) -> ([[[f64; VX]; VY]; F], usize, usize) {
+) -> ([[[f64; F]; VX]; VY], usize, usize) {
     let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let tsteps = ((context.tend - context.tbeg) / context.dt) as usize;
     let mut tot_f = 0;
