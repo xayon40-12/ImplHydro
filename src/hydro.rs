@@ -1,11 +1,16 @@
 use crate::{
+    kt::{kt, Dir},
     newton::{Boundary, Context},
     solver::run,
-    utils::{flux_limiter, ghost, noboundary, periodic},
+    utils::{ghost, noboundary},
 };
 
 fn p(e: f64) -> f64 {
     e / 3.0
+}
+
+fn dpde(_e: f64) -> f64 {
+    1.0 / 3.0
 }
 
 fn constraints([t00, t01, e]: [f64; 3]) -> [f64; 5] {
@@ -15,6 +20,14 @@ fn constraints([t00, t01, e]: [f64; 3]) -> [f64; 5] {
     [t00, t01, e, ut, ux]
 }
 
+fn eigenvalues([_t00, _t01, e, ut, ux]: [f64; 5]) -> f64 {
+    let vs2 = dpde(e);
+    let a = (ut * ux * (1.0 - vs2)).abs();
+    let b = ((ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2).sqrt();
+    let d = ut * ut - (ut * ut - 1.0) * vs2;
+    (a + b) / d
+}
+
 fn f01([_, _, e, ux, ut]: [f64; 5]) -> f64 {
     (e + p(e)) * ut * ux
 }
@@ -22,29 +35,25 @@ fn f11([_, _, e, ux, _]: [f64; 5]) -> f64 {
     (e + p(e)) * ux * ux + p(e)
 }
 
-fn flux<const V: usize>(
-    v: &[[[f64; 3]; V]; 1],
-    [bound, _]: &[Boundary; 2],
-    [i, _]: [i32; 2],
-) -> [f64; 3] {
-    let ivdx = 10.0f64;
+fn flux<const V: usize>(v: &[[[f64; 3]; V]; 1], bound: &[Boundary; 2], pos: [i32; 2]) -> [f64; 3] {
+    let dx = 0.1;
     let theta = 1.1;
 
-    let vals: Vec<[f64; 5]> = (-2..=2)
-        .map(|l| constraints(v[0][bound(i - l, V)]))
-        .collect();
-    let j01: Vec<f64> = vals.iter().map(|v| f01(*v)).collect();
-    let j11: Vec<f64> = vals.iter().map(|v| f11(*v)).collect();
-
-    let rt00 = ivdx * flux_limiter(theta, j01[1], j01[2], j01[3]);
-    let rt01 = ivdx * flux_limiter(theta, j11[1], j11[2], j11[3]);
-
-    let t00 = vals[2][0];
-    let t01 = vals[2][1];
-    let e = vals[2][2];
+    let [t00, t01, e, _ut, _ux] = constraints(v[0][bound[0](pos[0], V)]);
     let re = t00 - t01 * t01 / (t00 + p(e));
+    let rt0 = kt(
+        v,
+        bound,
+        pos,
+        Dir::X,
+        [&f01, &f11],
+        &constraints,
+        &eigenvalues,
+        dx,
+        theta,
+    );
 
-    [rt00, rt01, re]
+    [rt0[0], rt0[1], re]
 }
 
 pub fn hydro() {
