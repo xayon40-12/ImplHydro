@@ -23,6 +23,7 @@ fn flux<const V: usize>(
 pub fn diffusion() {
     const V: usize = 100;
     let mut vs = [[[0.0; V]]];
+    let k = [[[[0.0]; V]]];
     let integrated = [true];
     for i in 0..V {
         vs[0][0][i] = 100.0 * (-(i as f64 - V as f64 / 2.0).abs()).exp()
@@ -33,14 +34,16 @@ pub fn diffusion() {
         boundary: &[&periodic, &noboundary], // use noboundary to emulate 1D
         local_interaction: [4, 0],           // use a distance of 0 to emulate 1D
         vs,
+        k,
         integrated,
         r: [[1.0]],
         dt: 10.0,
-        er: 1e-10,
+        er: 1e-5,
         tbeg: 0.0,
         tend: 1000.0,
     };
     let (vs, tot_f, tsteps) = run(context);
+    let tot_f = tot_f * (2 * 4 + 1 + 1);
     println!(
         "tot_f: {}, tsteps: {}, ratio: {}",
         tot_f,

@@ -10,6 +10,7 @@ pub struct Context<'a, 'b, const F: usize, const VX: usize, const VY: usize, con
     pub boundary: &'b [Boundary<'b>; 2],
     pub local_interaction: [i32; 2],
     pub vs: [[[f64; VX]; VY]; F],
+    pub k: [[[[f64; F]; VX]; VY]; S],
     pub integrated: [bool; F],
     pub r: [[f64; S]; S],
     pub dt: f64,
@@ -49,18 +50,16 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
         boundary,
         local_interaction,
         vs,
+        k,
         integrated,
         r,
         dt,
         er,
         tbeg: _,
         tend: _,
-    }: &Context<F, VX, VY, S>,
-) -> ([[[f64; VX]; VY]; F], usize) {
+    }: &mut Context<F, VX, VY, S>,
+) -> usize {
     let [sizex, sizey] = *local_interaction;
-    let er = *er;
-    let mut vs = vs.clone();
-    let mut k = [[[[0.0; F]; VX]; VY]; S];
     let ff = |vdtk: &[[[[f64; F]; VX]; VY]; S],
               k: &[[[[f64; F]; VX]; VY]; S],
               [px, py]: [i32; 2],
@@ -94,8 +93,8 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
     };
     let mut err = 1.0;
     let mut iterations = 0;
-    while err > er {
-        let e = dt / S as f64; // devide by S because S stages
+    while err > *er {
+        let e = *dt / S as f64; // devide by S because S stages
         iterations += 1;
         let mut vdtk = [[[[0.0; F]; VX]; VY]; S];
         for f in 0..F {
@@ -105,7 +104,7 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
                         if integrated[f] {
                             for s1 in 0..S {
                                 vdtk[s][vy][vx][f] +=
-                                    vs[f][vy][vx] + dt * r[s][s1] * k[s1][vy][vx][f];
+                                    vs[f][vy][vx] + *dt * r[s][s1] * k[s1][vy][vx][f];
                             }
                         } else {
                             vdtk[s][vy][vx][f] = k[s][vy][vx][f];
@@ -126,7 +125,7 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
                         let uk = k[s0][vy0][vx0][f0];
                         let c = r[s0][s0];
                         if integrated[f0] {
-                            vdtk[s0][vy0][vx0][f0] = u + dt * c * e;
+                            vdtk[s0][vy0][vx0][f0] = u + *dt * c * e;
                         } else {
                             vdtk[s0][vy0][vx0][f0] = u + e;
                         }
@@ -185,7 +184,7 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
             for vx in 0..VX {
                 if integrated[f] {
                     for s in 0..S {
-                        vs[f][vy][vx] += dt * r[S - 1][s] * k[s][vy][vx][f];
+                        vs[f][vy][vx] += *dt * r[S - 1][s] * k[s][vy][vx][f];
                     }
                 } else {
                     vs[f][vy][vx] = k[S - 1][vy][vx][f];
@@ -193,5 +192,5 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
             }
         }
     }
-    (vs, iterations)
+    iterations
 }

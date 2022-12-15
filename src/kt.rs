@@ -20,28 +20,30 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     dx: f64,
     theta: f64,
 ) -> [f64; N] {
-    let mut vals: [[f64; C]; 5] = [[0.0; C]; 5];
+    let mut vals: [[f64; F]; 5] = [[0.0; F]; 5];
     for l in 0..5 {
         let (lx, ly) = match dir {
             Dir::X => (l as i32 - 2, 0),
             Dir::Y => (0, l as i32 - 2),
         };
-        vals[l] = constraints(vars[boundy(y + ly, VY)][boundx(x + lx, VX)])
+        vals[l] = vars[boundy(y + ly, VY)][boundx(x + lx, VX)]
     }
-    let mut deriv: [[f64; C]; 3] = [[0.0; C]; 3];
+    let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];
     for l in 0..3 {
-        for c in 0..C {
-            deriv[l][c] = flux_limiter(theta, vals[l][c], vals[l + 1][c], vals[l + 2][c]);
+        for f in 0..F {
+            deriv[l][f] = flux_limiter(theta, vals[l][f], vals[l + 1][f], vals[l + 2][f]);
         }
     }
+    let mut tmpupm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
     let mut upm: [[[f64; C]; 2]; 2] = [[[0.0; C]; 2]; 2];
     for jpm in 0..2 {
         for pm in 0..2 {
             let s = pm as f64 - 0.5;
             let j = jpm + pm;
-            for c in 0..C {
-                upm[jpm][pm][c] = vals[1 + j][c] + s * deriv[j][c];
+            for f in 0..F {
+                tmpupm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
             }
+            upm[jpm][pm] = constraints(tmpupm[jpm][pm]);
         }
     }
     let mut fpm: [[[f64; N]; 2]; 2] = [[[0.0; N]; 2]; 2];
