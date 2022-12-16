@@ -38,8 +38,9 @@ pub fn diffusion() {
         integrated,
         r: [[1.0]],
         dt: 10.0,
+        maxdt: 0.1,
         er: 1e-5,
-        tbeg: 0.0,
+        t: 0.0,
         tend: 1000.0,
     };
     let (vs, tot_f, tsteps) = run(context);

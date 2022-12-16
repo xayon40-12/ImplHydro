@@ -14,8 +14,9 @@ pub struct Context<'a, 'b, const F: usize, const VX: usize, const VY: usize, con
     pub integrated: [bool; F],
     pub r: [[f64; S]; S],
     pub dt: f64,
+    pub maxdt: f64,
     pub er: f64,
-    pub tbeg: f64,
+    pub t: f64,
     pub tend: f64,
 }
 
@@ -54,11 +55,13 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
         integrated,
         r,
         dt,
+        maxdt,
         er,
-        tbeg: _,
+        t: _,
         tend: _,
     }: &mut Context<F, VX, VY, S>,
 ) -> usize {
+    *dt = maxdt.min(*dt);
     let [sizex, sizey] = *local_interaction;
     let mut err = 1.0;
     let mut iterations = 0;

@@ -1,4 +1,5 @@
 pub mod diffusion;
+pub mod fixedpoint;
 pub mod hydro1d;
 pub mod hydro2d;
 pub mod kt;

@@ -57,7 +57,7 @@ fn f22([_, _, _, e, _, _, uy]: [f64; 7]) -> f64 {
 }
 
 fn flux<const V: usize>(v: &[[[f64; 4]; V]; V], bound: &[Boundary; 2], pos: [i32; 2]) -> [f64; 4] {
-    let dx = 0.5;
+    let dx = 0.1;
     let theta = 1.5;
 
     let divf1 = kt(
@@ -95,13 +95,17 @@ fn flux<const V: usize>(v: &[[[f64; 4]; V]; V], bound: &[Boundary; 2], pos: [i32
 }
 
 pub fn hydro2d() {
-    const V: usize = 20;
+    const V: usize = 100;
     let mut vs = [[[0.0; 4]; V]; V];
     let k = [[[[0.0; 4]; V]; V]];
     let integrated = [true, true, true, false];
     for i in 0..V {
         for j in 0..V {
-            let e = if i == V / 2 && j == V / 2 { 10.0 } else { 1.0 };
+            let e = if i == V / 2 && j == V / 2 {
+                10.0
+            } else {
+                1e-15
+            };
             vs[i][j] = [e, 0.0, 0.0, e];
         }
     }
@@ -113,13 +117,14 @@ pub fn hydro2d() {
         k,
         integrated,
         r: [[1.0]],
-        dt: 0.1,
-        er: 1e-2,
-        tbeg: 0.0,
+        dt: 1.0,
+        maxdt: 0.1,
+        er: 1e-3,
+        t: 0.0,
         tend: 4.0,
     };
-    let (vals, tot_f, tsteps) = run(context);
-    let tot_f = tot_f * (2 * 2 + 2 * 2 + 1 + 1);
+    let (vals, _tot_f, _tsteps) = run(context);
+    // let tot_f = tot_f * (2 * 2 + 2 * 2 + 1 + 1);
     // println!(
     //     "tot_f: {}, tsteps: {}, ratio: {}",
     //     tot_f,
@@ -130,7 +135,7 @@ pub fn hydro2d() {
     // let mut vs = [(0.0, 0.0); V];
     for j in 0..V {
         for i in 0..V {
-            let [_t00, _t01, _t02, e, ut, ux, uy] = constraints(vals[j][i]);
+            let [_t00, _t01, _t02, e, _ut, _ux, _uy] = constraints(vals[j][i]);
             let y = (j as f32 / V as f32) * 2.0 - 1.0;
             let x = (i as f32 / V as f32) * 2.0 - 1.0;
             println!("{} {} {}", x, y, e);
