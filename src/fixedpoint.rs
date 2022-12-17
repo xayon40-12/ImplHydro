@@ -12,6 +12,7 @@ pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usi
         integrated,
         r,
         dt: dto,
+        dx,
         maxdt,
         er,
         t,
@@ -58,9 +59,20 @@ pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usi
 
         err = 0.0;
         for s in 0..S {
+            let ot = *t;
+            let c = r[s].iter().fold(0.0, |acc, r| acc + r);
+            let cdt = c * dt;
+            let t = ot + cdt;
             for vy in 0..VY {
                 fu[s][vy].par_iter_mut().enumerate().for_each(|(vx, fu)| {
-                    *fu = fun(&vdtk[s], boundary, [vx as i32, vy as i32]);
+                    *fu = fun(
+                        [&vs, &vdtk[s]],
+                        boundary,
+                        [vx as i32, vy as i32],
+                        *dx,
+                        [ot, t],
+                        [dt, cdt],
+                    );
                 });
                 for vx in 0..VX {
                     for f in 0..F {

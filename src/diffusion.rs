@@ -5,11 +5,14 @@ use crate::{
 };
 
 fn flux<const V: usize>(
-    v: &[[[f64; 1]; V]; 1],
+    [_vo, v]: [&[[[f64; 1]; V]; 1]; 2],
     boundary: &[Boundary; 2],
     [i, _]: [i32; 2],
+    dx: f64,
+    [_ot, _t]: [f64; 2],
+    [_dt, _cdt]: [f64; 2],
 ) -> [f64; 1] {
-    let ivdx = 10.0f64;
+    let ivdx = 1.0 / dx;
     let f = 0;
     let res = ivdx.powf(2.0)
         * (-v[0][boundary[0](i - 2, V)][f] + 16.0 * v[0][boundary[0](i - 1, V)][f]
@@ -38,6 +41,7 @@ pub fn diffusion() {
         integrated,
         r: [[1.0]],
         dt: 10.0,
+        dx: 0.1,
         maxdt: 0.1,
         er: 1e-5,
         t: 0.0,

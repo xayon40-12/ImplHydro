@@ -2,8 +2,15 @@ use itertools::Itertools;
 use sparse21::Matrix;
 
 pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
-pub type Fun<'a, const F: usize, const VX: usize, const VY: usize> =
-    &'a (dyn Fn(&[[[f64; F]; VX]; VY], &[Boundary; 2], [i32; 2]) -> [f64; F] + Sync);
+pub type Fun<'a, const F: usize, const VX: usize, const VY: usize> = &'a (dyn Fn(
+    [&[[[f64; F]; VX]; VY]; 2],
+    &[Boundary; 2],
+    [i32; 2], // position in index
+    f64,      // dx
+    [f64; 2], // [old t, current t]
+    [f64; 2], // [dt, current dt]
+) -> [f64; F]
+         + Sync);
 
 pub struct Context<'a, 'b, const F: usize, const VX: usize, const VY: usize, const S: usize> {
     pub fun: Fun<'a, F, VX, VY>,
@@ -14,6 +21,7 @@ pub struct Context<'a, 'b, const F: usize, const VX: usize, const VY: usize, con
     pub integrated: [bool; F],
     pub r: [[f64; S]; S],
     pub dt: f64,
+    pub dx: f64,
     pub maxdt: f64,
     pub er: f64,
     pub t: f64,
@@ -55,9 +63,10 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
         integrated,
         r,
         dt,
+        dx,
         maxdt,
         er,
-        t: _,
+        t,
         tend: _,
     }: &mut Context<F, VX, VY, S>,
 ) -> usize {
@@ -88,10 +97,21 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
 
         let mut fu = [[[[0.0; F]; VX]; VY]; S];
         for s in 0..S {
+            let ot = *t;
+            let c = r[s].iter().fold(0.0, |acc, r| acc + r);
+            let cdt = c * *dt;
+            let t = ot + cdt;
             for vy in 0..VY {
                 for vx in 0..VX {
                     fu[s][vy][vx] = sub(
-                        fun(&vdtk[s], boundary, [vx as i32, vy as i32]),
+                        fun(
+                            [&vs, &vdtk[s]],
+                            boundary,
+                            [vx as i32, vy as i32],
+                            *dx,
+                            [ot, t],
+                            [*dt, cdt],
+                        ),
                         k[s][vy][vx],
                     );
                 }
@@ -100,6 +120,10 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
         let mut m = Matrix::new();
         let mut count = 0;
         for s0 in 0..S {
+            let ot = *t;
+            let c = r[s0].iter().fold(0.0, |acc, r| acc + r);
+            let cdt = c * *dt;
+            let t = ot + cdt;
             for f0 in 0..F {
                 for vy0 in 0..VY {
                     for vx0 in 0..VX {
@@ -124,7 +148,14 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
                                     .unique()
                                 {
                                     let fpu = sub(
-                                        fun(&vdtk[s1], boundary, [vx1 as i32, vy1 as i32]),
+                                        fun(
+                                            [&vs, &vdtk[s1]],
+                                            boundary,
+                                            [vx1 as i32, vy1 as i32],
+                                            *dx,
+                                            [ot, t],
+                                            [*dt, cdt],
+                                        ),
                                         k[s1][vy1][vx1],
                                     );
                                     for f1 in 0..F {

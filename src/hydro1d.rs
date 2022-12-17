@@ -37,8 +37,14 @@ fn f11([_, _, e, _, ux]: [f64; 5]) -> f64 {
     (e + p(e)) * ux * ux + p(e)
 }
 
-fn flux<const V: usize>(v: &[[[f64; 3]; V]; 1], bound: &[Boundary; 2], pos: [i32; 2]) -> [f64; 3] {
-    let dx = 0.2;
+fn flux<const V: usize>(
+    [_ov, v]: [&[[[f64; 3]; V]; 1]; 2],
+    bound: &[Boundary; 2],
+    pos: [i32; 2],
+    dx: f64,
+    [_ot, _t]: [f64; 2],
+    [_dt, _cdt]: [f64; 2],
+) -> [f64; 3] {
     let theta = 1.5;
 
     let divf0 = kt(
@@ -77,6 +83,7 @@ pub fn hydro1d() {
         integrated,
         r: [[1.0]],
         dt: 0.1,
+        dx: 0.2,
         maxdt: 0.1,
         er: 1e-5,
         t: 0.0,
