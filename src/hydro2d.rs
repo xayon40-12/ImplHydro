@@ -1,5 +1,3 @@
-use textplots::{Chart, Plot, Shape};
-
 use crate::{
     kt::{kt, Dir},
     newton::{Boundary, Context},

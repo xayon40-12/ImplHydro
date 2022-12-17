@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 sparse21 = "0.2.1"
 itertools = "0.10.5"
-textplots = "0.8.0"
+rayon = "1.6.1"

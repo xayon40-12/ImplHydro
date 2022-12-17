@@ -1,5 +1,3 @@
-use textplots::{Chart, Plot, Shape};
-
 use crate::{
     kt::{kt, Dir},
     newton::{Boundary, Context},
@@ -84,22 +82,19 @@ pub fn hydro1d() {
         t: 0.0,
         tend: 5.0,
     };
-    let (vs, tot_f, tsteps) = run(context);
+    let (_vs, tot_f, tsteps) = run(context);
     println!(
         "tot_f: {}, tsteps: {}, ratio: {}",
         tot_f,
         tsteps,
         tot_f as f64 / tsteps as f64
     );
-    let mut es = [(0.0, 0.0); V];
-    let mut vxs = [(0.0, 0.0); V];
-    for v in 0..V {
-        let [_t00, _t01, e, ut, ux] = constraints(vs[0][v]);
-        let x = (v as f32 / V as f32) * 2.0 - 1.0;
-        es[v] = (x, e as _);
-        vxs[v] = (x, (ux / ut) as _);
-    }
-    Chart::new(400, 200, -1.0, 1.0)
-        .lineplot(&Shape::Lines(&es))
-        .display();
+    // let mut es = [(0.0, 0.0); V];
+    // let mut vxs = [(0.0, 0.0); V];
+    // for v in 0..V {
+    //     let [_t00, _t01, e, ut, ux] = constraints(vs[0][v]);
+    //     let x = (v as f32 / V as f32) * 2.0 - 1.0;
+    //     es[v] = (x, e as _);
+    //     vxs[v] = (x, (ux / ut) as _);
+    // }
 }

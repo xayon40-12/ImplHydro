@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use sparse21::Matrix;
 
-pub type Boundary<'a> = &'a dyn Fn(i32, usize) -> usize;
+pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
 pub type Fun<'a, const F: usize, const VX: usize, const VY: usize> =
-    &'a dyn Fn(&[[[f64; F]; VX]; VY], &[Boundary; 2], [i32; 2]) -> [f64; F];
+    &'a (dyn Fn(&[[[f64; F]; VX]; VY], &[Boundary; 2], [i32; 2]) -> [f64; F] + Sync);
 
 pub struct Context<'a, 'b, const F: usize, const VX: usize, const VY: usize, const S: usize> {
     pub fun: Fun<'a, F, VX, VY>,

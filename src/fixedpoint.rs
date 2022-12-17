@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 use crate::newton::Context;
 
 pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usize>(
@@ -23,7 +25,7 @@ pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usi
     let ko = *k;
     let mut fu = [[[[0.0f64; F]; VX]; VY]; S];
     let mut vdtk = [[[[0.0f64; F]; VX]; VY]; S];
-    let mut errs = [[[0.0f64; VY]; VY]; S];
+    let mut errs = [[[true; VY]; VY]; S];
     let mut dt = *dto;
     let mut iter = 0;
     let maxiter = 10;
@@ -34,6 +36,7 @@ pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usi
             dt *= 0.5;
             iter = 0;
             *k = ko;
+            errs = [[[true; VY]; VY]; S];
         }
         for f in 0..F {
             for vy in 0..VY {
@@ -56,14 +59,15 @@ pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usi
         err = 0.0;
         for s in 0..S {
             for vy in 0..VY {
+                fu[s][vy].par_iter_mut().enumerate().for_each(|(vx, fu)| {
+                    *fu = fun(&vdtk[s], boundary, [vx as i32, vy as i32]);
+                });
                 for vx in 0..VX {
-                    fu[s][vy][vx] = fun(&vdtk[s], boundary, [vx as i32, vy as i32]);
-                    errs[s][vy][vx] = 0.0;
                     for f in 0..F {
-                        errs[s][vy][vx] =
-                            errs[s][vy][vx].max((fu[s][vy][vx][f] - k[s][vy][vx][f]).abs());
+                        let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
+                        err = err.max(e);
+                        errs[s][vy][vx] = e <= *er;
                     }
-                    err = err.max(errs[s][vy][vx]);
                     k[s][vy][vx] = fu[s][vy][vx];
                 }
             }
