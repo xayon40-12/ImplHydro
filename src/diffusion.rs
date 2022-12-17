@@ -11,6 +11,7 @@ fn flux<const V: usize>(
     dx: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
+    _opt: &(),
 ) -> [f64; 1] {
     let ivdx = 1.0 / dx;
     let f = 0;
@@ -46,6 +47,7 @@ pub fn diffusion() {
         er: 1e-5,
         t: 0.0,
         tend: 1000.0,
+        opt: (),
     };
     let (vs, tot_f, tsteps) = run(context);
     let tot_f = tot_f * (2 * 4 + 1 + 1);

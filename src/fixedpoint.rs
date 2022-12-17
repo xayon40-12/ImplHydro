@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 use crate::newton::Context;
 
-pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usize>(
+pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
     Context {
         fun,
         boundary,
@@ -17,7 +17,8 @@ pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usi
         er,
         t,
         tend: _,
-    }: &mut Context<F, VX, VY, S>,
+        opt,
+    }: &mut Context<Opt, F, VX, VY, S>,
 ) -> usize {
     *dto = maxdt.min(*dto);
     let [_sizex, _sizey] = *local_interaction;
@@ -72,6 +73,7 @@ pub fn fixedpoint<const F: usize, const VX: usize, const VY: usize, const S: usi
                         *dx,
                         [ot, t],
                         [dt, cdt],
+                        opt,
                     );
                 });
                 for vx in 0..VX {

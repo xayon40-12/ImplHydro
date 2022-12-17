@@ -2,18 +2,27 @@ use itertools::Itertools;
 use sparse21::Matrix;
 
 pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
-pub type Fun<'a, const F: usize, const VX: usize, const VY: usize> = &'a (dyn Fn(
+pub type Fun<'a, Opt, const F: usize, const VX: usize, const VY: usize> = &'a (dyn Fn(
     [&[[[f64; F]; VX]; VY]; 2],
     &[Boundary; 2],
     [i32; 2], // position in index
     f64,      // dx
     [f64; 2], // [old t, current t]
     [f64; 2], // [dt, current dt]
+    &Opt,
 ) -> [f64; F]
          + Sync);
 
-pub struct Context<'a, 'b, const F: usize, const VX: usize, const VY: usize, const S: usize> {
-    pub fun: Fun<'a, F, VX, VY>,
+pub struct Context<
+    'a,
+    'b,
+    Opt: Sync,
+    const F: usize,
+    const VX: usize,
+    const VY: usize,
+    const S: usize,
+> {
+    pub fun: Fun<'a, Opt, F, VX, VY>,
     pub boundary: &'b [Boundary<'b>; 2],
     pub local_interaction: [i32; 2],
     pub vs: [[[f64; F]; VX]; VY],
@@ -26,6 +35,7 @@ pub struct Context<'a, 'b, const F: usize, const VX: usize, const VY: usize, con
     pub er: f64,
     pub t: f64,
     pub tend: f64,
+    pub opt: Opt,
 }
 
 fn sub<const F: usize>(a: [f64; F], b: [f64; F]) -> [f64; F] {
@@ -53,7 +63,7 @@ fn flat<const F: usize, const VX: usize, const VY: usize, const S: usize>(
     res
 }
 
-pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
+pub fn newton<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
     Context {
         fun,
         boundary,
@@ -68,7 +78,8 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
         er,
         t,
         tend: _,
-    }: &mut Context<F, VX, VY, S>,
+        opt,
+    }: &mut Context<Opt, F, VX, VY, S>,
 ) -> usize {
     *dt = maxdt.min(*dt);
     let [sizex, sizey] = *local_interaction;
@@ -111,6 +122,7 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
                             *dx,
                             [ot, t],
                             [*dt, cdt],
+                            &opt,
                         ),
                         k[s][vy][vx],
                     );
@@ -155,6 +167,7 @@ pub fn newton<const F: usize, const VX: usize, const VY: usize, const S: usize>(
                                             *dx,
                                             [ot, t],
                                             [*dt, cdt],
+                                            &opt,
                                         ),
                                         k[s1][vy1][vx1],
                                     );

@@ -44,6 +44,7 @@ fn flux<const V: usize>(
     dx: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
+    _opt: &(),
 ) -> [f64; 3] {
     let theta = 1.5;
 
@@ -88,6 +89,7 @@ pub fn hydro1d() {
         er: 1e-5,
         t: 0.0,
         tend: 5.0,
+        opt: (),
     };
     let (_vs, tot_f, tsteps) = run(context);
     println!(

@@ -54,13 +54,19 @@ fn f22([_, _, _, e, _, _, uy]: [f64; 7]) -> f64 {
     (e + p(e)) * uy * uy + p(e)
 }
 
+pub enum Coordinate {
+    Cartesian,
+    Milne,
+}
+
 fn flux<const V: usize>(
     [_ov, v]: [&[[[f64; 4]; V]; V]; 2],
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
-    [_ot, _t]: [f64; 2],
+    [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
+    opt: &Coordinate,
 ) -> [f64; 4] {
     let theta = 1.5;
 
@@ -87,18 +93,25 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let [t00, t01, t02, e, _ut, _ux, _uy] =
-        constraints(v[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+    let [t00, t01, t02, e, ut, ux, uy] = constraints(v[bound[1](pos[1], V)][bound[0](pos[0], V)]);
     let re = t00 - (t01 * t01 + t02 * t02) / (t00 + p(e));
+    let source: [f64; 3] = match opt {
+        Coordinate::Cartesian => [0.0; 3],
+        Coordinate::Milne => [
+            (e + p(e)) * ut * ut / t,
+            (e + p(e)) * ut * ux / t,
+            (e + p(e)) * ut * uy / t,
+        ],
+    };
     let rt0 = [
-        -divf1[0] - divf2[0],
-        -divf1[1] - divf2[1],
-        -divf1[2] - divf2[2],
+        -divf1[0] - divf2[0] - source[0],
+        -divf1[1] - divf2[1] - source[1],
+        -divf1[2] - divf2[2] - source[2],
     ];
     [rt0[0], rt0[1], rt0[2], re]
 }
 
-pub fn hydro2d() {
+pub fn hydro2d(maxdt: f64, er: f64, t: f64, tend: f64, opt: Coordinate) {
     const V: usize = 100;
     let mut vs = [[[0.0; 4]; V]; V];
     let k = [[[[0.0; 4]; V]; V]];
@@ -121,12 +134,13 @@ pub fn hydro2d() {
         k,
         integrated,
         r: [[1.0]],
-        dt: 1.0,
+        dt: 1e10,
         dx: 0.1,
-        maxdt: 0.1,
-        er: 1e-3,
-        t: 0.0,
-        tend: 4.0,
+        maxdt,
+        er,
+        t,
+        tend,
+        opt,
     };
     let (vals, _tot_f, _tsteps) = run(context);
     // let tot_f = tot_f * (2 * 2 + 2 * 2 + 1 + 1);
