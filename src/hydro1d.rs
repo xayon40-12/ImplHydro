@@ -69,6 +69,7 @@ fn flux<const V: usize>(
 pub fn hydro1d() {
     const V: usize = 50;
     let mut vs = [[[0.0; 3]; V]];
+    let names = ["t00", "t01", "e", "ut", "ux"];
     let k = [[[[0.0; 3]; V]]];
     let integrated = [true, true, false];
     for i in 0..V {
@@ -91,7 +92,7 @@ pub fn hydro1d() {
         tend: 5.0,
         opt: (),
     };
-    let (_vs, tot_f, tsteps) = run(context);
+    let (_vs, tot_f, tsteps) = run(context, &names, &constraints);
     println!(
         "tot_f: {}, tsteps: {}, ratio: {}",
         tot_f,

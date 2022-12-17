@@ -114,6 +114,7 @@ fn flux<const V: usize>(
 pub fn hydro2d(maxdt: f64, er: f64, t: f64, tend: f64, opt: Coordinate) {
     const V: usize = 100;
     let mut vs = [[[0.0; 4]; V]; V];
+    let names = ["t00", "t01", "t02", "e", "ut", "ux", "uy"];
     let k = [[[[0.0; 4]; V]; V]];
     let integrated = [true, true, true, false];
     for i in 0..V {
@@ -142,7 +143,7 @@ pub fn hydro2d(maxdt: f64, er: f64, t: f64, tend: f64, opt: Coordinate) {
         tend,
         opt,
     };
-    let (vals, _tot_f, _tsteps) = run(context);
+    let (vals, _tot_f, _tsteps) = run(context, &names, &constraints);
     // let tot_f = tot_f * (2 * 2 + 2 * 2 + 1 + 1);
     // println!(
     //     "tot_f: {}, tsteps: {}, ratio: {}",

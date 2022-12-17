@@ -222,5 +222,6 @@ pub fn newton<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
             }
         }
     }
+    *t += *dt;
     iterations
 }

@@ -24,9 +24,14 @@ fn flux<const V: usize>(
     [res]
 }
 
+fn constraints(u: [f64; 1]) -> [f64; 1] {
+    u
+}
+
 pub fn diffusion() {
     const V: usize = 100;
     let mut vs = [[[0.0]; V]];
+    let names = ["u"];
     let k = [[[[0.0]; V]]];
     let integrated = [true];
     for i in 0..V {
@@ -49,7 +54,7 @@ pub fn diffusion() {
         tend: 1000.0,
         opt: (),
     };
-    let (vs, tot_f, tsteps) = run(context);
+    let (vs, tot_f, tsteps) = run(context, &names, &constraints);
     let tot_f = tot_f * (2 * 4 + 1 + 1);
     println!(
         "tot_f: {}, tsteps: {}, ratio: {}",

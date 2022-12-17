@@ -7,6 +7,6 @@ use implicit_newton::{
 fn main() {
     // diffusion();
     // hydro1d();
-    hydro2d(0.01, 1e-5, 0.6, 4.6, Coordinate::Milne);
+    hydro2d(0.01, 1e-3, 0.6, 4.7, Coordinate::Cartesian);
     // println!("done");
 }
