@@ -1,5 +1,5 @@
 use crate::{
-    context::{Boundary, Context, ToCompute},
+    context::{Boundary, Context, Integration, ToCompute},
     kt::{kt, Dir},
     newton::newton,
     solver::run,
@@ -139,6 +139,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     dx: f64,
     r: [[f64; S]; S],
     opt: Coordinate,
+    integration: Integration,
     init: impl Fn(f64, f64) -> [f64; 4],
 ) -> ([[[f64; 4]; V]; V], f64) {
     let mut vs = [[[0.0; 4]; V]; V];
@@ -172,7 +173,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         tend,
         opt,
     };
-    let (vals, t, cost, tsteps) = run(context, &names, &constraints);
+    let (vals, t, cost, tsteps) = run(context, integration, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
     (vals, t)
 }

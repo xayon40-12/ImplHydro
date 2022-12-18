@@ -1,5 +1,5 @@
 use crate::{
-    context::{Boundary, Context, ToCompute},
+    context::{Boundary, Context, Integration, ToCompute},
     solver::run,
     utils::{noboundary, periodic},
 };
@@ -61,7 +61,7 @@ pub fn diffusion() {
         tend: 100.0,
         opt: (),
     };
-    let (vs, _t, cost, tsteps) = run(context, &names, &constraints);
+    let (vs, _t, cost, tsteps) = run(context, Integration::FixPoint, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
     let mean_res = vs[0].iter().fold(0.0, |acc, i| acc + i[0]) / V as f64;
     println!("expected mean: {}", mean);

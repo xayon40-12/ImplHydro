@@ -1,5 +1,5 @@
 use crate::{
-    context::{Boundary, Context, ToCompute},
+    context::{Boundary, Context, Integration, ToCompute},
     kt::{kt, Dir},
     newton::newton,
     solver::run,
@@ -103,6 +103,6 @@ pub fn hydro1d() {
         tend: 5.0,
         opt: (),
     };
-    let (_vs, _t, cost, tsteps) = run(context, &names, &constraints);
+    let (_vs, _t, cost, tsteps) = run(context, Integration::FixPoint, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
 }

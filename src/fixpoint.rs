@@ -2,7 +2,7 @@ use rayon::prelude::*;
 
 use crate::context::{Context, ToCompute};
 
-pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
+pub fn fixpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
     Context {
         fun,
         boundary,

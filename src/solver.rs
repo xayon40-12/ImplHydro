@@ -1,4 +1,9 @@
-use crate::{context::Context, explicit::explicit, fixedpoint::fixedpoint};
+use crate::{
+    context::{Context, Integration},
+    explicit::explicit,
+    fixpoint::fixpoint,
+    newton::newton_solver,
+};
 
 pub type Constraints<'a, const F: usize, const C: usize> = &'a dyn Fn([f64; F]) -> [f64; C];
 
@@ -50,6 +55,7 @@ pub fn run<
     const S: usize,
 >(
     mut context: Context<Opt, F, VX, VY, S>,
+    integration: Integration,
     names: &[&str; C],
     constraints: Constraints<F, C>,
 ) -> ([[[f64; F]; VX]; VY], f64, usize, usize) {
@@ -60,7 +66,12 @@ pub fn run<
     let now = Instant::now();
     while context.t < context.tend {
         tsteps += 1;
-        let c = explicit(&mut context);
+        let c = match integration {
+            Integration::Explicit => explicit(&mut context),
+            Integration::FixPoint => fixpoint(&mut context),
+            Integration::Newton => newton_solver(&mut context),
+        };
+
         cost += c;
     }
     let cost = cost as usize;

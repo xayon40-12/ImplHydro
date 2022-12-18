@@ -1,4 +1,7 @@
-use implicit_newton::hydro2d::{f00, f01, f02, hydro2d, Coordinate};
+use implicit_newton::{
+    context::Integration,
+    hydro2d::{f00, f01, f02, hydro2d, Coordinate},
+};
 
 fn gubser(x: f64, y: f64, t: f64) -> [f64; 4] {
     let r = (x * x + y * y).sqrt();
@@ -53,6 +56,7 @@ fn main() {
         dx,
         r,
         Coordinate::Milne,
+        Integration::Explicit,
         |x, y| {
             // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
             let [e, ut, ux, uy] = gubser(x, y, t0);

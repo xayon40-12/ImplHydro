@@ -1,3 +1,9 @@
+pub enum Integration {
+    Explicit,
+    FixPoint,
+    Newton,
+}
+
 pub enum ToCompute {
     Integrated,
     NonIntegrated,
