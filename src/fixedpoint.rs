@@ -27,7 +27,7 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
     let ko = *k;
     let mut fu = [[[[0.0f64; F]; VX]; VY]; S];
     let mut vdtk = [[[[0.0f64; F]; VX]; VY]; S];
-    let mut errs = [[true; VY]; VY];
+    let mut errs = [[true; VX]; VY];
     let mut dt = *dto;
     let mut iter = 0;
     let maxiter = 10;
@@ -37,7 +37,7 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
             dt *= 0.5;
             iter = 0;
             *k = ko;
-            errs = [[true; VY]; VY];
+            errs = [[true; VX]; VY];
         }
         for f in 0..F {
             for vy in 0..VY {
@@ -100,7 +100,7 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
                 }
             }
         }
-        let mut tmperrs = [[false; VY]; VY];
+        let mut tmperrs = [[false; VX]; VY];
         for vy in 0..VY {
             for vx in 0..VX {
                 for dy in -sizey..=sizey {

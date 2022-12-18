@@ -49,9 +49,9 @@ pub fn diffusion() {
         dt: 10.0,
         dx: 0.1,
         maxdt: 0.1,
-        er: 1e-5,
+        er: 1e-2,
         t: 0.0,
-        tend: 1000.0,
+        tend: 100.0,
         opt: (),
     };
     let (vs, cost, tsteps) = run(context, &names, &constraints);

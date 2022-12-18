@@ -111,20 +111,25 @@ fn flux<const V: usize>(
     [rt0[0], rt0[1], rt0[2], re]
 }
 
-pub fn hydro2d(maxdt: f64, er: f64, t: f64, tend: f64, opt: Coordinate) {
-    const V: usize = 100;
+pub fn hydro2d<const V: usize>(
+    maxdt: f64,
+    er: f64,
+    t: f64,
+    tend: f64,
+    dx: f64,
+    opt: Coordinate,
+    init: impl Fn(f64, f64) -> [f64; 4],
+) -> [[[f64; 4]; V]; V] {
     let mut vs = [[[0.0; 4]; V]; V];
     let names = ["t00", "t01", "t02", "e", "ut", "ux", "uy"];
     let k = [[[[0.0; 4]; V]; V]];
     let integrated = [true, true, true, false];
+    let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {
         for j in 0..V {
-            let e = if i == V / 2 && j == V / 2 {
-                10.0
-            } else {
-                1e-15
-            };
-            vs[i][j] = [e, 0.0, 0.0, e];
+            let x = i as f64 - v2;
+            let y = j as f64 - v2;
+            vs[i][j] = init(x, y);
         }
     }
     let context = Context {
@@ -136,13 +141,14 @@ pub fn hydro2d(maxdt: f64, er: f64, t: f64, tend: f64, opt: Coordinate) {
         integrated,
         r: [[1.0]],
         dt: 1e10,
-        dx: 0.1,
+        dx,
         maxdt,
         er,
         t,
         tend,
         opt,
     };
-    let (_vals, cost, tsteps) = run(context, &names, &constraints);
+    let (vals, cost, tsteps) = run(context, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
+    vals
 }
