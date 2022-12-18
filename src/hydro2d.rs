@@ -115,18 +115,19 @@ fn flux<const V: usize>(
     [rt0[0], rt0[1], rt0[2], re]
 }
 
-pub fn hydro2d<const V: usize>(
+pub fn hydro2d<const V: usize, const S: usize>(
     maxdt: f64,
     er: f64,
     t: f64,
     tend: f64,
     dx: f64,
+    r: [[f64; S]; S],
     opt: Coordinate,
     init: impl Fn(f64, f64) -> [f64; 4],
 ) -> ([[[f64; 4]; V]; V], f64) {
     let mut vs = [[[0.0; 4]; V]; V];
     let names = ["t00", "t01", "t02", "e", "ut", "ux", "uy"];
-    let k = [[[[0.0; 4]; V]; V]];
+    let k = [[[[0.0; 4]; V]; V]; S];
     let integrated = [true, true, true, false];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
@@ -143,7 +144,7 @@ pub fn hydro2d<const V: usize>(
         vs,
         k,
         integrated,
-        r: [[1.0]],
+        r,
         dt: 1e10,
         dx,
         maxdt,

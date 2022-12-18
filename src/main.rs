@@ -42,12 +42,23 @@ fn main() {
     // hydro1d();
     let t0 = 0.6;
     let dx = 0.1;
-    let (v, t) = hydro2d::<101>(0.01, 1e-3, t0, t0 + 4.0, dx, Coordinate::Milne, |x, y| {
-        // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
-        let [e, ut, ux, uy] = gubser(x, y, t0);
-        let vars = [0.0, 0.0, 0.0, e, ut, ux, uy];
-        [f00(vars), f01(vars), f02(vars), e]
-    });
+    // let r = [[1.0]];
+    let r = [[5.0 / 12.0, -1.0 / 12.0], [3.0 / 4.0, 1.0 / 4.0]];
+    let (v, t) = hydro2d::<101, 2>(
+        0.01,
+        1e-3,
+        t0,
+        t0 + 4.0,
+        dx,
+        r,
+        Coordinate::Milne,
+        |x, y| {
+            // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
+            let [e, ut, ux, uy] = gubser(x, y, t0);
+            let vars = [0.0, 0.0, 0.0, e, ut, ux, uy];
+            [f00(vars), f01(vars), f02(vars), e]
+        },
+    );
     let [maxerr, meanerr] = gubser_err(v, t, dx);
     println!("gubser:\nmaxerr: {}\nminerr: {}\n", maxerr, meanerr);
 }

@@ -44,10 +44,9 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
                 for vx in 0..VX {
                     for s in 0..S {
                         if integrated[f] {
-                            vdtk[s][vy][vx][f] = 0.0;
+                            vdtk[s][vy][vx][f] = vs[vy][vx][f];
                             for s1 in 0..S {
-                                vdtk[s][vy][vx][f] +=
-                                    vs[vy][vx][f] + dt * r[s][s1] * k[s1][vy][vx][f];
+                                vdtk[s][vy][vx][f] += dt * r[s][s1] * k[s1][vy][vx][f];
                             }
                         } else {
                             vdtk[s][vy][vx][f] = k[s][vy][vx][f];
