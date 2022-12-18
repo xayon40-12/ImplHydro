@@ -80,14 +80,13 @@ pub fn newton<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
         tend: _,
         opt,
     }: &mut Context<Opt, F, VX, VY, S>,
-) -> usize {
+) -> f64 {
     *dt = maxdt.min(*dt);
     let [sizex, sizey] = *local_interaction;
     let mut err = 1.0;
-    let mut iterations = 0;
+    let mut cost = 0.0;
     while err > *er {
         let e = *er / S as f64; // devide by S because S stages
-        iterations += 1;
         let mut vdtk = [[[[0.0; F]; VX]; VY]; S];
         for f in 0..F {
             for vy in 0..VY {
@@ -159,6 +158,7 @@ pub fn newton<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
                                     .map(|l| boundary[0](l + vx0 as i32, VX))
                                     .unique()
                                 {
+                                    cost += 1.0;
                                     let fpu = sub(
                                         fun(
                                             [&vs, &vdtk[s1]],
@@ -223,5 +223,5 @@ pub fn newton<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
         }
     }
     *t += *dt;
-    iterations
+    cost / (VY * VX) as f64
 }

@@ -19,26 +19,25 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
         tend: _,
         opt,
     }: &mut Context<Opt, F, VX, VY, S>,
-) -> usize {
+) -> f64 {
     *dto = maxdt.min(*dto);
-    let [_sizex, _sizey] = *local_interaction;
+    let [sizex, sizey] = *local_interaction;
     let mut err = 1.0;
-    let mut iterations = 0;
+    let mut cost = 0.0;
     let ko = *k;
     let mut fu = [[[[0.0f64; F]; VX]; VY]; S];
     let mut vdtk = [[[[0.0f64; F]; VX]; VY]; S];
-    let mut errs = [[[true; VY]; VY]; S];
+    let mut errs = [[true; VY]; VY];
     let mut dt = *dto;
     let mut iter = 0;
     let maxiter = 10;
     while err > *er {
-        iterations += 1;
         iter += 1;
         if iter > maxiter {
             dt *= 0.5;
             iter = 0;
             *k = ko;
-            errs = [[[true; VY]; VY]; S];
+            errs = [[true; VY]; VY];
         }
         for f in 0..F {
             for vy in 0..VY {
@@ -59,13 +58,21 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
         }
 
         err = 0.0;
+        let ot = *t;
         for s in 0..S {
-            let ot = *t;
             let c = r[s].iter().fold(0.0, |acc, r| acc + r);
             let cdt = c * dt;
             let t = ot + cdt;
-            for vy in 0..VY {
-                fu[s][vy].par_iter_mut().enumerate().for_each(|(vx, fu)| {
+            fu[s]
+                .par_iter_mut()
+                .enumerate()
+                .flat_map(|(vy, fsy)| {
+                    fsy.par_iter_mut()
+                        .enumerate()
+                        .map(move |(vx, fsyx)| (vy, vx, fsyx))
+                })
+                .filter(|(vy, vx, _)| errs[*vy][*vx])
+                .for_each(|(vy, vx, fu)| {
                     *fu = fun(
                         [&vs, &vdtk[s]],
                         boundary,
@@ -76,17 +83,35 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
                         opt,
                     );
                 });
-                for vx in 0..VX {
+        }
+        for vy in 0..VY {
+            for vx in 0..VX {
+                if errs[vy][vx] {
+                    cost += S as f64;
+                }
+                errs[vy][vx] = false;
+                for s in 0..S {
                     for f in 0..F {
                         let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
                         err = err.max(e);
-                        errs[s][vy][vx] = e <= *er;
+                        errs[vy][vx] |= e > *er;
                     }
                     k[s][vy][vx] = fu[s][vy][vx];
                 }
             }
         }
-        // eprintln!("i: {}, err: {}", iterations, err);
+        let mut tmperrs = [[false; VY]; VY];
+        for vy in 0..VY {
+            for vx in 0..VX {
+                for dy in -sizey..=sizey {
+                    for dx in -sizex..=sizex {
+                        tmperrs[vy][vx] |=
+                            errs[boundary[1](vy as i32 + dy, VY)][boundary[0](vx as i32 + dx, VX)];
+                    }
+                }
+            }
+        }
+        errs = tmperrs;
     }
     for f in 0..F {
         for vy in 0..VY {
@@ -103,5 +128,5 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
     }
     *t += dt;
     *dto = maxdt.min(dt * 1.1);
-    iterations
+    cost / (VX * VY) as f64
 }

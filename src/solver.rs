@@ -54,16 +54,21 @@ pub fn run<
     constraints: Constraints<F, C>,
 ) -> ([[[f64; F]; VX]; VY], usize, usize) {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
-    let mut cost = 0;
+    let mut cost = 0.0;
     let mut tsteps = 0;
     let tend = context.tend;
     let mut t = context.t;
+    use std::time::Instant;
+    let now = Instant::now();
     while t < tend {
         tsteps += 1;
         let c = fixedpoint(&mut context);
         t = context.t;
-        cost += c * S; // cost is per stage
+        cost += c * S as f64; // cost is per stage
     }
+    let cost = cost as usize;
+    let elapsed = now.elapsed();
+    println!("Elapsed: {:.2?}", elapsed);
     let err = save(&context.vs, constraints, names, context.t, context.dx, cost);
     match err {
         Err(e) => eprintln!("{}", e),
