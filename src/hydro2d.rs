@@ -1,6 +1,7 @@
 use crate::{
+    context::{Boundary, Context, ToCompute},
     kt::{kt, Dir},
-    newton::{Boundary, Context},
+    newton::newton,
     solver::run,
     utils::ghost,
 };
@@ -68,50 +69,65 @@ fn flux<const V: usize>(
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
+    er: f64,
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     opt: &Coordinate,
+    tocomp: ToCompute,
 ) -> [f64; 4] {
-    let theta = 1.5;
-
-    let divf1 = kt(
-        v,
-        bound,
-        pos,
-        Dir::X,
-        [&f01, &f11, &f12],
-        &constraints,
-        &eigenvaluesx,
-        dx,
-        theta,
-    );
-    let divf2 = kt(
-        v,
-        bound,
-        pos,
-        Dir::Y,
-        [&f02, &f21, &f22],
-        &constraints,
-        &eigenvaluesy,
-        dx,
-        theta,
-    );
-
     let [t00, t01, t02, e, ut, ux, uy] = constraints(v[bound[1](pos[1], V)][bound[0](pos[0], V)]);
-    let re = t00 - (t01 * t01 + t02 * t02) / (t00 + p(e));
-    let source: [f64; 3] = match opt {
-        Coordinate::Cartesian => [0.0; 3],
-        Coordinate::Milne => [
-            (e + p(e)) * ut * ut / t,
-            (e + p(e)) * ut * ux / t,
-            (e + p(e)) * ut * uy / t,
-        ],
+    let rt0 = if tocomp.integrated() || tocomp.all() {
+        let theta = 1.5;
+
+        let divf1 = kt(
+            v,
+            bound,
+            pos,
+            Dir::X,
+            [&f01, &f11, &f12],
+            &constraints,
+            &eigenvaluesx,
+            dx,
+            theta,
+        );
+        let divf2 = kt(
+            v,
+            bound,
+            pos,
+            Dir::Y,
+            [&f02, &f21, &f22],
+            &constraints,
+            &eigenvaluesy,
+            dx,
+            theta,
+        );
+
+        // let re = newton(1e-10, e, |e| {
+        //     t00 - (t01 * t01 + t02 * t02) / (t00 + p(e)) - e
+        // }); // WARNING: the energy density must be solved in the flux and not in the constraints, else there are oscillations
+        let source: [f64; 3] = match opt {
+            Coordinate::Cartesian => [0.0; 3],
+            Coordinate::Milne => [
+                (e + p(e)) * ut * ut / t,
+                (e + p(e)) * ut * ux / t,
+                (e + p(e)) * ut * uy / t,
+            ],
+        };
+        [
+            -divf1[0] - divf2[0] - source[0],
+            -divf1[1] - divf2[1] - source[1],
+            -divf1[2] - divf2[2] - source[2],
+        ]
+    } else {
+        [0.0, 0.0, 0.0]
     };
-    let rt0 = [
-        -divf1[0] - divf2[0] - source[0],
-        -divf1[1] - divf2[1] - source[1],
-        -divf1[2] - divf2[2] - source[2],
-    ];
+    let re = match tocomp {
+        ToCompute::All => t00 - (t01 * t01 + t02 * t02) / (t00 + p(e)),
+        ToCompute::NonIntegrated => {
+            newton(er, e, |e| t00 - (t01 * t01 + t02 * t02) / (t00 + p(e)) - e)
+        }
+        ToCompute::Integrated => 0.0,
+    };
     [rt0[0], rt0[1], rt0[2], re]
 }
 
@@ -127,7 +143,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
 ) -> ([[[f64; 4]; V]; V], f64) {
     let mut vs = [[[0.0; 4]; V]; V];
     let names = ["t00", "t01", "t02", "e", "ut", "ux", "uy"];
-    let k = [[[[0.0; 4]; V]; V]; S];
+    let mut k = [[[[0.0; 4]; V]; V]; S];
     let integrated = [true, true, true, false];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
@@ -135,6 +151,9 @@ pub fn hydro2d<const V: usize, const S: usize>(
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
             vs[j][i] = init(x, y);
+            for s in 0..S {
+                k[s][j][i][3] = vs[j][i][3];
+            }
         }
     }
     let context = Context {

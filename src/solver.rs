@@ -1,4 +1,4 @@
-use crate::{fixedpoint::fixedpoint, newton::Context};
+use crate::{context::Context, explicit::explicit, fixedpoint::fixedpoint};
 
 pub type Constraints<'a, const F: usize, const C: usize> = &'a dyn Fn([f64; F]) -> [f64; C];
 
@@ -60,7 +60,7 @@ pub fn run<
     let now = Instant::now();
     while context.t < context.tend {
         tsteps += 1;
-        let c = fixedpoint(&mut context);
+        let c = explicit(&mut context);
         cost += c;
     }
     let cost = cost as usize;

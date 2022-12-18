@@ -1,6 +1,7 @@
 use crate::{
+    context::{Boundary, Context, ToCompute},
     kt::{kt, Dir},
-    newton::{Boundary, Context},
+    newton::newton,
     solver::run,
     utils::{ghost, noboundary},
 };
@@ -42,27 +43,37 @@ fn flux<const V: usize>(
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
+    er: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     _opt: &(),
+    tocomp: ToCompute,
 ) -> [f64; 3] {
-    let theta = 1.5;
-
-    let divf0 = kt(
-        v,
-        bound,
-        pos,
-        Dir::X,
-        [&f01, &f11],
-        &constraints,
-        &eigenvalues,
-        dx,
-        theta,
-    );
-
     let [t00, t01, e, _ut, _ux] = constraints(v[0][bound[0](pos[0], V)]);
-    let re = t00 - t01 * t01 / (t00 + p(e));
-    let rt0 = [-divf0[0], -divf0[1]];
+    let rt0 = if tocomp.integrated() || tocomp.all() {
+        let theta = 1.5;
+
+        let divf0 = kt(
+            v,
+            bound,
+            pos,
+            Dir::X,
+            [&f01, &f11],
+            &constraints,
+            &eigenvalues,
+            dx,
+            theta,
+        );
+
+        [-divf0[0], -divf0[1]]
+    } else {
+        [0.0, 0.0]
+    };
+    let re = match tocomp {
+        ToCompute::All => t00 - t01 * t01 / (t00 + p(e)),
+        ToCompute::NonIntegrated => newton(er, e, |e| t00 - (t01 * t01) / (t00 + p(e)) - e),
+        ToCompute::Integrated => 0.0,
+    };
     [rt0[0], rt0[1], re]
 }
 

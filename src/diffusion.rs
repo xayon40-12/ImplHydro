@@ -1,5 +1,5 @@
 use crate::{
-    newton::{Boundary, Context},
+    context::{Boundary, Context, ToCompute},
     solver::run,
     utils::{noboundary, periodic},
 };
@@ -9,19 +9,26 @@ fn flux<const V: usize>(
     boundary: &[Boundary; 2],
     [i, _]: [i32; 2],
     dx: f64,
+    _er: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     _opt: &(),
+    tocomp: ToCompute,
 ) -> [f64; 1] {
-    let ivdx = 1.0 / dx;
-    let f = 0;
-    let res = ivdx.powf(2.0)
-        * (-v[0][boundary[0](i - 2, V)][f] + 16.0 * v[0][boundary[0](i - 1, V)][f]
-            - 30.0 * v[0][boundary[0](i, V)][f]
-            + 16.0 * v[0][boundary[0](i + 1, V)][f]
-            - v[0][boundary[0](i + 2, V)][f])
-        / 12.0;
-    [res]
+    match tocomp {
+        ToCompute::All | ToCompute::Integrated => {
+            let ivdx = 1.0 / dx;
+            let f = 0;
+            let res = ivdx.powf(2.0)
+                * (-v[0][boundary[0](i - 2, V)][f] + 16.0 * v[0][boundary[0](i - 1, V)][f]
+                    - 30.0 * v[0][boundary[0](i, V)][f]
+                    + 16.0 * v[0][boundary[0](i + 1, V)][f]
+                    - v[0][boundary[0](i + 2, V)][f])
+                / 12.0;
+            [res]
+        }
+        ToCompute::NonIntegrated => [0.0],
+    }
 }
 
 fn constraints(u: [f64; 1]) -> [f64; 1] {

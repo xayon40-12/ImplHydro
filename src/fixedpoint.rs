@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 
-use crate::newton::Context;
+use crate::context::{Context, ToCompute};
 
 pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
     Context {
@@ -70,7 +70,6 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
                         .enumerate()
                         .map(move |(vx, fsyx)| (vy, vx, fsyx))
                 })
-                // .filter(|(vy, vx, _)| errs[*vy][*vx])
                 .for_each(|(vy, vx, fu)| {
                     if errs[vy][vx] {
                         *fu = fun(
@@ -78,9 +77,11 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
                             boundary,
                             [vx as i32, vy as i32],
                             *dx,
+                            *er,
                             [ot, t],
                             [dt, cdt],
                             opt,
+                            ToCompute::All,
                         );
                     }
                 });

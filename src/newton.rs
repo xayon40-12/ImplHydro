@@ -1,41 +1,17 @@
 use itertools::Itertools;
 use sparse21::Matrix;
 
-pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
-pub type Fun<'a, Opt, const F: usize, const VX: usize, const VY: usize> = &'a (dyn Fn(
-    [&[[[f64; F]; VX]; VY]; 2],
-    &[Boundary; 2],
-    [i32; 2], // position in index
-    f64,      // dx
-    [f64; 2], // [old t, current t]
-    [f64; 2], // [dt, current dt]
-    &Opt,
-) -> [f64; F]
-         + Sync);
+use crate::context::{Context, ToCompute};
 
-pub struct Context<
-    'a,
-    'b,
-    Opt: Sync,
-    const F: usize,
-    const VX: usize,
-    const VY: usize,
-    const S: usize,
-> {
-    pub fun: Fun<'a, Opt, F, VX, VY>,
-    pub boundary: &'b [Boundary<'b>; 2],
-    pub local_interaction: [i32; 2],
-    pub vs: [[[f64; F]; VX]; VY],
-    pub k: [[[[f64; F]; VX]; VY]; S],
-    pub integrated: [bool; F],
-    pub r: [[f64; S]; S],
-    pub dt: f64,
-    pub dx: f64,
-    pub maxdt: f64,
-    pub er: f64,
-    pub t: f64,
-    pub tend: f64,
-    pub opt: Opt,
+pub fn newton(er: f64, mut v: f64, f: impl Fn(f64) -> f64) -> f64 {
+    let mut e = er + 1.0;
+    while e >= er {
+        let fv = f(v);
+        let ff = (f(v + er) - fv) / er;
+        v -= fv / ff;
+        e = fv.abs();
+    }
+    v
 }
 
 fn sub<const F: usize>(a: [f64; F], b: [f64; F]) -> [f64; F] {
@@ -63,7 +39,13 @@ fn flat<const F: usize, const VX: usize, const VY: usize, const S: usize>(
     res
 }
 
-pub fn newton<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
+pub fn newton_solver<
+    Opt: Sync,
+    const F: usize,
+    const VX: usize,
+    const VY: usize,
+    const S: usize,
+>(
     Context {
         fun,
         boundary,
@@ -119,9 +101,11 @@ pub fn newton<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
                             boundary,
                             [vx as i32, vy as i32],
                             *dx,
+                            *er,
                             [ot, t],
                             [*dt, cdt],
                             &opt,
+                            ToCompute::All,
                         ),
                         k[s][vy][vx],
                     );
@@ -165,9 +149,11 @@ pub fn newton<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
                                             boundary,
                                             [vx1 as i32, vy1 as i32],
                                             *dx,
+                                            *er,
                                             [ot, t],
                                             [*dt, cdt],
                                             &opt,
+                                            ToCompute::All,
                                         ),
                                         k[s1][vy1][vx1],
                                     );

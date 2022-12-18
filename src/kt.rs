@@ -1,4 +1,4 @@
-use crate::{newton::Boundary, utils::flux_limiter};
+use crate::{context::Boundary, utils::flux_limiter};
 
 type Flux<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
 type Constraints<'a, const F: usize, const C: usize> = &'a dyn Fn([f64; F]) -> [f64; C];

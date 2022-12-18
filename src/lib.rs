@@ -1,4 +1,6 @@
+pub mod context;
 pub mod diffusion;
+pub mod explicit;
 pub mod fixedpoint;
 pub mod hydro1d;
 pub mod hydro2d;
