@@ -92,6 +92,6 @@ pub fn hydro1d() {
         tend: 5.0,
         opt: (),
     };
-    let (_vs, cost, tsteps) = run(context, &names, &constraints);
+    let (_vs, _t, cost, tsteps) = run(context, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
 }

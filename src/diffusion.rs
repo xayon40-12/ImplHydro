@@ -54,7 +54,7 @@ pub fn diffusion() {
         tend: 100.0,
         opt: (),
     };
-    let (vs, cost, tsteps) = run(context, &names, &constraints);
+    let (vs, _t, cost, tsteps) = run(context, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
     let mean_res = vs[0].iter().fold(0.0, |acc, i| acc + i[0]) / V as f64;
     println!("expected mean: {}", mean);

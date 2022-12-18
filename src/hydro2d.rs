@@ -34,9 +34,16 @@ fn eigenvaluesy([t00, t01, t02, e, ut, ux, uy]: [f64; 7]) -> f64 {
     eigenvaluesx([t00, t01, t02, e, ut, uy, ux])
 }
 
-fn f10([_, _, _, e, ut, ux, _]: [f64; 7]) -> f64 {
+pub fn f00([_, _, _, e, ut, _, _]: [f64; 7]) -> f64 {
+    (e + p(e)) * ut * ut - p(e)
+}
+pub fn f01([_, _, _, e, ut, ux, _]: [f64; 7]) -> f64 {
     (e + p(e)) * ut * ux
 }
+pub fn f02([_, _, _, e, ut, _, uy]: [f64; 7]) -> f64 {
+    (e + p(e)) * uy * ut
+}
+
 fn f11([_, _, _, e, _, ux, _]: [f64; 7]) -> f64 {
     (e + p(e)) * ux * ux + p(e)
 }
@@ -44,9 +51,6 @@ fn f12([_, _, _, e, _, ux, uy]: [f64; 7]) -> f64 {
     (e + p(e)) * ux * uy
 }
 
-fn f20([_, _, _, e, ut, _, uy]: [f64; 7]) -> f64 {
-    (e + p(e)) * uy * ut
-}
 fn f21([_, _, _, e, _, ux, uy]: [f64; 7]) -> f64 {
     (e + p(e)) * uy * ux
 }
@@ -75,7 +79,7 @@ fn flux<const V: usize>(
         bound,
         pos,
         Dir::X,
-        [&f10, &f11, &f12],
+        [&f01, &f11, &f12],
         &constraints,
         &eigenvaluesx,
         dx,
@@ -86,7 +90,7 @@ fn flux<const V: usize>(
         bound,
         pos,
         Dir::Y,
-        [&f20, &f21, &f22],
+        [&f02, &f21, &f22],
         &constraints,
         &eigenvaluesy,
         dx,
@@ -119,17 +123,17 @@ pub fn hydro2d<const V: usize>(
     dx: f64,
     opt: Coordinate,
     init: impl Fn(f64, f64) -> [f64; 4],
-) -> [[[f64; 4]; V]; V] {
+) -> ([[[f64; 4]; V]; V], f64) {
     let mut vs = [[[0.0; 4]; V]; V];
     let names = ["t00", "t01", "t02", "e", "ut", "ux", "uy"];
     let k = [[[[0.0; 4]; V]; V]];
     let integrated = [true, true, true, false];
     let v2 = ((V - 1) as f64) / 2.0;
-    for i in 0..V {
-        for j in 0..V {
-            let x = i as f64 - v2;
-            let y = j as f64 - v2;
-            vs[i][j] = init(x, y);
+    for j in 0..V {
+        for i in 0..V {
+            let x = (i as f64 - v2) * dx;
+            let y = (j as f64 - v2) * dx;
+            vs[j][i] = init(x, y);
         }
     }
     let context = Context {
@@ -148,7 +152,7 @@ pub fn hydro2d<const V: usize>(
         tend,
         opt,
     };
-    let (vals, cost, tsteps) = run(context, &names, &constraints);
+    let (vals, t, cost, tsteps) = run(context, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
-    vals
+    (vals, t)
 }

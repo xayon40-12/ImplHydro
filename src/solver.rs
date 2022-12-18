@@ -52,7 +52,7 @@ pub fn run<
     mut context: Context<Opt, F, VX, VY, S>,
     names: &[&str; C],
     constraints: Constraints<F, C>,
-) -> ([[[f64; F]; VX]; VY], usize, usize) {
+) -> ([[[f64; F]; VX]; VY], f64, usize, usize) {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
     let mut tsteps = 0;
@@ -74,5 +74,5 @@ pub fn run<
         Err(e) => eprintln!("{}", e),
         Ok(()) => {}
     }
-    (context.vs, cost, tsteps)
+    (context.vs, t, cost, tsteps)
 }
