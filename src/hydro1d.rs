@@ -92,19 +92,6 @@ pub fn hydro1d() {
         tend: 5.0,
         opt: (),
     };
-    let (_vs, tot_f, tsteps) = run(context, &names, &constraints);
-    println!(
-        "tot_f: {}, tsteps: {}, ratio: {}",
-        tot_f,
-        tsteps,
-        tot_f as f64 / tsteps as f64
-    );
-    // let mut es = [(0.0, 0.0); V];
-    // let mut vxs = [(0.0, 0.0); V];
-    // for v in 0..V {
-    //     let [_t00, _t01, e, ut, ux] = constraints(vs[0][v]);
-    //     let x = (v as f32 / V as f32) * 2.0 - 1.0;
-    //     es[v] = (x, e as _);
-    //     vxs[v] = (x, (ux / ut) as _);
-    // }
+    let (_vs, cost, tsteps) = run(context, &names, &constraints);
+    println!("cost: {}, tsteps: {}", cost, tsteps);
 }

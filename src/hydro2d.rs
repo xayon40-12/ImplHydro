@@ -143,28 +143,6 @@ pub fn hydro2d(maxdt: f64, er: f64, t: f64, tend: f64, opt: Coordinate) {
         tend,
         opt,
     };
-    let (vals, _tot_f, _tsteps) = run(context, &names, &constraints);
-    // let tot_f = tot_f * (2 * 2 + 2 * 2 + 1 + 1);
-    // println!(
-    //     "tot_f: {}, tsteps: {}, ratio: {}",
-    //     tot_f,
-    //     tsteps,
-    //     tot_f as f64 / tsteps as f64
-    // );
-    // let mut es = [(0.0, 0.0); V];
-    // let mut vs = [(0.0, 0.0); V];
-    for j in 0..V {
-        for i in 0..V {
-            let [_t00, _t01, _t02, e, _ut, _ux, _uy] = constraints(vals[j][i]);
-            let y = (j as f32 / V as f32) * 2.0 - 1.0;
-            let x = (i as f32 / V as f32) * 2.0 - 1.0;
-            println!("{} {} {}", x, y, e);
-            // es[v] = (x, e as _);
-            // vs[v] = (x, ((ux * ux + uy * uy).sqrt() / ut) as _);
-        }
-        println!("");
-    }
-    // Chart::new(400, 200, -1.0, 1.0)
-    //     .lineplot(&Shape::Lines(&es))
-    //     .display();
+    let (_vals, cost, tsteps) = run(context, &names, &constraints);
+    println!("cost: {}, tsteps: {}", cost, tsteps);
 }

@@ -8,13 +8,13 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     names: &[&str; C],
     t: f64,
     dx: f64,
-    iterations: usize,
-) {
-    let mut start = format!("# t {}\n# iterations {}\n# x y", t, iterations);
+    cost: usize,
+) -> std::io::Result<()> {
+    let mut res = format!("# t {:e}\n# cost {}\n# x y", t, cost);
     for c in 0..C {
-        start = format!("{} {}", start, names[c]);
+        res = format!("{} {}", res, names[c]);
     }
-    println!("{}", start);
+    res = format!("{}\n", res);
 
     for j in 0..VY {
         for i in 0..VX {
@@ -25,10 +25,20 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
             for c in 0..C {
                 s = format!("{} {}", s, vars[c]);
             }
-            println!("{}", s);
+            s = format!("{}\n", s);
+            res = format!("{}{}", res, s);
         }
-        println!("");
+        res = format!("{}\n", res);
     }
+
+    let time = format!("{:e}", t);
+    let dir = &format!("results/{}", time);
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
+    let info = format!("time: {}\ncost: {}\n", time, cost);
+    std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
+
+    Ok(())
 }
 
 pub fn run<
@@ -44,7 +54,7 @@ pub fn run<
     constraints: Constraints<F, C>,
 ) -> ([[[f64; F]; VX]; VY], usize, usize) {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
-    let mut tot_f = 0;
+    let mut cost = 0;
     let mut tsteps = 0;
     let tend = context.tend;
     let mut t = context.t;
@@ -52,19 +62,12 @@ pub fn run<
         tsteps += 1;
         let c = fixedpoint(&mut context);
         t = context.t;
-        // let c = c * (mul as usize + 1); // *(mul+1) because newton needs mul=2*'max distance interaction'+1 for the finite difference plus 1 for the reference
-        tot_f += c;
-        // if _i % (1 + tsteps / 10) == 0 {
-        //     println!("i: {}, c: {}", _i, c);
-        // }
+        cost += c * S; // cost is per stage
     }
-    save(
-        &context.vs,
-        constraints,
-        names,
-        context.t,
-        context.dx,
-        tot_f,
-    );
-    (context.vs, tot_f, tsteps)
+    let err = save(&context.vs, constraints, names, context.t, context.dx, cost);
+    match err {
+        Err(e) => eprintln!("{}", e),
+        Ok(()) => {}
+    }
+    (context.vs, cost, tsteps)
 }
