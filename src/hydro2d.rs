@@ -15,7 +15,7 @@ fn dpde(_e: f64) -> f64 {
 
 fn constraints([t00, t01, t02, e]: [f64; 4]) -> [f64; 7] {
     let t00 = t00.max((t01 * t01 + t02 * t02).sqrt());
-    let e = e.max(1e-15).min(100.0);
+    let e = e.max(1e-100);
     let ut = ((t00 + p(e)) / (e + p(e))).sqrt().max(1.0);
     let ux = t01 / ((e + p(e)) * ut);
     let uy = t02 / ((e + p(e)) * ut);
