@@ -39,9 +39,9 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
             *k = ko;
             errs = [[true; VX]; VY];
         }
-        for f in 0..F {
-            for vy in 0..VY {
-                for vx in 0..VX {
+        for vy in 0..VY {
+            for vx in 0..VX {
+                for f in 0..F {
                     for s in 0..S {
                         if integrated[f] {
                             vdtk[s][vy][vx][f] = vs[vy][vx][f];
@@ -70,35 +70,37 @@ pub fn fixedpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, c
                         .enumerate()
                         .map(move |(vx, fsyx)| (vy, vx, fsyx))
                 })
-                .filter(|(vy, vx, _)| errs[*vy][*vx])
+                // .filter(|(vy, vx, _)| errs[*vy][*vx])
                 .for_each(|(vy, vx, fu)| {
-                    *fu = fun(
-                        [&vs, &vdtk[s]],
-                        boundary,
-                        [vx as i32, vy as i32],
-                        *dx,
-                        [ot, t],
-                        [dt, cdt],
-                        opt,
-                    );
+                    if errs[vy][vx] {
+                        *fu = fun(
+                            [&vs, &vdtk[s]],
+                            boundary,
+                            [vx as i32, vy as i32],
+                            *dx,
+                            [ot, t],
+                            [dt, cdt],
+                            opt,
+                        );
+                    }
                 });
         }
         for vy in 0..VY {
             for vx in 0..VX {
                 if errs[vy][vx] {
                     cost += S as f64;
-                }
-                errs[vy][vx] = false;
-                for s in 0..S {
-                    for f in 0..F {
-                        let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
-                        err = err.max(e);
-                        errs[vy][vx] |= e > *er;
+                    errs[vy][vx] = false;
+                    for s in 0..S {
+                        for f in 0..F {
+                            let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
+                            err = err.max(e);
+                            errs[vy][vx] |= e > *er;
+                        }
                     }
-                    k[s][vy][vx] = fu[s][vy][vx];
                 }
             }
         }
+        *k = fu;
         let mut tmperrs = [[false; VX]; VY];
         for vy in 0..VY {
             for vx in 0..VX {

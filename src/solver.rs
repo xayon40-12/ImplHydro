@@ -56,15 +56,12 @@ pub fn run<
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
     let mut tsteps = 0;
-    let tend = context.tend;
-    let mut t = context.t;
     use std::time::Instant;
     let now = Instant::now();
-    while t < tend {
+    while context.t < context.tend {
         tsteps += 1;
         let c = fixedpoint(&mut context);
-        t = context.t;
-        cost += c * S as f64; // cost is per stage
+        cost += c;
     }
     let cost = cost as usize;
     let elapsed = now.elapsed();
@@ -74,5 +71,5 @@ pub fn run<
         Err(e) => eprintln!("{}", e),
         Ok(()) => {}
     }
-    (context.vs, t, cost, tsteps)
+    (context.vs, context.t, cost, tsteps)
 }
