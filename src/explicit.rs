@@ -15,7 +15,7 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
         dx,
         maxdt,
         er,
-        t,
+        t: ot,
         tend: _,
         opt,
     }: &mut Context<Opt, F, VX, VY, S>,
@@ -25,11 +25,10 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
     let mut fu = [[[0.0f64; F]; VX]; VY];
     let mut vdtk = *vs;
 
-    let ot = *t;
+    let mut c;
+    let mut cdt = 0.0;
+    let mut t = *ot;
     for s in 0..S {
-        let c = r[s].iter().fold(0.0, |acc, r| acc + r);
-        let cdt = c * *dt;
-        let t = ot + cdt;
         fu.par_iter_mut()
             .enumerate()
             .flat_map(|(vy, fsy)| {
@@ -44,7 +43,7 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
                     [vx as i32, vy as i32],
                     *dx,
                     *er,
-                    [ot, t],
+                    [*ot, t],
                     [*dt, cdt],
                     opt,
                     ToCompute::Integrated,
@@ -63,6 +62,9 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
                 }
             }
         }
+        c = r[s].iter().fold(0.0, |acc, r| acc + r);
+        cdt = c * *dt;
+        t = *ot + cdt;
         fu.par_iter_mut()
             .enumerate()
             .flat_map(|(vy, fsy)| {
@@ -77,7 +79,7 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
                     [vx as i32, vy as i32],
                     *dx,
                     *er,
-                    [ot, t],
+                    [*ot, t],
                     [*dt, cdt],
                     opt,
                     ToCompute::NonIntegrated,
@@ -108,6 +110,6 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
             }
         }
     }
-    *t += *dt;
+    *ot += *dt;
     cost
 }
