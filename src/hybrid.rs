@@ -131,9 +131,11 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
                     errs[vy][vx] = false;
                     for s in 0..S {
                         for f in 0..F {
-                            let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
-                            err = err.max(e);
-                            errs[vy][vx] |= e > *er;
+                            if integrated[f] {
+                                let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
+                                err = err.max(e);
+                                errs[vy][vx] |= e > *er;
+                            }
                         }
                     }
                 }
