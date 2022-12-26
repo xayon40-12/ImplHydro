@@ -67,20 +67,22 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
                         .map(move |(vx, fsyx)| (vy, vx, fsyx))
                 })
                 .for_each(|(vy, vx, fu)| {
-                    let tmp = fun(
-                        [&vs, &vdtk],
-                        boundary,
-                        [vx as i32, vy as i32],
-                        *dx,
-                        *er,
-                        [*ot, t],
-                        [dt, cdt],
-                        opt,
-                        ToCompute::Integrated,
-                    );
-                    for f in 0..F {
-                        if integrated[f] {
-                            fu[f] = tmp[f];
+                    if errs[vy][vx] {
+                        let tmp = fun(
+                            [&vs, &vdtk],
+                            boundary,
+                            [vx as i32, vy as i32],
+                            *dx,
+                            *er,
+                            [*ot, t],
+                            [dt, cdt],
+                            opt,
+                            ToCompute::Integrated,
+                        );
+                        for f in 0..F {
+                            if integrated[f] {
+                                fu[f] = tmp[f];
+                            }
                         }
                     }
                 });
@@ -105,20 +107,22 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
                         .map(move |(vx, fsyx)| (vy, vx, fsyx))
                 })
                 .for_each(|(vy, vx, fu)| {
-                    let tmp = fun(
-                        [&vs, &vdtk],
-                        boundary,
-                        [vx as i32, vy as i32],
-                        *dx,
-                        *er,
-                        [*ot, t],
-                        [dt, cdt],
-                        opt,
-                        ToCompute::NonIntegrated,
-                    );
-                    for f in 0..F {
-                        if !integrated[f] {
-                            fu[f] = tmp[f];
+                    if errs[vy][vx] {
+                        let tmp = fun(
+                            [&vs, &vdtk],
+                            boundary,
+                            [vx as i32, vy as i32],
+                            *dx,
+                            *er,
+                            [*ot, t],
+                            [dt, cdt],
+                            opt,
+                            ToCompute::NonIntegrated,
+                        );
+                        for f in 0..F {
+                            if !integrated[f] {
+                                fu[f] = tmp[f];
+                            }
                         }
                     }
                 });
