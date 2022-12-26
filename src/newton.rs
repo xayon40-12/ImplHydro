@@ -53,7 +53,7 @@ pub fn newton_solver<
         vs,
         k,
         integrated,
-        r,
+        r: (a, b),
         dt,
         dx,
         maxdt,
@@ -77,7 +77,7 @@ pub fn newton_solver<
                         if integrated[f] {
                             for s1 in 0..S {
                                 vdtk[s][vy][vx][f] +=
-                                    vs[vy][vx][f] + *dt * r[s][s1] * k[s1][vy][vx][f];
+                                    vs[vy][vx][f] + *dt * a[s][s1] * k[s1][vy][vx][f];
                             }
                         } else {
                             vdtk[s][vy][vx][f] = k[s][vy][vx][f];
@@ -90,7 +90,7 @@ pub fn newton_solver<
         let mut fu = [[[[0.0; F]; VX]; VY]; S];
         for s in 0..S {
             let ot = *t;
-            let c = r[s].iter().fold(0.0, |acc, r| acc + r);
+            let c = a[s].iter().fold(0.0, |acc, r| acc + r);
             let cdt = c * *dt;
             let t = ot + cdt;
             for vy in 0..VY {
@@ -116,7 +116,7 @@ pub fn newton_solver<
         let mut count = 0;
         for s0 in 0..S {
             let ot = *t;
-            let c = r[s0].iter().fold(0.0, |acc, r| acc + r);
+            let c = a[s0].iter().fold(0.0, |acc, r| acc + r);
             let cdt = c * *dt;
             let t = ot + cdt;
             for f0 in 0..F {
@@ -124,7 +124,7 @@ pub fn newton_solver<
                     for vx0 in 0..VX {
                         let u = vdtk[s0][vy0][vx0][f0];
                         let uk = k[s0][vy0][vx0][f0];
-                        let c = r[s0][s0];
+                        let c = a[s0][s0];
                         if integrated[f0] {
                             vdtk[s0][vy0][vx0][f0] = u + *dt * c * e;
                         } else {
@@ -195,12 +195,13 @@ pub fn newton_solver<
             panic!("Nothing to do");
         }
     }
+    let b = if let Some(b) = b { *b } else { a[S - 1] };
     for f in 0..F {
         for vy in 0..VY {
             for vx in 0..VX {
                 if integrated[f] {
                     for s in 0..S {
-                        vs[vy][vx][f] += *dt * r[S - 1][s] * k[s][vy][vx][f];
+                        vs[vy][vx][f] += *dt * b[s] * k[s][vy][vx][f];
                     }
                 } else {
                     vs[vy][vx][f] = k[S - 1][vy][vx][f];

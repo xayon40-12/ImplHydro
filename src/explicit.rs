@@ -10,7 +10,7 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
         vs,
         k,
         integrated,
-        r,
+        r: (a, _),
         dt,
         dx,
         maxdt,
@@ -56,13 +56,13 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
                         vdtk[vy][vx][f] = vs[vy][vx][f];
                         k[s][vy][vx][f] = fu[vy][vx][f];
                         for s1 in 0..S {
-                            vdtk[vy][vx][f] += *dt * r[s][s1] * k[s1][vy][vx][f];
+                            vdtk[vy][vx][f] += *dt * a[s][s1] * k[s1][vy][vx][f];
                         }
                     }
                 }
             }
         }
-        c = r[s].iter().fold(0.0, |acc, r| acc + r);
+        c = a[s].iter().fold(0.0, |acc, r| acc + r);
         cdt = c * *dt;
         t = *ot + cdt;
         fu.par_iter_mut()
@@ -97,12 +97,13 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
         }
     }
 
+    let b = a[S - 1];
     for f in 0..F {
         for vy in 0..VY {
             for vx in 0..VX {
                 if integrated[f] {
                     for s in 0..S {
-                        vs[vy][vx][f] += *dt * r[S - 1][s] * k[s][vy][vx][f];
+                        vs[vy][vx][f] += *dt * b[s] * k[s][vy][vx][f];
                     }
                 } else {
                     vs[vy][vx][f] = k[S - 1][vy][vx][f];

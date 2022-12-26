@@ -2,6 +2,7 @@ pub mod context;
 pub mod diffusion;
 pub mod explicit;
 pub mod fixpoint;
+pub mod hybrid;
 pub mod hydro1d;
 pub mod hydro2d;
 pub mod kt;

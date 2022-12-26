@@ -1,6 +1,7 @@
 pub enum Integration {
     Explicit,
     FixPoint,
+    Hybrid,
     Newton,
 }
 
@@ -60,7 +61,7 @@ pub struct Context<
     pub vs: [[[f64; F]; VX]; VY],
     pub k: [[[[f64; F]; VX]; VY]; S],
     pub integrated: [bool; F],
-    pub r: [[f64; S]; S],
+    pub r: ([[f64; S]; S], Option<[f64; S]>),
     pub dt: f64,
     pub dx: f64,
     pub maxdt: f64,

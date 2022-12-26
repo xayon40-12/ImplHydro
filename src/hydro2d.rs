@@ -6,7 +6,7 @@ use crate::{
     utils::ghost,
 };
 
-fn p(e: f64) -> f64 {
+pub fn p(e: f64) -> f64 {
     e / 3.0
 }
 
@@ -137,7 +137,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     t: f64,
     tend: f64,
     dx: f64,
-    r: [[f64; S]; S],
+    r: ([[f64; S]; S], Option<[f64; S]>),
     opt: Coordinate,
     integration: Integration,
     init: impl Fn(f64, f64) -> [f64; 4],

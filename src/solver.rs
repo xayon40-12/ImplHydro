@@ -2,6 +2,7 @@ use crate::{
     context::{Context, Integration},
     explicit::explicit,
     fixpoint::fixpoint,
+    hybrid::hybrid,
     newton::newton_solver,
 };
 
@@ -69,6 +70,7 @@ pub fn run<
         let c = match integration {
             Integration::Explicit => explicit(&mut context),
             Integration::FixPoint => fixpoint(&mut context),
+            Integration::Hybrid => hybrid(&mut context),
             Integration::Newton => newton_solver(&mut context),
         };
 

@@ -94,7 +94,7 @@ pub fn hydro1d() {
         vs,
         k,
         integrated,
-        r: [[1.0]],
+        r: ([[1.0]], None),
         dt: 0.1,
         dx: 0.2,
         maxdt: 0.1,

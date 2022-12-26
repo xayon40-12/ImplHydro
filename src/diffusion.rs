@@ -52,7 +52,7 @@ pub fn diffusion() {
         vs,
         k,
         integrated,
-        r: [[1.0]],
+        r: ([[1.0]], None),
         dt: 10.0,
         dx: 0.1,
         maxdt: 0.1,
