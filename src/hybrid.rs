@@ -31,10 +31,18 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
     let mut dt = *dto;
     let mut iter = 0;
     let maxiter = 10;
+    let muldt: f64 = 1.01;
+    let divdt: f64 = 0.5;
+    let mut reset = false;
     while err > *er {
         iter += 1;
         if iter > maxiter {
-            dt *= 0.5;
+            if reset {
+                dt *= divdt;
+            } else {
+                dt /= muldt.powf(3.0);
+            }
+            reset = true;
             iter = 0;
             *k = ko;
             errs = [[true; VX]; VY];

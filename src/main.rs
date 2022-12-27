@@ -55,7 +55,6 @@ fn main() {
     // hydro1d();
     let t0 = 0.6;
     let dx = 0.1;
-    // let r = ([[1.0]], None);
     // let r = ([[5.0 / 12.0, -1.0 / 12.0], [3.0 / 4.0, 1.0 / 4.0]], None);
     // let sq3 = 3.0f64.sqrt();
     // let r = (
@@ -65,18 +64,25 @@ fn main() {
     //     ],
     //     Some([1.0 / 2.0, 1.0 / 2.0]),
     // );
+    // let r = ([[1.0]], None);
     let r = ([[0.5]], Some([1.0]));
+    const STAGES: usize = 1;
+    let dt: f64 = 0.0125;
     // let r = ([[1.0, 0.0], [0.5, 0.5]], None);
-    let (v, t) = hydro2d::<101, 1>(
-        0.05,
-        0.005,
+    // const STAGES: usize = 2;
+    // let dt: f64 = 0.0125;
+    const SIZE: usize = 101;
+    let er: f64 = (0.1 * dt / (2.0 * dx)).powf(2.0);
+    let (v, t) = hydro2d::<SIZE, STAGES>(
+        dt,
+        er,
         t0,
         t0 + 4.0,
         dx,
         r,
         Coordinate::Milne,
-        Integration::Hybrid,
         // Integration::Explicit,
+        Integration::Hybrid,
         // Integration::FixPoint,
         |x, y| {
             // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
