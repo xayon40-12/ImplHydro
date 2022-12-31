@@ -149,26 +149,33 @@ pub fn compare<const VX: usize, const VY: usize, const F: usize>(
 }
 
 pub fn converge<const VX: usize, const VY: usize, const F: usize>(
+    m: i32,
     fun: impl Fn(f64) -> [[[f64; F]; VX]; VY],
-) -> [[[f64; F]; VX]; VY] {
-    let mut dt = 0.5;
+) -> Vec<[[[f64; F]; VX]; VY]> {
+    let mut dt = 0.05;
     let mut f = fun(dt);
-    for i in 0..=12 {
+    let mut all = vec![f];
+    for i in 0..=m {
         dt *= 0.5;
         let f2 = fun(dt);
         let (ma, av) = compare(0, &f, &f2);
+        let d = 0.5f64.powi(i);
         println!(
-            "i: {:0>2}, ma: {:.3e}, av: {:.3e}, ma/dt: {:.3e}, av/dt: {:.3e}",
+            "i: {:0>2}, dt: {:.3e}, d: {:.3e}, ma: {:.3e}, av: {:.3e}, ma/d: {:.3e}, av/d: {:.3e}",
             i,
+            dt,
+            d,
             ma,
             av,
-            ma / dt,
-            av / dt
+            ma / d,
+            av / d
         );
         f = f2;
+        all.push(f2);
     }
+    println!("");
 
-    f
+    all
 }
 
 fn main() {
@@ -179,7 +186,9 @@ fn main() {
     const SIZE: usize = 101;
 
     // let (_v, _t, _maxerr, _meanerr) = impl1d1::<SIZE>(t0, dx, dt, er);
-    let _v = converge(|dt| expl1d2::<SIZE>(t0, dx, dt, dt * dt).0);
+    // let (_v, _t, _maxerr, _meanerr) = expl1d2::<SIZE>(t0, dx, dt, er);
+    let _v = converge(8, |dt| expl1d2::<SIZE>(t0, dx, dt, dt * dt).0);
+    let _v = converge(6, |dt| expl2d2::<SIZE>(t0, dx, dt, dt * dt).0);
     // let (v, t, _maxerr, _meanerr) = impl2d1::<SIZE>(t0, dx, dt, er);
     // let (v, t, _maxerr, _meanerr) = impl2d2::<SIZE>(t0, dx, dt, er);
     // let (v, t, _maxerr, _meanerr) = expl2d1::<SIZE>(t0, dx, dt, er);
