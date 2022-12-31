@@ -103,6 +103,6 @@ pub fn hydro1d() {
         tend: 5.0,
         opt: (),
     };
-    let (_vs, _t, cost, tsteps) = run(context, Integration::FixPoint, &names, &constraints);
+    let (_vs, _t, cost, tsteps) = run(context, Integration::FixPointOnly, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
 }

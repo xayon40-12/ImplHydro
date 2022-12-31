@@ -1,7 +1,7 @@
 pub enum Integration {
     Explicit,
+    FixPointOnly,
     FixPoint,
-    Hybrid,
     Newton,
 }
 

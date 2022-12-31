@@ -2,7 +2,13 @@ use rayon::prelude::*;
 
 use crate::context::{Context, ToCompute};
 
-pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
+pub fn fixpoint_only<
+    Opt: Sync,
+    const F: usize,
+    const VX: usize,
+    const VY: usize,
+    const S: usize,
+>(
     Context {
         fun,
         boundary,
@@ -15,7 +21,7 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
         dx,
         maxdt,
         er,
-        t: ot,
+        t,
         tend: _,
         opt,
     }: &mut Context<Opt, F, VX, VY, S>,
@@ -25,8 +31,8 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
     let mut err = 1.0;
     let mut cost = 0.0;
     let ko = *k;
-    let mut fu = *k;
-    let mut vdtk = [[[0.0f64; F]; VX]; VY];
+    let mut fu = [[[[0.0f64; F]; VX]; VY]; S];
+    let mut vdtk = [[[[0.0f64; F]; VX]; VY]; S];
     let mut errs = [[true; VX]; VY];
     let mut dt = *dto;
     let mut iter = 0;
@@ -47,25 +53,29 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
             *k = ko;
             errs = [[true; VX]; VY];
         }
+        for vy in 0..VY {
+            for vx in 0..VX {
+                for f in 0..F {
+                    for s in 0..S {
+                        if integrated[f] {
+                            vdtk[s][vy][vx][f] = vs[vy][vx][f];
+                            for s1 in 0..S {
+                                vdtk[s][vy][vx][f] += dt * a[s][s1] * k[s1][vy][vx][f];
+                            }
+                        } else {
+                            vdtk[s][vy][vx][f] = k[s][vy][vx][f];
+                        }
+                    }
+                }
+            }
+        }
+
         err = 0.0;
+        let ot = *t;
         for s in 0..S {
             let c = a[s].iter().fold(0.0, |acc, r| acc + r);
             let cdt = c * dt;
-            let t = *ot + cdt;
-            for vy in 0..VY {
-                for vx in 0..VX {
-                    for f in 0..F {
-                        if integrated[f] {
-                            vdtk[vy][vx][f] = vs[vy][vx][f];
-                            for s1 in 0..S {
-                                vdtk[vy][vx][f] += dt * a[s][s1] * fu[s1][vy][vx][f];
-                            }
-                        } else {
-                            vdtk[vy][vx][f] = fu[s][vy][vx][f];
-                        }
-                    }
-                }
-            }
+            let t = ot + cdt;
             fu[s]
                 .par_iter_mut()
                 .enumerate()
@@ -76,66 +86,20 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
                 })
                 .for_each(|(vy, vx, fu)| {
                     if errs[vy][vx] {
-                        let tmp = fun(
-                            [&vs, &vdtk],
+                        *fu = fun(
+                            [&vs, &vdtk[s]],
                             boundary,
                             [vx as i32, vy as i32],
                             *dx,
                             *er,
-                            [*ot, t],
+                            [ot, t],
                             [dt, cdt],
                             opt,
-                            ToCompute::Integrated,
+                            ToCompute::All,
                         );
-                        for f in 0..F {
-                            if integrated[f] {
-                                fu[f] = tmp[f];
-                            }
-                        }
-                    }
-                });
-            for vy in 0..VY {
-                for vx in 0..VX {
-                    for f in 0..F {
-                        if integrated[f] {
-                            vdtk[vy][vx][f] = vs[vy][vx][f];
-                            for s1 in 0..S {
-                                vdtk[vy][vx][f] += dt * a[s][s1] * fu[s1][vy][vx][f];
-                            }
-                        }
-                    }
-                }
-            }
-            fu[s]
-                .par_iter_mut()
-                .enumerate()
-                .flat_map(|(vy, fsy)| {
-                    fsy.par_iter_mut()
-                        .enumerate()
-                        .map(move |(vx, fsyx)| (vy, vx, fsyx))
-                })
-                .for_each(|(vy, vx, fu)| {
-                    if errs[vy][vx] {
-                        let tmp = fun(
-                            [&vs, &vdtk],
-                            boundary,
-                            [vx as i32, vy as i32],
-                            *dx,
-                            *er,
-                            [*ot, t],
-                            [dt, cdt],
-                            opt,
-                            ToCompute::NonIntegrated,
-                        );
-                        for f in 0..F {
-                            if !integrated[f] {
-                                fu[f] = tmp[f];
-                            }
-                        }
                     }
                 });
         }
-
         for vy in 0..VY {
             for vx in 0..VX {
                 if errs[vy][vx] {
@@ -143,11 +107,9 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
                     errs[vy][vx] = false;
                     for s in 0..S {
                         for f in 0..F {
-                            if integrated[f] {
-                                let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
-                                err = err.max(e);
-                                errs[vy][vx] |= e > *er;
-                            }
+                            let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
+                            err = err.max(e);
+                            errs[vy][vx] |= e > *er;
                         }
                     }
                 }
@@ -181,7 +143,7 @@ pub fn hybrid<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const
             }
         }
     }
-    *ot += dt;
-    *dto = maxdt.min(dt * 1.1);
+    *t += dt;
+    *dto = maxdt.min(dt * muldt);
     cost / (VX * VY) as f64
 }
