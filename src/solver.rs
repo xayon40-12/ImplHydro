@@ -3,7 +3,6 @@ use crate::{
     explicit::explicit,
     fixpoint::fixpoint,
     fixpoint_only::fixpoint_only,
-    newton::newton_solver,
 };
 
 pub type Constraints<'a, const F: usize, const C: usize> = &'a dyn Fn([f64; F]) -> [f64; C];
@@ -71,7 +70,6 @@ pub fn run<
             Integration::Explicit => explicit(&mut context),
             Integration::FixPointOnly => fixpoint_only(&mut context),
             Integration::FixPoint => fixpoint(&mut context),
-            Integration::Newton => newton_solver(&mut context),
         };
 
         cost += c;

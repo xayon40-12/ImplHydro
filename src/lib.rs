@@ -1,5 +1,4 @@
 pub mod context;
-pub mod diffusion;
 pub mod explicit;
 pub mod fixpoint;
 pub mod fixpoint_only;

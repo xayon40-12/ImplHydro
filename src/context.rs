@@ -2,7 +2,6 @@ pub enum Integration {
     Explicit,
     FixPointOnly,
     FixPoint,
-    Newton,
 }
 
 pub enum ToCompute {
