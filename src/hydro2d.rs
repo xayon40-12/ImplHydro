@@ -132,6 +132,7 @@ fn flux<const V: usize>(
 }
 
 pub fn hydro2d<const V: usize, const S: usize>(
+    name: &str,
     maxdt: f64,
     er: f64,
     t: f64,
@@ -173,7 +174,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         tend,
         opt,
     };
-    let (vals, t, cost, tsteps) = run(context, integration, &names, &constraints);
+    let (vs, t, cost, tsteps) = run(context, name, integration, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
-    (vals, t)
+    (vs, t)
 }

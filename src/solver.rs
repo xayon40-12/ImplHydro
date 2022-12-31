@@ -11,6 +11,7 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     v: &[[[f64; F]; VX]; VY],
     constraints: Constraints<F, C>,
     names: &[&str; C],
+    name: &str, // simulation name
     t: f64,
     dx: f64,
     cost: usize,
@@ -37,7 +38,7 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     }
 
     let time = format!("{:e}", t);
-    let dir = &format!("results/{}", time);
+    let dir = &format!("results/{}/{}", name, time);
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!("time: {}\ncost: {}\n", time, cost);
@@ -55,6 +56,7 @@ pub fn run<
     const S: usize,
 >(
     mut context: Context<Opt, F, VX, VY, S>,
+    name: &str,
     integration: Integration,
     names: &[&str; C],
     constraints: Constraints<F, C>,
@@ -77,7 +79,15 @@ pub fn run<
     let cost = cost as usize;
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
-    let err = save(&context.vs, constraints, names, context.t, context.dx, cost);
+    let err = save(
+        &context.vs,
+        constraints,
+        names,
+        name,
+        context.t,
+        context.dx,
+        cost,
+    );
     match err {
         Err(e) => eprintln!("{}", e),
         Ok(()) => {}

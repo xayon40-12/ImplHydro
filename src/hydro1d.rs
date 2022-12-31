@@ -16,7 +16,7 @@ fn dpde(_e: f64) -> f64 {
 
 fn constraints([t00, t01, e]: [f64; 3]) -> [f64; 5] {
     let t00 = t00.max(t01.abs());
-    let e = e.max(1e-15).min(100.0);
+    let e = e.max(1e-100);
     let ut = ((t00 + p(e)) / (e + p(e))).sqrt().max(1.0);
     let ux = t01 / ((e + p(e)) * ut);
     let ut = (1.0 + ux * ux).sqrt();
@@ -31,7 +31,10 @@ fn eigenvalues([_t00, _t01, e, ut, ux]: [f64; 5]) -> f64 {
     (a.abs() + b.sqrt()) / d
 }
 
-fn f01([_, _, e, ut, ux]: [f64; 5]) -> f64 {
+pub fn f00([_, _, e, ut, _]: [f64; 5]) -> f64 {
+    (e + p(e)) * ut * ut - p(e)
+}
+pub fn f01([_, _, e, ut, ux]: [f64; 5]) -> f64 {
     (e + p(e)) * ut * ux
 }
 fn f11([_, _, e, _, ux]: [f64; 5]) -> f64 {
@@ -77,15 +80,28 @@ fn flux<const V: usize>(
     [rt0[0], rt0[1], re]
 }
 
-pub fn hydro1d() {
-    const V: usize = 50;
+pub fn hydro1d<const V: usize, const S: usize>(
+    name: &str,
+    maxdt: f64,
+    er: f64,
+    t: f64,
+    tend: f64,
+    dx: f64,
+    r: ([[f64; S]; S], Option<[f64; S]>),
+    integration: Integration,
+    init: impl Fn(f64) -> [f64; 3],
+) -> ([[[f64; 3]; V]; 1], f64) {
     let mut vs = [[[0.0; 3]; V]];
     let names = ["t00", "t01", "e", "ut", "ux"];
-    let k = [[[[0.0; 3]; V]]];
+    let mut k = [[[[0.0; 3]; V]]; S];
     let integrated = [true, true, false];
+    let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {
-        let e = if i == V / 2 { 10.0 } else { 1.0 };
-        vs[0][i] = [e, 0.0, e];
+        let x = (i as f64 - v2) * dx;
+        vs[0][i] = init(x);
+        for s in 0..S {
+            k[s][0][i][2] = vs[0][i][2];
+        }
     }
     let context = Context {
         fun: &flux,
@@ -94,15 +110,16 @@ pub fn hydro1d() {
         vs,
         k,
         integrated,
-        r: ([[1.0]], None),
-        dt: 0.1,
-        dx: 0.2,
-        maxdt: 0.1,
-        er: 1e-5,
-        t: 0.0,
-        tend: 5.0,
+        r,
+        dt: 1e10,
+        dx,
+        maxdt,
+        er,
+        t,
+        tend,
         opt: (),
     };
-    let (_vs, _t, cost, tsteps) = run(context, Integration::FixPointOnly, &names, &constraints);
+    let (vs, t, cost, tsteps) = run(context, name, integration, &names, &constraints);
     println!("cost: {}, tsteps: {}", cost, tsteps);
+    (vs, t)
 }
