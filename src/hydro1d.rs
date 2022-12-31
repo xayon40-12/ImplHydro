@@ -90,7 +90,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
     r: ([[f64; S]; S], Option<[f64; S]>),
     integration: Integration,
     init: impl Fn(f64) -> [f64; 3],
-) -> ([[[f64; 3]; V]; 1], f64) {
+) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
     let mut vs = [[[0.0; 3]; V]];
     let names = ["t00", "t01", "e", "ut", "ux"];
     let mut k = [[[[0.0; 3]; V]]; S];
@@ -119,7 +119,5 @@ pub fn hydro1d<const V: usize, const S: usize>(
         tend,
         opt: (),
     };
-    let (vs, t, cost, tsteps) = run(context, name, integration, &names, &constraints);
-    println!("cost: {}, tsteps: {}", cost, tsteps);
-    (vs, t)
+    run(context, name, integration, &names, &constraints)
 }

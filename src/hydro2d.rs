@@ -142,7 +142,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     opt: Coordinate,
     integration: Integration,
     init: impl Fn(f64, f64) -> [f64; 4],
-) -> ([[[f64; 4]; V]; V], f64) {
+) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
     let mut vs = [[[0.0; 4]; V]; V];
     let names = ["t00", "t01", "t02", "e", "ut", "ux", "uy"];
     let mut k = [[[[0.0; 4]; V]; V]; S];
@@ -174,7 +174,5 @@ pub fn hydro2d<const V: usize, const S: usize>(
         tend,
         opt,
     };
-    let (vs, t, cost, tsteps) = run(context, name, integration, &names, &constraints);
-    println!("cost: {}, tsteps: {}", cost, tsteps);
-    (vs, t)
+    run(context, name, integration, &names, &constraints)
 }

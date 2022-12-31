@@ -8,5 +8,6 @@ pub mod hydro2d;
 pub mod kt;
 pub mod newton;
 pub mod riemann;
+pub mod schemes;
 pub mod solver;
 pub mod utils;

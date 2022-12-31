@@ -1,14 +1,19 @@
 use implicit_newton::{
-    context::Integration,
+    context::Integration::*,
     gubser::{gubser_err, init_gubser},
     hydro1d::hydro1d,
-    hydro2d::{hydro2d, Coordinate},
+    hydro2d::{hydro2d, Coordinate::Milne},
     riemann::init_riemann,
+    schemes::*,
 };
 
-pub fn impl1d1<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 3]; V]; 1], f64) {
-    // let r = ([[1.0]], None);
-    let r = ([[0.5]], Some([1.0]));
+pub fn impl1d1<const V: usize>(
+    t0: f64,
+    dx: f64,
+    dt: f64,
+    er: f64,
+) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
+    let r = gauss_legendre_1();
     hydro1d::<V, 1>(
         "impl1d1",
         dt,
@@ -17,12 +22,17 @@ pub fn impl1d1<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 3
         t0 + 4.0,
         dx,
         r,
-        Integration::FixPoint,
+        FixPoint,
         init_riemann(),
     )
 }
-pub fn expl1d2<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 3]; V]; 1], f64) {
-    let r = ([[1.0, 0.0], [0.5, 0.5]], None);
+pub fn expl1d2<const V: usize>(
+    t0: f64,
+    dx: f64,
+    dt: f64,
+    er: f64,
+) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
+    let r = heun();
     hydro1d::<V, 2>(
         "expl1d2",
         dt,
@@ -31,13 +41,18 @@ pub fn expl1d2<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 3
         t0 + 4.0,
         dx,
         r,
-        Integration::Explicit,
+        Explicit,
         init_riemann(),
     )
 }
-pub fn impl2d1<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 4]; V]; V], f64) {
+pub fn impl2d1<const V: usize>(
+    t0: f64,
+    dx: f64,
+    dt: f64,
+    er: f64,
+) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
     // let r = ([[1.0]], None);
-    let r = ([[0.5]], Some([1.0]));
+    let r = gauss_legendre_1();
     hydro2d::<V, 1>(
         "impl2d1",
         dt,
@@ -46,21 +61,18 @@ pub fn impl2d1<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 4
         t0 + 4.0,
         dx,
         r,
-        Coordinate::Milne,
-        Integration::FixPoint,
+        Milne,
+        FixPoint,
         init_gubser(t0),
     )
 }
-pub fn impl2d2<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 4]; V]; V], f64) {
-    // let r = ([[5.0 / 12.0, -1.0 / 12.0], [3.0 / 4.0, 1.0 / 4.0]], None);
-    let sq3 = 3.0f64.sqrt();
-    let r = (
-        [
-            [1.0 / 4.0, 1.0 / 4.0 - 1.0 / 6.0 * sq3],
-            [1.0 / 4.0 + 1.0 / 6.0 * sq3, 1.0 / 4.0],
-        ],
-        Some([1.0 / 2.0, 1.0 / 2.0]),
-    );
+pub fn impl2d2<const V: usize>(
+    t0: f64,
+    dx: f64,
+    dt: f64,
+    er: f64,
+) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
+    let r = gauss_legendre_2();
     hydro2d::<V, 2>(
         "impl2d2",
         dt,
@@ -69,13 +81,18 @@ pub fn impl2d2<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 4
         t0 + 4.0,
         dx,
         r,
-        Coordinate::Milne,
-        Integration::FixPoint,
+        Milne,
+        FixPoint,
         init_gubser(t0),
     )
 }
-pub fn expl2d1<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 4]; V]; V], f64) {
-    let r = ([[1.0]], None);
+pub fn expl2d1<const V: usize>(
+    t0: f64,
+    dx: f64,
+    dt: f64,
+    er: f64,
+) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
+    let r = euler();
     hydro2d::<V, 1>(
         "expl2d1",
         dt,
@@ -84,13 +101,18 @@ pub fn expl2d1<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 4
         t0 + 4.0,
         dx,
         r,
-        Coordinate::Milne,
-        Integration::Explicit,
+        Milne,
+        Explicit,
         init_gubser(t0),
     )
 }
-pub fn expl2d2<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 4]; V]; V], f64) {
-    let r = ([[1.0, 0.0], [0.5, 0.5]], None);
+pub fn expl2d2<const V: usize>(
+    t0: f64,
+    dx: f64,
+    dt: f64,
+    er: f64,
+) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
+    let r = heun();
     hydro2d::<V, 2>(
         "expl2d2",
         dt,
@@ -99,25 +121,69 @@ pub fn expl2d2<const V: usize>(t0: f64, dx: f64, dt: f64, er: f64) -> ([[[f64; 4
         t0 + 4.0,
         dx,
         r,
-        Coordinate::Milne,
-        Integration::Explicit,
+        Milne,
+        Explicit,
         init_gubser(t0),
     )
+}
+
+pub fn compare<const VX: usize, const VY: usize, const F: usize>(
+    f: usize,
+    v1: &[[[f64; F]; VX]; VY],
+    v2: &[[[f64; F]; VX]; VY],
+) -> (f64, f64) {
+    let mut average: f64 = 0.0;
+    let mut maximum: f64 = 0.0;
+    for j in 0..VY {
+        for i in 0..VX {
+            let v1 = v1[j][i][f];
+            let v2 = v2[j][i][f];
+            let d = (v1 - v2).abs() / v1.abs().max(v2.abs());
+            average += d;
+            maximum = maximum.max(d);
+        }
+    }
+    average /= (VX * VY) as f64;
+
+    (maximum, average)
+}
+
+pub fn converge<const VX: usize, const VY: usize, const F: usize>(
+    fun: impl Fn(f64) -> [[[f64; F]; VX]; VY],
+) -> [[[f64; F]; VX]; VY] {
+    let mut dt = 0.5;
+    let mut f = fun(dt);
+    for i in 0..=12 {
+        dt *= 0.5;
+        let f2 = fun(dt);
+        let (ma, av) = compare(0, &f, &f2);
+        println!(
+            "i: {:0>2}, ma: {:.3e}, av: {:.3e}, ma/dt: {:.3e}, av/dt: {:.3e}",
+            i,
+            ma,
+            av,
+            ma / dt,
+            av / dt
+        );
+        f = f2;
+    }
+
+    f
 }
 
 fn main() {
     let t0 = 0.6;
     let dx = 0.1;
     let dt: f64 = 0.0125;
-    let er: f64 = (0.1 * dt / (2.0 * dx)).powf(2.0);
+    let er: f64 = dt * dt;
     const SIZE: usize = 101;
 
-    // let (_v, _t) = impl1d1::<SIZE>(t0, dx, dt, er);
-    let (_v, _t) = expl1d2::<SIZE>(t0, dx, dt, er);
-    // let (v, t) = impl2d1::<SIZE>(t0, dx, dt, er);
-    // let (v, t) = impl2d2::<SIZE>(t0, dx, dt, er);
-    // let (v, t) = expl2d1::<SIZE>(t0, dx, dt, er);
-    let (v, t) = expl2d2::<SIZE>(t0, dx, dt, er);
+    // let (_v, _t, _maxerr, _meanerr) = impl1d1::<SIZE>(t0, dx, dt, er);
+    let _v = converge(|dt| expl1d2::<SIZE>(t0, dx, dt, dt * dt).0);
+    // let (v, t, _maxerr, _meanerr) = impl2d1::<SIZE>(t0, dx, dt, er);
+    // let (v, t, _maxerr, _meanerr) = impl2d2::<SIZE>(t0, dx, dt, er);
+    // let (v, t, _maxerr, _meanerr) = expl2d1::<SIZE>(t0, dx, dt, er);
+    let (v, t, _maxerr, _meanerr) = expl2d2::<SIZE>(t0, dx, dt, er);
     let [maxerr, meanerr, maxerrt00, meanerrt00] = gubser_err(v, t, dx);
     println!(
         "|gubser |    e      t00   |\n|-------|-----------------|\n|maxerr | {:.5} {:.5} |\n|meanerr| {:.5} {:.5} |\n",
