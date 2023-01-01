@@ -1,10 +1,9 @@
 use implicit_newton::{
     hydro::{
-        dpde,
         gubser::{gubser_err, init_gubser},
         hydro1d,
         hydro2d::{self, Coordinate::Milne},
-        p,
+        ideal_gas,
         riemann::init_riemann,
         Pressure,
     },
@@ -32,6 +31,8 @@ pub fn hydro1d<'a, const V: usize, const S: usize>(
             dx,
             r,
             explimpl,
+            &p,
+            &dpde,
             init_riemann(&p, &dpde),
         )
     })
@@ -55,6 +56,8 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
             r,
             Milne,
             explimpl,
+            &p,
+            &dpde,
             init_gubser(t0, &p, &dpde),
         )
     })
@@ -117,14 +120,14 @@ fn main() {
     let dt: f64 = 0.0125;
     let er: f64 = dt * dt;
     const SIZE: usize = 101;
-    let p = &p;
-    let dpde = &dpde;
+    let p = &ideal_gas::p;
+    let dpde = &ideal_gas::dpde;
     // let hydro1d1 = hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
     // let hydro1d2 = hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
     // let hydro2d1 = hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
     let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
 
-    let _v = converge(8, |dt| {
+    let _v = converge(4, |dt| {
         hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
     });
 

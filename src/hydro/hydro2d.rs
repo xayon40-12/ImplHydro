@@ -7,19 +7,24 @@ use crate::solver::{
     Constraints,
 };
 
-use super::{dpde, p, solve_v};
+use super::{solve_v, Pressure};
 
-fn constraints([t00, t01, t02, v]: [f64; 4]) -> [f64; 10] {
-    let m = (t01 * t01 + t02 * t02).sqrt();
-    let t00 = t00.max(m);
-    let e = (t00 - m * v).max(1e-100);
-    let pe = p(e);
-    let v = v.max(0.0).min(1.0);
-    let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
-    let ux = t01 / ((e + pe) * ut);
-    let uy = t02 / ((e + pe) * ut);
-    let ut = (1.0 + ux * ux + uy * uy).sqrt();
-    [t00, t01, t02, v, e, pe, dpde(e), ut, ux, uy]
+fn gen_constraints<'a>(
+    p: Pressure<'a>,
+    dpde: Pressure<'a>,
+) -> Box<dyn Fn([f64; 4]) -> [f64; 10] + 'a + Sync> {
+    Box::new(|[t00, t01, t02, v]| {
+        let m = (t01 * t01 + t02 * t02).sqrt();
+        let t00 = t00.max(m);
+        let e = (t00 - m * v).max(1e-100);
+        let pe = p(e);
+        let v = v.max(0.0).min(1.0);
+        let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
+        let ux = t01 / ((e + pe) * ut);
+        let uy = t02 / ((e + pe) * ut);
+        let ut = (1.0 + ux * ux + uy * uy).sqrt();
+        [t00, t01, t02, v, e, pe, dpde(e), ut, ux, uy]
+    })
 }
 
 fn eigenvaluesx([_t00, _t01, _t02, _v, _e, _pe, dpde, ut, ux, _uy]: [f64; 10]) -> f64 {
@@ -141,6 +146,8 @@ pub fn hydro2d<const V: usize, const S: usize>(
     r: ([[f64; S]; S], Option<[f64; S]>),
     opt: Coordinate,
     integration: Integration,
+    p: Pressure,
+    dpde: Pressure,
     init: impl Fn(f64, f64) -> [f64; 4],
 ) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
     let mut vs = [[[0.0; 4]; V]; V];
@@ -160,6 +167,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
             }
         }
     }
+    let constraints = gen_constraints(&p, &dpde);
     let context = Context {
         fun: &flux,
         constraints: &constraints,

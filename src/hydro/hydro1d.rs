@@ -7,18 +7,23 @@ use crate::solver::{
     Constraints,
 };
 
-use super::{dpde, p, solve_v};
+use super::{solve_v, Pressure};
 
-fn constraints([t00, t01, v]: [f64; 3]) -> [f64; 8] {
-    let m = t01.abs();
-    let t00 = t00.max(m);
-    let e = (t00 - m * v).max(1e-100);
-    let pe = p(e);
-    let v = v.max(0.0).min(1.0);
-    let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
-    let ux = t01 / ((e + pe) * ut);
-    let ut = (1.0 + ux * ux).sqrt();
-    [t00, t01, v, e, pe, dpde(e), ut, ux]
+fn gen_constraints<'a>(
+    p: Pressure<'a>,
+    dpde: Pressure<'a>,
+) -> Box<dyn Fn([f64; 3]) -> [f64; 8] + 'a + Sync> {
+    Box::new(move |[t00, t01, v]| {
+        let m = t01.abs();
+        let t00 = t00.max(m);
+        let e = (t00 - m * v).max(1e-100);
+        let pe = p(e);
+        let v = v.max(0.0).min(1.0);
+        let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
+        let ux = t01 / ((e + pe) * ut);
+        let ut = (1.0 + ux * ux).sqrt();
+        [t00, t01, v, e, pe, dpde(e), ut, ux]
+    })
 }
 
 fn eigenvalues([_t00, _t01, _, _e, _pe, dpde, ut, ux]: [f64; 8]) -> f64 {
@@ -51,7 +56,7 @@ fn flux<const V: usize>(
     _opt: &(),
     tocomp: ToCompute,
 ) -> [f64; 3] {
-    let [t00, t01, v, e, pe, _dpde, _ut, _ux] = constraints(vs[0][bound[0](pos[0], V)]);
+    let [t00, t01, v, _e, _pe, _dpde, _ut, _ux] = constraints(vs[0][bound[0](pos[0], V)]);
     let rt0 = if tocomp.integrated() || tocomp.all() {
         let theta = 1.5;
 
@@ -90,6 +95,8 @@ pub fn hydro1d<const V: usize, const S: usize>(
     dx: f64,
     r: ([[f64; S]; S], Option<[f64; S]>),
     integration: Integration,
+    p: Pressure,
+    dpde: Pressure,
     init: impl Fn(f64) -> [f64; 3],
 ) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
     let mut vs = [[[0.0; 3]; V]];
@@ -104,6 +111,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
             k[s][0][i][2] = vs[0][i][2];
         }
     }
+    let constraints = gen_constraints(&p, &dpde);
     let context = Context {
         fun: &flux,
         constraints: &constraints,

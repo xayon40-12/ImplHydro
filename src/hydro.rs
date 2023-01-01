@@ -3,15 +3,18 @@ pub mod hydro1d;
 pub mod hydro2d;
 pub mod riemann;
 
-pub type Pressure<'a> = &'a dyn Fn(f64) -> f64;
+pub type Pressure<'a> = &'a (dyn Fn(f64) -> f64 + Sync);
 
-pub fn p(e: f64) -> f64 {
-    e / 3.0
-}
+pub mod ideal_gas {
+    pub fn p(e: f64) -> f64 {
+        e / 3.0
+    }
 
-pub fn dpde(_e: f64) -> f64 {
-    1.0 / 3.0
+    pub fn dpde(_e: f64) -> f64 {
+        1.0 / 3.0
+    }
 }
+use ideal_gas::p;
 
 pub fn solve_v(t00: f64, m: f64) -> Box<dyn Fn(f64) -> f64> {
     Box::new(move |v| {
