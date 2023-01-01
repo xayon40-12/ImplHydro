@@ -1,13 +1,2 @@
-pub mod context;
-pub mod explicit;
-pub mod fixpoint;
-pub mod fixpoint_only;
-pub mod gubser;
-pub mod hydro1d;
-pub mod hydro2d;
-pub mod kt;
-pub mod newton;
-pub mod riemann;
-pub mod schemes;
+pub mod hydro;
 pub mod solver;
-pub mod utils;

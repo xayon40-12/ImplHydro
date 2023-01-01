@@ -1,3 +1,6 @@
+use super::Constraints;
+
+#[derive(Debug)]
 pub enum Integration {
     Explicit,
     FixPointOnly,
@@ -32,29 +35,33 @@ impl ToCompute {
 }
 
 pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
-pub type Fun<'a, Opt, const F: usize, const VX: usize, const VY: usize> = &'a (dyn Fn(
-    [&[[[f64; F]; VX]; VY]; 2],
-    &[Boundary; 2],
-    [i32; 2], // position in index
-    f64,      // dx
-    f64,      // er
-    [f64; 2], // [old t, current t]
-    [f64; 2], // [dt, current dt]
-    &Opt,
-    ToCompute,
-) -> [f64; F]
-         + Sync);
+pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY: usize> =
+    &'a (dyn Fn(
+        [&[[[f64; F]; VX]; VY]; 2],
+        Constraints<F, C>,
+        &[Boundary; 2],
+        [i32; 2], // position in index
+        f64,      // dx
+        f64,      // er
+        [f64; 2], // [old t, current t]
+        [f64; 2], // [dt, current dt]
+        &Opt,
+        ToCompute,
+    ) -> [f64; F]
+             + Sync);
 
 pub struct Context<
     'a,
     'b,
     Opt: Sync,
     const F: usize,
+    const C: usize,
     const VX: usize,
     const VY: usize,
     const S: usize,
 > {
-    pub fun: Fun<'a, Opt, F, VX, VY>,
+    pub fun: Fun<'a, Opt, F, C, VX, VY>,
+    pub constraints: Constraints<'a, F, C>,
     pub boundary: &'b [Boundary<'b>; 2],
     pub local_interaction: [i32; 2],
     pub vs: [[[f64; F]; VX]; VY],

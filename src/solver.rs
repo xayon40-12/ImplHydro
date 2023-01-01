@@ -1,11 +1,21 @@
-use crate::{
+pub mod context;
+pub mod explicit;
+pub mod fixpoint;
+pub mod fixpoint_only;
+pub mod kt;
+pub mod newton;
+pub mod schemes;
+pub mod utils;
+
+use {
     context::{Context, Integration},
     explicit::explicit,
     fixpoint::fixpoint,
     fixpoint_only::fixpoint_only,
 };
 
-pub type Constraints<'a, const F: usize, const C: usize> = &'a dyn Fn([f64; F]) -> [f64; C];
+pub type Constraints<'a, const F: usize, const C: usize> =
+    &'a (dyn Fn([f64; F]) -> [f64; C] + Sync);
 
 pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     v: &[[[f64; F]; VX]; VY],
@@ -55,7 +65,7 @@ pub fn run<
     const VY: usize,
     const S: usize,
 >(
-    mut context: Context<Opt, F, VX, VY, S>,
+    mut context: Context<Opt, F, C, VX, VY, S>,
     name: &str,
     integration: Integration,
     names: &[&str; C],

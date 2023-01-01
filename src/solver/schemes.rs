@@ -1,16 +1,18 @@
-pub fn euler() -> ([[f64; 1]; 1], Option<[f64; 1]>) {
+pub type Scheme<const S: usize> = ([[f64; S]; S], Option<[f64; S]>);
+
+pub fn euler() -> Scheme<1> {
     ([[1.0]], None)
 }
-pub fn heun() -> ([[f64; 2]; 2], Option<[f64; 2]>) {
+pub fn heun() -> Scheme<2> {
     ([[1.0, 0.0], [0.5, 0.5]], None)
 }
-pub fn radauiia2() -> ([[f64; 2]; 2], Option<[f64; 2]>) {
+pub fn radauiia2() -> Scheme<2> {
     ([[5.0 / 12.0, -1.0 / 12.0], [3.0 / 4.0, 1.0 / 4.0]], None)
 }
-pub fn gauss_legendre_1() -> ([[f64; 1]; 1], Option<[f64; 1]>) {
+pub fn gauss_legendre_1() -> Scheme<1> {
     ([[0.5]], Some([1.0]))
 }
-pub fn gauss_legendre_2() -> ([[f64; 2]; 2], Option<[f64; 2]>) {
+pub fn gauss_legendre_2() -> Scheme<2> {
     let sq3 = 3.0f64.sqrt();
     (
         [

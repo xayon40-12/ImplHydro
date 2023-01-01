@@ -1,10 +1,18 @@
 use rayon::prelude::*;
 
-use crate::context::{Context, ToCompute};
+use crate::solver::context::{Context, ToCompute};
 
-pub fn fixpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
+pub fn fixpoint<
+    Opt: Sync,
+    const F: usize,
+    const C: usize,
+    const VX: usize,
+    const VY: usize,
+    const S: usize,
+>(
     Context {
         fun,
+        constraints,
         boundary,
         local_interaction,
         vs,
@@ -18,7 +26,7 @@ pub fn fixpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
         t: ot,
         tend: _,
         opt,
-    }: &mut Context<Opt, F, VX, VY, S>,
+    }: &mut Context<Opt, F, C, VX, VY, S>,
 ) -> f64 {
     *dto = maxdt.min(*dto);
     let [sizex, sizey] = *local_interaction;
@@ -78,6 +86,7 @@ pub fn fixpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
                     if errs[vy][vx] {
                         let tmp = fun(
                             [&vs, &vdtk],
+                            constraints,
                             boundary,
                             [vx as i32, vy as i32],
                             *dx,
@@ -118,6 +127,7 @@ pub fn fixpoint<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
                     if errs[vy][vx] {
                         let tmp = fun(
                             [&vs, &vdtk],
+                            constraints,
                             boundary,
                             [vx as i32, vy as i32],
                             *dx,

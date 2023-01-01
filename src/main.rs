@@ -1,130 +1,63 @@
 use implicit_newton::{
-    context::Integration::*,
-    gubser::{gubser_err, init_gubser},
-    hydro1d::hydro1d,
-    hydro2d::{hydro2d, Coordinate::Milne},
-    riemann::init_riemann,
-    schemes::*,
+    hydro::{
+        dpde,
+        gubser::{gubser_err, init_gubser},
+        hydro1d,
+        hydro2d::{self, Coordinate::Milne},
+        p,
+        riemann::init_riemann,
+        Pressure,
+    },
+    solver::{
+        context::Integration::{self, *},
+        schemes::*,
+    },
 };
 
-pub fn impl1d1<const V: usize>(
+pub fn hydro1d<'a, const V: usize, const S: usize>(
     t0: f64,
     dx: f64,
     dt: f64,
     er: f64,
-) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
-    let r = gauss_legendre_1();
-    hydro1d::<V, 1>(
-        "impl1d1",
-        dt,
-        er,
-        t0,
-        t0 + 4.0,
-        dx,
-        r,
-        FixPoint,
-        init_riemann(),
-    )
+    p: Pressure<'a>,
+    dpde: Pressure<'a>,
+) -> Box<dyn Fn(Integration, Scheme<S>) -> ([[[f64; 3]; V]; 1], f64, usize, usize) + 'a> {
+    Box::new(move |explimpl, r| {
+        hydro1d::hydro1d::<V, S>(
+            &format!("{:?}1d{}_{:e}", explimpl, S, dt),
+            dt,
+            er,
+            t0,
+            t0 + 4.0,
+            dx,
+            r,
+            explimpl,
+            init_riemann(&p, &dpde),
+        )
+    })
 }
-pub fn expl1d2<const V: usize>(
+pub fn hydro2d<'a, const V: usize, const S: usize>(
     t0: f64,
     dx: f64,
     dt: f64,
     er: f64,
-) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
-    let r = heun();
-    hydro1d::<V, 2>(
-        "expl1d2",
-        dt,
-        er,
-        t0,
-        t0 + 4.0,
-        dx,
-        r,
-        Explicit,
-        init_riemann(),
-    )
-}
-pub fn impl2d1<const V: usize>(
-    t0: f64,
-    dx: f64,
-    dt: f64,
-    er: f64,
-) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
-    // let r = ([[1.0]], None);
-    let r = gauss_legendre_1();
-    hydro2d::<V, 1>(
-        "impl2d1",
-        dt,
-        er,
-        t0,
-        t0 + 4.0,
-        dx,
-        r,
-        Milne,
-        FixPoint,
-        init_gubser(t0),
-    )
-}
-pub fn impl2d2<const V: usize>(
-    t0: f64,
-    dx: f64,
-    dt: f64,
-    er: f64,
-) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
-    let r = gauss_legendre_2();
-    hydro2d::<V, 2>(
-        "impl2d2",
-        dt,
-        er,
-        t0,
-        t0 + 4.0,
-        dx,
-        r,
-        Milne,
-        FixPoint,
-        init_gubser(t0),
-    )
-}
-pub fn expl2d1<const V: usize>(
-    t0: f64,
-    dx: f64,
-    dt: f64,
-    er: f64,
-) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
-    let r = euler();
-    hydro2d::<V, 1>(
-        "expl2d1",
-        dt,
-        er,
-        t0,
-        t0 + 4.0,
-        dx,
-        r,
-        Milne,
-        Explicit,
-        init_gubser(t0),
-    )
-}
-pub fn expl2d2<const V: usize>(
-    t0: f64,
-    dx: f64,
-    dt: f64,
-    er: f64,
-) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
-    let r = heun();
-    hydro2d::<V, 2>(
-        "expl2d2",
-        dt,
-        er,
-        t0,
-        t0 + 4.0,
-        dx,
-        r,
-        Milne,
-        Explicit,
-        init_gubser(t0),
-    )
+    p: Pressure<'a>,
+    dpde: Pressure<'a>,
+) -> Box<dyn Fn(Integration, Scheme<S>) -> ([[[f64; 4]; V]; V], f64, usize, usize) + 'a> {
+    Box::new(move |explimpl, r| {
+        hydro2d::hydro2d::<V, S>(
+            &format!("{:?}2d{}_{:e}", explimpl, S, dt),
+            dt,
+            er,
+            t0,
+            t0 + 4.0,
+            dx,
+            r,
+            Milne,
+            explimpl,
+            init_gubser(t0, &p, &dpde),
+        )
+    })
 }
 
 pub fn compare<const VX: usize, const VY: usize, const F: usize>(
@@ -184,18 +117,24 @@ fn main() {
     let dt: f64 = 0.0125;
     let er: f64 = dt * dt;
     const SIZE: usize = 101;
+    let p = &p;
+    let dpde = &dpde;
+    // let hydro1d1 = hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
+    // let hydro1d2 = hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
+    // let hydro2d1 = hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
+    let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
 
-    // let (_v, _t, _maxerr, _meanerr) = impl1d1::<SIZE>(t0, dx, dt, er);
-    // let (_v, _t, _maxerr, _meanerr) = expl1d2::<SIZE>(t0, dx, dt, er);
-    let _v = converge(8, |dt| expl1d2::<SIZE>(t0, dx, dt, dt * dt).0);
-    let _v = converge(6, |dt| expl2d2::<SIZE>(t0, dx, dt, dt * dt).0);
-    // let (v, t, _maxerr, _meanerr) = impl2d1::<SIZE>(t0, dx, dt, er);
-    // let (v, t, _maxerr, _meanerr) = impl2d2::<SIZE>(t0, dx, dt, er);
-    // let (v, t, _maxerr, _meanerr) = expl2d1::<SIZE>(t0, dx, dt, er);
-    let (v, t, _maxerr, _meanerr) = expl2d2::<SIZE>(t0, dx, dt, er);
-    let [maxerr, meanerr, maxerrt00, meanerrt00] = gubser_err(v, t, dx);
+    let _v = converge(8, |dt| {
+        hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
+    });
+
+    // let (v, t, _maxerr, _meanerr) = hydro2d1(Explicit, euler());
+    // let (v, t, _maxerr, _meanerr) = hydro2d1(FixPoint, gauss_legendre_1());
+    let (v, t, _maxerr, _meanerr) = hydro2d2(Explicit, heun());
+    // let (v, t, _maxerr, _meanerr) = hydro2d2(FixPoint, gauss_legendre_2());
+    let [maxerrt00, meanerrt00] = gubser_err(v, t, dx, p);
     println!(
-        "|gubser |    e      t00   |\n|-------|-----------------|\n|maxerr | {:.5} {:.5} |\n|meanerr| {:.5} {:.5} |\n",
-        maxerr, maxerrt00, meanerr, meanerrt00
+        "|gubser |   t00   |\n|-------|---------|\n|maxerr | {:.5} |\n|meanerr| {:.5} |\n",
+        maxerrt00, meanerrt00
     );
 }

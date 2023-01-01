@@ -1,7 +1,8 @@
-use crate::{context::Boundary, utils::flux_limiter};
+use crate::solver::{context::Boundary, utils::flux_limiter};
+
+use super::Constraints;
 
 type Flux<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
-type Constraints<'a, const F: usize, const C: usize> = &'a dyn Fn([f64; F]) -> [f64; C];
 type Eigenvalues<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
 
 pub enum Dir {

@@ -1,10 +1,18 @@
 use rayon::prelude::*;
 
-use crate::context::{Context, ToCompute};
+use crate::solver::context::{Context, ToCompute};
 
-pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, const S: usize>(
+pub fn explicit<
+    Opt: Sync,
+    const F: usize,
+    const C: usize,
+    const VX: usize,
+    const VY: usize,
+    const S: usize,
+>(
     Context {
         fun,
+        constraints,
         boundary,
         local_interaction: _,
         vs,
@@ -18,7 +26,7 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
         t: ot,
         tend: _,
         opt,
-    }: &mut Context<Opt, F, VX, VY, S>,
+    }: &mut Context<Opt, F, C, VX, VY, S>,
 ) -> f64 {
     *dt = maxdt.min(*dt);
     let cost = S as f64;
@@ -39,6 +47,7 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
             .for_each(|(vy, vx, fu)| {
                 *fu = fun(
                     [&vs, &vdtk],
+                    constraints,
                     boundary,
                     [vx as i32, vy as i32],
                     *dx,
@@ -75,6 +84,7 @@ pub fn explicit<Opt: Sync, const F: usize, const VX: usize, const VY: usize, con
             .for_each(|(vy, vx, fu)| {
                 *fu = fun(
                     [&vs, &vdtk],
+                    constraints,
                     boundary,
                     [vx as i32, vy as i32],
                     *dx,

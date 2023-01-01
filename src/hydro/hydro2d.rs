@@ -1,62 +1,60 @@
-use crate::{
+use crate::solver::{
     context::{Boundary, Context, Integration, ToCompute},
     kt::{kt, Dir},
     newton::newton,
-    solver::run,
+    run,
     utils::ghost,
+    Constraints,
 };
 
-pub fn p(e: f64) -> f64 {
-    e / 3.0
-}
+use super::{dpde, p, solve_v};
 
-fn dpde(_e: f64) -> f64 {
-    1.0 / 3.0
-}
-
-fn constraints([t00, t01, t02, e]: [f64; 4]) -> [f64; 7] {
-    let t00 = t00.max((t01 * t01 + t02 * t02).sqrt());
-    let e = e.max(1e-100);
-    let ut = ((t00 + p(e)) / (e + p(e))).sqrt().max(1.0);
-    let ux = t01 / ((e + p(e)) * ut);
-    let uy = t02 / ((e + p(e)) * ut);
+fn constraints([t00, t01, t02, v]: [f64; 4]) -> [f64; 10] {
+    let m = (t01 * t01 + t02 * t02).sqrt();
+    let t00 = t00.max(m);
+    let e = (t00 - m * v).max(1e-100);
+    let pe = p(e);
+    let v = v.max(0.0).min(1.0);
+    let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
+    let ux = t01 / ((e + pe) * ut);
+    let uy = t02 / ((e + pe) * ut);
     let ut = (1.0 + ux * ux + uy * uy).sqrt();
-    [t00, t01, t02, e, ut, ux, uy]
+    [t00, t01, t02, v, e, pe, dpde(e), ut, ux, uy]
 }
 
-fn eigenvaluesx([_t00, _t01, _t02, e, ut, ux, _uy]: [f64; 7]) -> f64 {
-    let vs2 = dpde(e);
+fn eigenvaluesx([_t00, _t01, _t02, _v, _e, _pe, dpde, ut, ux, _uy]: [f64; 10]) -> f64 {
+    let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
     (a.abs() + b.sqrt()) / d
 }
-fn eigenvaluesy([t00, t01, t02, e, ut, ux, uy]: [f64; 7]) -> f64 {
-    eigenvaluesx([t00, t01, t02, e, ut, uy, ux])
+fn eigenvaluesy([t00, t01, t02, v, e, pe, dpde, ut, ux, uy]: [f64; 10]) -> f64 {
+    eigenvaluesx([t00, t01, t02, v, e, pe, dpde, ut, uy, ux])
 }
 
-pub fn f00([_, _, _, e, ut, _, _]: [f64; 7]) -> f64 {
-    (e + p(e)) * ut * ut - p(e)
+pub fn f00([_, _, _, _, e, pe, _, ut, _, _]: [f64; 10]) -> f64 {
+    (e + pe) * ut * ut - pe
 }
-pub fn f01([_, _, _, e, ut, ux, _]: [f64; 7]) -> f64 {
-    (e + p(e)) * ut * ux
+pub fn f01([_, _, _, _, e, pe, _, ut, ux, _]: [f64; 10]) -> f64 {
+    (e + pe) * ut * ux
 }
-pub fn f02([_, _, _, e, ut, _, uy]: [f64; 7]) -> f64 {
-    (e + p(e)) * uy * ut
-}
-
-fn f11([_, _, _, e, _, ux, _]: [f64; 7]) -> f64 {
-    (e + p(e)) * ux * ux + p(e)
-}
-fn f12([_, _, _, e, _, ux, uy]: [f64; 7]) -> f64 {
-    (e + p(e)) * ux * uy
+pub fn f02([_, _, _, _, e, pe, _, ut, _, uy]: [f64; 10]) -> f64 {
+    (e + pe) * uy * ut
 }
 
-fn f21([_, _, _, e, _, ux, uy]: [f64; 7]) -> f64 {
-    (e + p(e)) * uy * ux
+fn f11([_, _, _, _, e, pe, _, _, ux, _]: [f64; 10]) -> f64 {
+    (e + pe) * ux * ux + pe
 }
-fn f22([_, _, _, e, _, _, uy]: [f64; 7]) -> f64 {
-    (e + p(e)) * uy * uy + p(e)
+fn f12([_, _, _, _, e, pe, _, _, ux, uy]: [f64; 10]) -> f64 {
+    (e + pe) * ux * uy
+}
+
+fn f21([_, _, _, _, e, pe, _, _, ux, uy]: [f64; 10]) -> f64 {
+    (e + pe) * uy * ux
+}
+fn f22([_, _, _, _, e, pe, _, _, _, uy]: [f64; 10]) -> f64 {
+    (e + pe) * uy * uy + pe
 }
 
 pub enum Coordinate {
@@ -65,7 +63,8 @@ pub enum Coordinate {
 }
 
 fn flux<const V: usize>(
-    [_ov, v]: [&[[[f64; 4]; V]; V]; 2],
+    [_ov, vs]: [&[[[f64; 4]; V]; V]; 2],
+    constraints: Constraints<4, 10>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
@@ -75,12 +74,13 @@ fn flux<const V: usize>(
     opt: &Coordinate,
     tocomp: ToCompute,
 ) -> [f64; 4] {
-    let [t00, t01, t02, e, ut, ux, uy] = constraints(v[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+    let [t00, t01, t02, v, e, pe, _dpde, ut, ux, uy] =
+        constraints(vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
     let rt0 = if tocomp.integrated() || tocomp.all() {
         let theta = 1.5;
 
         let divf1 = kt(
-            v,
+            vs,
             bound,
             pos,
             Dir::X,
@@ -91,7 +91,7 @@ fn flux<const V: usize>(
             theta,
         );
         let divf2 = kt(
-            v,
+            vs,
             bound,
             pos,
             Dir::Y,
@@ -108,9 +108,9 @@ fn flux<const V: usize>(
         let source: [f64; 3] = match opt {
             Coordinate::Cartesian => [0.0; 3],
             Coordinate::Milne => [
-                (e + p(e)) * ut * ut / t,
-                (e + p(e)) * ut * ux / t,
-                (e + p(e)) * ut * uy / t,
+                (e + pe) * ut * ut / t,
+                (e + pe) * ut * ux / t,
+                (e + pe) * ut * uy / t,
             ],
         };
         [
@@ -121,14 +121,14 @@ fn flux<const V: usize>(
     } else {
         [0.0, 0.0, 0.0]
     };
-    let re = match tocomp {
-        ToCompute::All => t00 - (t01 * t01 + t02 * t02) / (t00 + p(e)),
-        ToCompute::NonIntegrated => {
-            newton(er, e, |e| t00 - (t01 * t01 + t02 * t02) / (t00 + p(e)) - e)
-        }
+    let m = (t01 * t01 + t02 * t02).sqrt();
+    let sv = solve_v(t00, m);
+    let rv = match tocomp {
+        ToCompute::All => sv(v),
+        ToCompute::NonIntegrated => newton(er, v, |v| sv(v) - v),
         ToCompute::Integrated => 0.0,
     };
-    [rt0[0], rt0[1], rt0[2], re]
+    [rt0[0], rt0[1], rt0[2], rv]
 }
 
 pub fn hydro2d<const V: usize, const S: usize>(
@@ -144,7 +144,9 @@ pub fn hydro2d<const V: usize, const S: usize>(
     init: impl Fn(f64, f64) -> [f64; 4],
 ) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
     let mut vs = [[[0.0; 4]; V]; V];
-    let names = ["t00", "t01", "t02", "e", "ut", "ux", "uy"];
+    let names = [
+        "t00", "t01", "t02", "v", "e", "pe", "dpde", "ut", "ux", "uy",
+    ];
     let mut k = [[[[0.0; 4]; V]; V]; S];
     let integrated = [true, true, true, false];
     let v2 = ((V - 1) as f64) / 2.0;
@@ -160,6 +162,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     }
     let context = Context {
         fun: &flux,
+        constraints: &constraints,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
         local_interaction: [2, 2],   // use a distance of 0 to emulate 1D
         vs,
