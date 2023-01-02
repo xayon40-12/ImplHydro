@@ -85,7 +85,7 @@ pub fn compare<const VX: usize, const VY: usize, const F: usize>(
 }
 
 pub fn converge<const VX: usize, const VY: usize, const F: usize>(
-    m: i32,
+    m: usize,
     fun: impl Fn(f64) -> [[[f64; F]; VX]; VY],
 ) -> Vec<[[[f64; F]; VX]; VY]> {
     let mut dt = 0.05;
@@ -119,17 +119,25 @@ fn main() {
     // let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
 
     // Convergenc:
-    // let _v = converge(8, |dt| {
-    //     hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
-    // });
-    // let _v = converge(8, |dt| {
-    //     hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
-    // });
+    let nconv = 8;
+    println!("heun");
+    let v1 = converge(nconv, |dt| {
+        hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
+    });
+    println!("gl1");
+    let v2 = converge(nconv, |dt| {
+        hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
+    });
+    let (compmax, compaverage) = compare(0, &v1[nconv - 1], &v2[nconv - 1]);
+    println!(
+        "Comparison heun and gl1:\nmax     error: {:e}\naverage error: {:e}\n",
+        compmax, compaverage
+    );
 
-    // let _v = converge(6, |dt| {
+    // let _v = converge(nconv, |dt| {
     //     hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
     // });
-    // let _v = converge(6, |dt| {
+    // let _v = converge(nconv, |dt| {
     //     hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
     // });
 

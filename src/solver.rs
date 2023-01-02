@@ -101,7 +101,7 @@ pub fn run<
     }
     let cost = cost as usize;
     let _elapsed = now.elapsed();
-    eprintln!("Elapsed: {:.2?}", _elapsed);
+    // eprintln!("Elapsed: {:.2?}", _elapsed);
     let err = save(
         &context.vs,
         constraints,
