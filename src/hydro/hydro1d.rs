@@ -58,7 +58,7 @@ fn flux<const V: usize>(
 ) -> [f64; 3] {
     let [t00, t01, v, _e, _pe, _dpde, _ut, _ux] = constraints(vs[0][bound[0](pos[0], V)]);
     let rt0 = if tocomp.integrated() || tocomp.all() {
-        let theta = 1.5;
+        let theta = 1.1;
 
         let divf0 = kt(
             vs,
