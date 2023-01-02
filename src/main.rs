@@ -91,21 +91,12 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize>(
     let mut dt = 0.05;
     let mut f = fun(dt);
     let mut all = vec![f];
-    for i in 0..=m {
+    println!("error convergence:");
+    for _i in 0..m {
         dt *= 0.5;
         let f2 = fun(dt);
         let (ma, av) = compare(0, &f, &f2);
-        let d = 0.5f64.powi(i);
-        println!(
-            "i: {:0>2}, dt: {:.3e}, d: {:.3e}, ma: {:.3e}, av: {:.3e}, ma/d: {:.3e}, av/d: {:.3e}",
-            i,
-            dt,
-            d,
-            ma,
-            av,
-            ma / d,
-            av / d
-        );
+        println!("dt: {:.3e}, max: {:.3e}, average: {:.3e}", dt, ma, av);
         f = f2;
         all.push(f2);
     }
@@ -127,8 +118,18 @@ fn main() {
     // let hydro2d1 = hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
     let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
 
-    let _v = converge(6, |dt| {
+    let _v = converge(8, |dt| {
         hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
+    });
+    let _v = converge(8, |dt| {
+        hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
+    });
+
+    let _v = converge(6, |dt| {
+        hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
+    });
+    let _v = converge(6, |dt| {
+        hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
     });
 
     // let (v, t, _maxerr, _meanerr) = hydro2d1(Explicit, euler());
