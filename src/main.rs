@@ -1,6 +1,6 @@
 use std::thread;
 
-use implicit_newton::{
+use fixhydro::{
     hydro::{
         gubser::init_gubser,
         hydro1d,
@@ -169,11 +169,10 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
 
 fn big_stack() {
     let t0 = 1.0;
-    // let nconv = 11;
-    let nconv = 2;
+    let nconv = 12;
 
     let tend = 4.5;
-    // run::<101>(t0, tend, 0.1, nconv);
+    run::<101>(t0, tend, 0.1, nconv);
     run::<201>(t0, tend, 0.05, nconv);
 
     let tend = 9.5;
