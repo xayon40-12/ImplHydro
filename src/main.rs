@@ -1,6 +1,6 @@
 use implicit_newton::{
     hydro::{
-        gubser::{gubser_err, init_gubser},
+        gubser::init_gubser,
         hydro1d,
         hydro2d::{self, Coordinate::Milne},
         ideal_gas,
@@ -15,52 +15,54 @@ use implicit_newton::{
 
 pub fn hydro1d<'a, const V: usize, const S: usize>(
     t0: f64,
+    tend: f64,
     dx: f64,
     dt: f64,
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-) -> Box<dyn Fn(Integration, Scheme<S>) -> ([[[f64; 3]; V]; 1], f64, usize, usize) + 'a> {
-    Box::new(move |explimpl, r| {
-        hydro1d::hydro1d::<V, S>(
-            &format!("{:?}1d{}_{}c_{:e}dt", explimpl, S, V, dt),
-            dt,
-            er,
-            t0,
-            t0 + 4.0,
-            dx,
-            r,
-            explimpl,
-            &p,
-            &dpde,
-            init_riemann(&p, &dpde),
-        )
-    })
+    explimpl: Integration,
+    r: Scheme<S>,
+) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
+    hydro1d::hydro1d::<V, S>(
+        &format!("{:?}1d{}_{}c_{:e}dt_{:e}dx", explimpl, S, V, dt, dx),
+        dt,
+        er,
+        t0,
+        tend,
+        dx,
+        r,
+        explimpl,
+        &p,
+        &dpde,
+        init_riemann(&p, &dpde),
+    )
 }
 pub fn hydro2d<'a, const V: usize, const S: usize>(
     t0: f64,
+    tend: f64,
     dx: f64,
     dt: f64,
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-) -> Box<dyn Fn(Integration, Scheme<S>) -> ([[[f64; 4]; V]; V], f64, usize, usize) + 'a> {
-    Box::new(move |explimpl, r| {
-        hydro2d::hydro2d::<V, S>(
-            &format!("{:?}2d{}_{}c_{:e}dt", explimpl, S, V, dt),
-            dt,
-            er,
-            t0,
-            t0 + 4.0,
-            dx,
-            r,
-            Milne,
-            explimpl,
-            &p,
-            &dpde,
-            init_gubser(t0, &p, &dpde),
-        )
-    })
+    explimpl: Integration,
+    r: Scheme<S>,
+) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
+    hydro2d::hydro2d::<V, S>(
+        &format!("{:?}2d{}_{}c_{:e}dt_{:e}dx", explimpl, S, V, dt, dx),
+        dt,
+        er,
+        t0,
+        tend,
+        dx,
+        r,
+        Milne,
+        explimpl,
+        &p,
+        &dpde,
+        init_gubser(t0, &p, &dpde),
+    )
 }
 
 pub fn compare<const VX: usize, const VY: usize, const F: usize>(
@@ -105,28 +107,30 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize>(
     all
 }
 
-fn main() {
-    let t0 = 0.6;
-    let dx = 0.1;
-    let dt: f64 = 0.0125;
-    let er: f64 = dt * dt;
-    const SIZE: usize = 101;
+pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     let p = &ideal_gas::p;
     let dpde = &ideal_gas::dpde;
-    // let hydro1d1 = hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
-    // let hydro1d2 = hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
-    let hydro2d1 = hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
-    // let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
 
     // Convergenc:
-    let nconv = 8;
+    println!("Riemann {} {}:\n", V, dx);
     println!("heun");
     let v1 = converge(nconv, |dt| {
-        hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
+        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, Explicit, heun()).0
     });
     println!("gl1");
     let v2 = converge(nconv, |dt| {
-        hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
+        hydro1d::<V, 1>(
+            t0,
+            tend,
+            dx,
+            dt,
+            dt * dt,
+            p,
+            dpde,
+            FixPoint,
+            gauss_legendre_1(),
+        )
+        .0
     });
     let (compmax, compaverage) = compare(0, &v1[nconv - 1], &v2[nconv - 1]);
     println!(
@@ -134,22 +138,42 @@ fn main() {
         compmax, compaverage
     );
 
-    // let _v = converge(nconv, |dt| {
-    //     hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
-    // });
-    // let _v = converge(nconv, |dt| {
-    //     hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
-    // });
-
-    // let (v, t, cost, tsteps) = hydro2d1(Explicit, euler());
-    // let (v, t, cost, tsteps) = hydro2d1(FixPoint, euler());
-    let (v, t, cost, tsteps) = hydro2d1(FixPoint, gauss_legendre_1());
-    // let (v, t, cost, tsteps) = hydro2d2(Explicit, heun());
-    // let (v, t, cost, tsteps) = hydro2d2(FixPoint, gauss_legendre_2());
-    let [maxerrt00, meanerrt00] = gubser_err(v, t, dx, p);
-    println!("cost: {}, tsteps: {}", cost, tsteps);
+    println!("Gubser {} {}:\n", V, dx);
+    println!("heun");
+    let v1 = converge(nconv, |dt| {
+        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, Explicit, heun()).0
+    });
+    println!("gl1");
+    let v2 = converge(nconv, |dt| {
+        hydro2d::<V, 1>(
+            t0,
+            tend,
+            dx,
+            dt,
+            dt * dt,
+            p,
+            dpde,
+            FixPoint,
+            gauss_legendre_1(),
+        )
+        .0
+    });
+    let (compmax, compaverage) = compare(0, &v1[nconv - 1], &v2[nconv - 1]);
     println!(
-        "|gubser |   t00   |\n|-------|---------|\n|maxerr | {:.5} |\n|meanerr| {:.5} |\n",
-        maxerrt00, meanerrt00
+        "Comparison heun and gl1:\nmax     error: {:e}\naverage error: {:e}\n",
+        compmax, compaverage
     );
+}
+
+fn main() {
+    let t0 = 0.6;
+    let nconv = 4;
+
+    let tend = t0 + 4.0;
+    run::<101>(t0, tend, 0.1, nconv);
+    run::<201>(t0, tend, 0.05, nconv);
+
+    let tend = t0 + 9.0;
+    run::<101>(t0, tend, 0.2, nconv);
+    run::<201>(t0, tend, 0.1, nconv);
 }

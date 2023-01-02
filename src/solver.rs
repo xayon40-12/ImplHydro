@@ -49,7 +49,10 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     let dir = &format!("results/{}/{}", name, time);
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
-    let info = format!("time: {}\ncost: {}\nnx: {}\nny: {}\n", time, cost, VX, VY);
+    let info = format!(
+        "time: {}\ncost: {}\nnx: {}\nny: {}\n,dx: {}",
+        time, cost, VX, VY, dx
+    );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
     Ok(())
@@ -101,7 +104,7 @@ pub fn run<
     }
     let cost = cost as usize;
     let _elapsed = now.elapsed();
-    // eprintln!("Elapsed: {:.2?}", _elapsed);
+    eprintln!("Elapsed: {:.2?}", _elapsed);
     let err = save(
         &context.vs,
         constraints,
@@ -111,6 +114,8 @@ pub fn run<
         context.dx,
         cost,
     );
+    let _elapsed = now.elapsed();
+    eprintln!("Elapsed with save: {:.2?}", _elapsed);
     match err {
         Err(e) => eprintln!("{}", e),
         Ok(()) => {}
