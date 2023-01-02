@@ -37,9 +37,9 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
             let vars = constraints(v[j][i]);
             let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
             let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
-            let mut s = format!("{} {}", x, y);
+            let mut s = format!("{:e} {:e}", x, y);
             for c in 0..C {
-                s = format!("{} {}", s, vars[c]);
+                s = format!("{} {:e}", s, vars[c]);
             }
             s = format!("{}\n", s);
             res = format!("{}{}", res, s);
@@ -76,7 +76,23 @@ pub fn run<
     let mut tsteps = 0;
     use std::time::Instant;
     let now = Instant::now();
+
+    let next_save = context.tend;
+    let mut ctx_dt = None;
     while context.t < context.tend {
+        let d = next_save - context.t;
+        if d < 0.0 || d > 2.0 * context.dt {
+            if let Some(dt) = ctx_dt {
+                context.dt = dt;
+                ctx_dt = None;
+            }
+        } else if d > context.dt {
+            ctx_dt = Some(context.dt);
+            context.dt = d / 2.0;
+        } else {
+            ctx_dt = Some(context.dt);
+            context.dt = d;
+        }
         tsteps += 1;
         let c = match integration {
             Integration::Explicit => explicit(&mut context),

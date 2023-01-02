@@ -127,7 +127,7 @@ fn main() {
     // let hydro2d1 = hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
     let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
 
-    let _v = converge(4, |dt| {
+    let _v = converge(6, |dt| {
         hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
     });
 
