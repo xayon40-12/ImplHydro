@@ -3,7 +3,7 @@ use crate::solver::{
     kt::{kt, Dir},
     newton::newton,
     run,
-    utils::{ghost, noboundary},
+    utils::{ghost, zero},
     Constraints,
 };
 
@@ -115,8 +115,8 @@ pub fn hydro1d<const V: usize, const S: usize>(
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        boundary: &[&ghost, &noboundary], // use noboundary to emulate 1D
-        local_interaction: [2, 0],        // use a distance of 0 to emulate 1D
+        boundary: &[&ghost, &zero], // use noboundary to emulate 1D
+        local_interaction: [1, 0],  // use a distance of 0 to emulate 1D
         vs,
         k,
         integrated,

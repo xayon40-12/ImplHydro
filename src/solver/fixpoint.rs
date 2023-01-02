@@ -2,6 +2,20 @@ use rayon::prelude::*;
 
 use crate::solver::context::{Context, ToCompute};
 
+pub fn pfor2d<T: Send, const VX: usize, const VY: usize>(
+    vss: &mut [[T; VX]; VY],
+    f: &(dyn Fn((usize, usize, &mut T)) + Sync),
+) {
+    vss.par_iter_mut()
+        .enumerate()
+        .flat_map(|(vy, vs)| {
+            vs.par_iter_mut()
+                .enumerate()
+                .map(move |(vx, v)| (vy, vx, v))
+        })
+        .for_each(f);
+}
+
 pub fn fixpoint<
     Opt: Sync,
     const F: usize,
@@ -28,8 +42,8 @@ pub fn fixpoint<
         opt,
     }: &mut Context<Opt, F, C, VX, VY, S>,
 ) -> f64 {
-    *dto = maxdt.min(*dto);
     let [sizex, sizey] = *local_interaction;
+    *dto = maxdt.min(*dto);
     let mut err = 1.0;
     let mut cost = 0.0;
     let ko = *k;
@@ -74,35 +88,27 @@ pub fn fixpoint<
                     }
                 }
             }
-            fu[s]
-                .par_iter_mut()
-                .enumerate()
-                .flat_map(|(vy, fsy)| {
-                    fsy.par_iter_mut()
-                        .enumerate()
-                        .map(move |(vx, fsyx)| (vy, vx, fsyx))
-                })
-                .for_each(|(vy, vx, fu)| {
-                    if errs[vy][vx] {
-                        let tmp = fun(
-                            [&vs, &vdtk],
-                            constraints,
-                            boundary,
-                            [vx as i32, vy as i32],
-                            *dx,
-                            *er,
-                            [*ot, t],
-                            [dt, cdt],
-                            opt,
-                            ToCompute::Integrated,
-                        );
-                        for f in 0..F {
-                            if integrated[f] {
-                                fu[f] = tmp[f];
-                            }
+            pfor2d(&mut fu[s], &|(vy, vx, fu)| {
+                if errs[vy][vx] {
+                    let tmp = fun(
+                        [&vs, &vdtk],
+                        constraints,
+                        boundary,
+                        [vx as i32, vy as i32],
+                        *dx,
+                        *er,
+                        [*ot, t],
+                        [dt, cdt],
+                        opt,
+                        ToCompute::Integrated,
+                    );
+                    for f in 0..F {
+                        if integrated[f] {
+                            fu[f] = tmp[f];
                         }
                     }
-                });
+                }
+            });
             for vy in 0..VY {
                 for vx in 0..VX {
                     for f in 0..F {
@@ -115,35 +121,27 @@ pub fn fixpoint<
                     }
                 }
             }
-            fu[s]
-                .par_iter_mut()
-                .enumerate()
-                .flat_map(|(vy, fsy)| {
-                    fsy.par_iter_mut()
-                        .enumerate()
-                        .map(move |(vx, fsyx)| (vy, vx, fsyx))
-                })
-                .for_each(|(vy, vx, fu)| {
-                    if errs[vy][vx] {
-                        let tmp = fun(
-                            [&vs, &vdtk],
-                            constraints,
-                            boundary,
-                            [vx as i32, vy as i32],
-                            *dx,
-                            *er,
-                            [*ot, t],
-                            [dt, cdt],
-                            opt,
-                            ToCompute::NonIntegrated,
-                        );
-                        for f in 0..F {
-                            if !integrated[f] {
-                                fu[f] = tmp[f];
-                            }
+            pfor2d(&mut fu[s], &|(vy, vx, fu)| {
+                if errs[vy][vx] {
+                    let tmp = fun(
+                        [&vs, &vdtk],
+                        constraints,
+                        boundary,
+                        [vx as i32, vy as i32],
+                        *dx,
+                        *er,
+                        [*ot, t],
+                        [dt, cdt],
+                        opt,
+                        ToCompute::NonIntegrated,
+                    );
+                    for f in 0..F {
+                        if !integrated[f] {
+                            fu[f] = tmp[f];
                         }
                     }
-                });
+                }
+            });
         }
 
         for vy in 0..VY {
@@ -165,16 +163,14 @@ pub fn fixpoint<
         }
         *k = fu;
         let mut tmperrs = [[false; VX]; VY];
-        for vy in 0..VY {
-            for vx in 0..VX {
-                for dy in -sizey..=sizey {
-                    for dx in -sizex..=sizex {
-                        tmperrs[vy][vx] |=
-                            errs[boundary[1](vy as i32 + dy, VY)][boundary[0](vx as i32 + dx, VX)];
-                    }
+        pfor2d(&mut tmperrs, &|(vy, vx, tmperrs)| {
+            for dy in -sizey..=sizey {
+                for dx in -sizex..=sizex {
+                    *tmperrs |=
+                        errs[boundary[1](vy as i32 + dy, VY)][boundary[0](vx as i32 + dx, VX)];
                 }
             }
-        }
+        });
         errs = tmperrs;
     }
     let b = if let Some(b) = b { *b } else { a[S - 1] };

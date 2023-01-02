@@ -172,7 +172,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         fun: &flux,
         constraints: &constraints,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
-        local_interaction: [2, 2],   // use a distance of 0 to emulate 1D
+        local_interaction: [1, 1],   // use a distance of 0 to emulate 1D
         vs,
         k,
         integrated,

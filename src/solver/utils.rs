@@ -1,5 +1,5 @@
-pub fn noboundary(j: i32, _n: usize) -> usize {
-    j as usize
+pub fn zero(_j: i32, _n: usize) -> usize {
+    0
 }
 
 pub fn periodic(j: i32, n: usize) -> usize {

@@ -118,25 +118,27 @@ fn main() {
     // let hydro2d1 = hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
     let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
 
-    let _v = converge(8, |dt| {
-        hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
-    });
-    let _v = converge(8, |dt| {
-        hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
-    });
+    // Convergenc:
+    // let _v = converge(8, |dt| {
+    //     hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
+    // });
+    // let _v = converge(8, |dt| {
+    //     hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
+    // });
 
-    let _v = converge(6, |dt| {
-        hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
-    });
-    let _v = converge(6, |dt| {
-        hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
-    });
+    // let _v = converge(6, |dt| {
+    //     hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde)(Explicit, heun()).0
+    // });
+    // let _v = converge(6, |dt| {
+    //     hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde)(FixPoint, gauss_legendre_1()).0
+    // });
 
-    // let (v, t, _maxerr, _meanerr) = hydro2d1(Explicit, euler());
-    // let (v, t, _maxerr, _meanerr) = hydro2d1(FixPoint, gauss_legendre_1());
-    let (v, t, _maxerr, _meanerr) = hydro2d2(Explicit, heun());
-    // let (v, t, _maxerr, _meanerr) = hydro2d2(FixPoint, gauss_legendre_2());
+    // let (v, t, cost, tsteps) = hydro2d1(Explicit, euler());
+    // let (v, t, cost, tsteps) = hydro2d1(FixPoint, gauss_legendre_1());
+    // let (v, t, cost, tsteps) = hydro2d2(Explicit, heun());
+    let (v, t, cost, tsteps) = hydro2d2(FixPoint, gauss_legendre_2());
     let [maxerrt00, meanerrt00] = gubser_err(v, t, dx, p);
+    println!("cost: {}, tsteps: {}", cost, tsteps);
     println!(
         "|gubser |   t00   |\n|-------|---------|\n|maxerr | {:.5} |\n|meanerr| {:.5} |\n",
         maxerrt00, meanerrt00
