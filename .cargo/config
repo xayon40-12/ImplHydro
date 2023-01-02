@@ -1,5 +1,0 @@
-[target.aarch64-apple-darwin]
-rustflags = "-C link-args=-Wl,-stack_size,0x10000000"
-
-[target.x86_64-unknown-linux-gnu]
-rustflags = "-C link-args=-Wl,-zstack-size=0x10000000"

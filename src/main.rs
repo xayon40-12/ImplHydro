@@ -1,3 +1,5 @@
+use std::thread;
+
 use implicit_newton::{
     hydro::{
         gubser::init_gubser,
@@ -165,15 +167,26 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     );
 }
 
-fn main() {
+fn big_stack() {
     let t0 = 1.0;
-    let nconv = 11;
+    // let nconv = 11;
+    let nconv = 2;
 
     let tend = 4.5;
-    run::<101>(t0, tend, 0.1, nconv);
+    // run::<101>(t0, tend, 0.1, nconv);
     run::<201>(t0, tend, 0.05, nconv);
 
     let tend = 9.5;
     run::<101>(t0, tend, 0.2, nconv);
     run::<201>(t0, tend, 0.1, nconv);
+}
+
+fn main() {
+    const STACK_SIZE: usize = 16 * 1024 * 1024; // if you want to run 2D simulation with more than 200x200 cells, you will need to increase the stack size
+    thread::Builder::new()
+        .stack_size(STACK_SIZE)
+        .spawn(big_stack)
+        .unwrap()
+        .join()
+        .unwrap();
 }
