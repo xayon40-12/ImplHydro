@@ -22,6 +22,7 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     name: &str, // simulation name
     t: f64,
     dx: f64,
+    maxdt: f64,
     cost: usize,
 ) -> std::io::Result<()> {
     let mut res = format!("# t {:e}\n# cost {}\n# x y", t, cost);
@@ -50,8 +51,8 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!(
-        "time: {}\ncost: {}\nnx: {}\nny: {}\n,dx: {}",
-        time, cost, VX, VY, dx
+        "time: {}\ncost: {}\nnx: {}\nny: {}\ndx: {}\nmaxdt: {}",
+        time, cost, VX, VY, dx, maxdt,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -112,6 +113,7 @@ pub fn run<
         name,
         context.t,
         context.dx,
+        context.maxdt,
         cost,
     );
     let _elapsed = now.elapsed();

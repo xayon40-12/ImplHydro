@@ -166,14 +166,14 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
 }
 
 fn main() {
-    let t0 = 0.6;
-    let nconv = 4;
+    let t0 = 1.0;
+    let nconv = 11;
 
-    let tend = t0 + 4.0;
+    let tend = 4.5;
     run::<101>(t0, tend, 0.1, nconv);
     run::<201>(t0, tend, 0.05, nconv);
 
-    let tend = t0 + 9.0;
+    let tend = 9.5;
     run::<101>(t0, tend, 0.2, nconv);
     run::<201>(t0, tend, 0.1, nconv);
 }
