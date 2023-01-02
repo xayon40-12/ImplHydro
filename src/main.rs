@@ -23,7 +23,7 @@ pub fn hydro1d<'a, const V: usize, const S: usize>(
 ) -> Box<dyn Fn(Integration, Scheme<S>) -> ([[[f64; 3]; V]; 1], f64, usize, usize) + 'a> {
     Box::new(move |explimpl, r| {
         hydro1d::hydro1d::<V, S>(
-            &format!("{:?}1d{}_{:e}", explimpl, S, dt),
+            &format!("{:?}1d{}_{}c_{:e}dt", explimpl, S, V, dt),
             dt,
             er,
             t0,
@@ -47,7 +47,7 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
 ) -> Box<dyn Fn(Integration, Scheme<S>) -> ([[[f64; 4]; V]; V], f64, usize, usize) + 'a> {
     Box::new(move |explimpl, r| {
         hydro2d::hydro2d::<V, S>(
-            &format!("{:?}2d{}_{:e}", explimpl, S, dt),
+            &format!("{:?}2d{}_{}c_{:e}dt", explimpl, S, V, dt),
             dt,
             er,
             t0,

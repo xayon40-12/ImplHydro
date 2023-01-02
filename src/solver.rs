@@ -49,7 +49,7 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     let dir = &format!("results/{}/{}", name, time);
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
-    let info = format!("time: {}\ncost: {}\n", time, cost);
+    let info = format!("time: {}\ncost: {}\nnx: {}\nny: {}\n", time, cost, VX, VY);
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
     Ok(())
