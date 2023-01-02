@@ -115,8 +115,8 @@ fn main() {
     let dpde = &ideal_gas::dpde;
     // let hydro1d1 = hydro1d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
     // let hydro1d2 = hydro1d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
-    // let hydro2d1 = hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
-    let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
+    let hydro2d1 = hydro2d::<SIZE, 1>(t0, dx, dt, er, p, dpde);
+    // let hydro2d2 = hydro2d::<SIZE, 2>(t0, dx, dt, er, p, dpde);
 
     // Convergenc:
     // let _v = converge(8, |dt| {
@@ -134,9 +134,10 @@ fn main() {
     // });
 
     // let (v, t, cost, tsteps) = hydro2d1(Explicit, euler());
-    // let (v, t, cost, tsteps) = hydro2d1(FixPoint, gauss_legendre_1());
+    // let (v, t, cost, tsteps) = hydro2d1(FixPoint, euler());
+    let (v, t, cost, tsteps) = hydro2d1(FixPoint, gauss_legendre_1());
     // let (v, t, cost, tsteps) = hydro2d2(Explicit, heun());
-    let (v, t, cost, tsteps) = hydro2d2(FixPoint, gauss_legendre_2());
+    // let (v, t, cost, tsteps) = hydro2d2(FixPoint, gauss_legendre_2());
     let [maxerrt00, meanerrt00] = gubser_err(v, t, dx, p);
     println!("cost: {}, tsteps: {}", cost, tsteps);
     println!(

@@ -1,7 +1,6 @@
 pub mod context;
 pub mod explicit;
 pub mod fixpoint;
-pub mod fixpoint_only;
 pub mod kt;
 pub mod newton;
 pub mod schemes;
@@ -11,7 +10,6 @@ use {
     context::{Context, Integration},
     explicit::explicit,
     fixpoint::fixpoint,
-    fixpoint_only::fixpoint_only,
 };
 
 pub type Constraints<'a, const F: usize, const C: usize> =
@@ -96,7 +94,6 @@ pub fn run<
         tsteps += 1;
         let c = match integration {
             Integration::Explicit => explicit(&mut context),
-            Integration::FixPointOnly => fixpoint_only(&mut context),
             Integration::FixPoint => fixpoint(&mut context),
         };
 

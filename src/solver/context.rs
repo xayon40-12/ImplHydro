@@ -3,7 +3,6 @@ use super::Constraints;
 #[derive(Debug)]
 pub enum Integration {
     Explicit,
-    FixPointOnly,
     FixPoint,
 }
 
