@@ -27,6 +27,8 @@ pub fn explicit<
         t0: _,
         tend: _,
         opt,
+        p,
+        dpde,
     }: &mut Context<Opt, F, C, VX, VY, S>,
 ) -> f64 {
     *dt = maxdt.min(*dt);
@@ -57,6 +59,8 @@ pub fn explicit<
                     [*dt, cdt],
                     opt,
                     ToCompute::Integrated,
+                    p,
+                    dpde,
                 );
             });
         for vy in 0..VY {
@@ -94,6 +98,8 @@ pub fn explicit<
                     [*dt, cdt],
                     opt,
                     ToCompute::NonIntegrated,
+                    p,
+                    dpde,
                 );
             });
         for vy in 0..VY {

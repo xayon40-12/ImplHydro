@@ -41,6 +41,8 @@ pub fn fixpoint<
         t0: _,
         tend: _,
         opt,
+        p,
+        dpde,
     }: &mut Context<Opt, F, C, VX, VY, S>,
 ) -> f64 {
     let [sizex, sizey] = *local_interaction;
@@ -102,6 +104,8 @@ pub fn fixpoint<
                         [dt, cdt],
                         opt,
                         ToCompute::Integrated,
+                        p,
+                        dpde,
                     );
                     for f in 0..F {
                         if integrated[f] {
@@ -135,6 +139,8 @@ pub fn fixpoint<
                         [dt, cdt],
                         opt,
                         ToCompute::NonIntegrated,
+                        p,
+                        dpde,
                     );
                     for f in 0..F {
                         if !integrated[f] {

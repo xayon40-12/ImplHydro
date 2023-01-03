@@ -14,9 +14,8 @@ pub mod ideal_gas {
         1.0 / 3.0
     }
 }
-use ideal_gas::p;
 
-pub fn solve_v(t00: f64, m: f64) -> Box<dyn Fn(f64) -> f64> {
+pub fn solve_v<'a>(t00: f64, m: f64, p: Pressure<'a>) -> Box<dyn Fn(f64) -> f64 + 'a> {
     Box::new(move |v| {
         let e = (t00 - m * v).max(1e-100);
         let v = m / (t00 + p(e));

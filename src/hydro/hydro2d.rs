@@ -16,9 +16,9 @@ fn gen_constraints<'a>(
     Box::new(|[t00, t01, t02, v]| {
         let m = (t01 * t01 + t02 * t02).sqrt();
         let t00 = t00.max(m);
+        let v = v.max(0.0).min(1.0);
         let e = (t00 - m * v).max(1e-100);
         let pe = p(e);
-        let v = v.max(0.0).min(1.0);
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
         let ux = t01 / ((e + pe) * ut);
         let uy = t02 / ((e + pe) * ut);
@@ -78,6 +78,8 @@ fn flux<const V: usize>(
     [_dt, _cdt]: [f64; 2],
     opt: &Coordinate,
     tocomp: ToCompute,
+    p: Pressure,
+    _dpde: Pressure,
 ) -> [f64; 4] {
     let [t00, t01, t02, v, e, pe, _dpde, ut, ux, uy] =
         constraints(vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
@@ -127,7 +129,7 @@ fn flux<const V: usize>(
         [0.0, 0.0, 0.0]
     };
     let m = (t01 * t01 + t02 * t02).sqrt();
-    let sv = solve_v(t00, m);
+    let sv = solve_v(t00, m, p);
     let rv = match tocomp {
         ToCompute::All => sv(v),
         ToCompute::NonIntegrated => newton(er, v, |v| sv(v) - v),
@@ -185,6 +187,8 @@ pub fn hydro2d<const V: usize, const S: usize>(
         t0: t,
         tend,
         opt,
+        p,
+        dpde,
     };
     run(context, name, integration, &names, &constraints)
 }

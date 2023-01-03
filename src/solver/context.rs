@@ -1,3 +1,5 @@
+use crate::hydro::Pressure;
+
 use super::Constraints;
 
 #[derive(Debug)]
@@ -46,12 +48,13 @@ pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY:
         [f64; 2], // [dt, current dt]
         &Opt,
         ToCompute,
+        Pressure,
+        Pressure,
     ) -> [f64; F]
              + Sync);
 
 pub struct Context<
     'a,
-    'b,
     Opt: Sync,
     const F: usize,
     const C: usize,
@@ -61,7 +64,7 @@ pub struct Context<
 > {
     pub fun: Fun<'a, Opt, F, C, VX, VY>,
     pub constraints: Constraints<'a, F, C>,
-    pub boundary: &'b [Boundary<'b>; 2],
+    pub boundary: &'a [Boundary<'a>; 2],
     pub local_interaction: [i32; 2],
     pub vs: [[[f64; F]; VX]; VY],
     pub k: [[[[f64; F]; VX]; VY]; S],
@@ -75,4 +78,6 @@ pub struct Context<
     pub t0: f64,
     pub tend: f64,
     pub opt: Opt,
+    pub p: Pressure<'a>,
+    pub dpde: Pressure<'a>,
 }
