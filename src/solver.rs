@@ -20,6 +20,8 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     constraints: Constraints<F, C>,
     names: &[&str; C],
     name: &str, // simulation name
+    t0: f64,
+    tend: f64,
     t: f64,
     dx: f64,
     maxdt: f64,
@@ -51,8 +53,8 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!(
-        "time: {}\ncost: {}\nnx: {}\nny: {}\ndx: {}\nmaxdt: {}",
-        time, cost, VX, VY, dx, maxdt,
+        "t0: {}\ntend: {}\ntime: {}\ncost: {}\nnx: {}\nny: {}\ndx: {}\nmaxdt: {}",
+        t0, tend, time, cost, VX, VY, dx, maxdt,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -111,6 +113,8 @@ pub fn run<
         constraints,
         names,
         name,
+        context.t0,
+        context.tend,
         context.t,
         context.dx,
         context.maxdt,

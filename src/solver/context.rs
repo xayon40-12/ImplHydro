@@ -72,6 +72,7 @@ pub struct Context<
     pub maxdt: f64,
     pub er: f64,
     pub t: f64,
+    pub t0: f64,
     pub tend: f64,
     pub opt: Opt,
 }

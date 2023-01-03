@@ -126,6 +126,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
         maxdt,
         er,
         t,
+        t0: t,
         tend,
         opt: (),
     };

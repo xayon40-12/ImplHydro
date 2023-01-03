@@ -24,6 +24,7 @@ pub fn explicit<
         maxdt,
         er,
         t: ot,
+        t0: _,
         tend: _,
         opt,
     }: &mut Context<Opt, F, C, VX, VY, S>,
