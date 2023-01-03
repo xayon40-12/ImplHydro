@@ -2,6 +2,7 @@
 import sys 
 import os
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
 sys.path.append(os.path.abspath("%s/.config/" % (os.path.expanduser("~"))))
 import plt_setting
 import numpy as np
@@ -45,12 +46,38 @@ for d in os.listdir(dir):
     
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
     datas[dim][integration][t0][tend][dx][nx][maxdt] = (info, data)
-    
-datadts = datas["1D"]["FixPoint"][1.0][4.5][0.1][100]
-maxdts = [dt for dt in datadts]
-(info, data) = datadts[maxdts[-1]]
 
-x = data[:,0]
-y = data[:,2]
-plt.plot(x,y)
-plt.show()
+def plot1d():
+    datadts = datas["1D"]["FixPoint"][1.0][4.5][0.1][100]
+    maxdts = sorted([dt for dt in datadts])
+    print(maxdts)
+    (info, data) = datadts[maxdts[-1]]
+
+    x = data[:,0]
+    y = data[:,2]
+    plt.plot(x,y)
+    plt.show()
+
+def plot2d():
+    datadts = datas["2D"]["FixPoint"][1.0][4.5][0.1][100]
+    maxdts = sorted([dt for dt in datadts])
+    (info, data) = datadts[maxdts[0]]
+
+    x = np.reshape(data[:,0], (100,100))
+    y = np.reshape(data[:,1], (100,100))
+    z = np.reshape(data[:,2], (100,100))
+    # fig = plt.figure()
+    # ax = plt.axes(projection='3d')
+    # ax.view_init(90,0)
+    # ax.plot_surface(x, y, z, rstride=1, cstride=1, cmap='viridis', edgecolor='none')
+    print(x)
+    print(y)
+    l = x[0][0]
+    r = x[0][-1]
+    d = y[0][0]
+    u = y[-1][0]
+    plt.imshow(z, extent=[l,r,d,u])
+    plt.show()
+
+plot1d()
+plot2d()
