@@ -48,13 +48,12 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
         res = format!("{}\n", res);
     }
 
-    let time = format!("{:e}", t);
-    let dir = &format!("results/{}/{}", name, time);
+    let dir = &format!("results/{}/{:e}", name, t);
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!(
-        "t0: {}\ntend: {}\ntime: {}\ncost: {}\nnx: {}\nny: {}\ndx: {}\nmaxdt: {}",
-        t0, tend, time, cost, VX, VY, dx, maxdt,
+        "t0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}",
+        t0, tend, t, cost, VX, VY, dx, maxdt,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
