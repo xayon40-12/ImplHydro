@@ -26,6 +26,7 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     dx: f64,
     maxdt: f64,
     cost: usize,
+    integration: Integration,
 ) -> std::io::Result<()> {
     let mut res = format!("# t {:e}\n# cost {}\n# x y", t, cost);
     for c in 0..C {
@@ -52,8 +53,8 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!(
-        "t0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}",
-        t0, tend, t, cost, VX, VY, dx, maxdt,
+        "t0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}",
+        t0, tend, t, cost, VX, VY, dx, maxdt, integration
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -118,6 +119,7 @@ pub fn run<
         context.dx,
         context.maxdt,
         cost,
+        integration,
     );
     let _elapsed = now.elapsed();
     eprintln!("Elapsed with save: {:.2?}", _elapsed);
