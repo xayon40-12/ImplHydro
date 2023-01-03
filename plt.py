@@ -47,6 +47,41 @@ for d in os.listdir(dir):
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
     datas[dim][integration][t0][tend][dx][nx][maxdt] = (info, data)
 
+def compare(i, vss, wss):
+    maxerr = 0
+    meanerr = 0
+    for (vs, ws) in zip(vss,wss):
+        a = vs[i]
+        b = ws[i]
+        err = abs(a-b)/max(abs(a),abs(b))
+        maxerr = max(err,maxerr)
+        meanerr += err
+    meanerr /= len(vss)
+    return (maxerr, meanerr)
+
+def convergence(a):
+    maxdts = sorted([dt for dt in a])
+    (_, ref) = a[maxdts[0]]
+    for i in maxdts:
+        (info, v) = a[i]
+        cost = info["cost"]
+        (maxerr, meanerr) = compare(2, ref, v)
+        print("cost", cost, "maxerr", maxerr, "meanerr", meanerr)
+
+def testconv(dim):
+    print("convergence "+dim+":")
+    impl = datas[dim]["FixPoint"][1.0][4.5][0.1][100]
+    expl = datas[dim]["Explicit"][1.0][4.5][0.1][100]
+    dt = sorted([dt for dt in impl])[0]
+    convergence(impl)
+    convergence(expl)
+    (maxerr, meanerr) = compare(2, impl[dt][1],expl[dt][1])
+    print("comparison explicit implicit:\n    ", "maxerr", maxerr, "meanerr", meanerr)
+    print()
+
+testconv("1D")
+testconv("2D")
+
 def plot1d():
     datadts = datas["1D"]["FixPoint"][1.0][4.5][0.1][100]
     maxdts = sorted([dt for dt in datadts])
@@ -79,5 +114,5 @@ def plot2d():
     plt.imshow(z, extent=[l,r,d,u])
     plt.show()
 
-plot1d()
-plot2d()
+# plot1d()
+# plot2d()
