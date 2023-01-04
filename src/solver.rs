@@ -20,6 +20,7 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     constraints: Constraints<F, C>,
     names: &[&str; C],
     name: &str, // simulation name
+    elapsed: f64,
     t0: f64,
     tend: f64,
     t: f64,
@@ -53,8 +54,8 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!(
-        "t0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}",
-        t0, tend, t, cost, VX, VY, dx, maxdt, integration
+        "elapsed: {:e}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}",
+        elapsed, t0, tend, t, cost, VX, VY, dx, maxdt, integration
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -106,13 +107,14 @@ pub fn run<
         cost += c;
     }
     let cost = cost as usize;
-    let _elapsed = now.elapsed();
-    eprintln!("Elapsed: {:.2?}", _elapsed);
+    let elapsed = now.elapsed().as_secs_f64();
+    eprintln!("Elapsed: {:.2?}", elapsed);
     let err = save(
         &context.vs,
         constraints,
         names,
         name,
+        elapsed,
         context.t0,
         context.tend,
         context.t,
@@ -121,7 +123,7 @@ pub fn run<
         cost,
         integration,
     );
-    let _elapsed = now.elapsed();
+    let _elapsed = now.elapsed().as_secs();
     eprintln!("Elapsed with save: {:.2?}", _elapsed);
     match err {
         Err(e) => eprintln!("{}", e),
