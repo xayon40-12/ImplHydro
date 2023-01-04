@@ -63,14 +63,12 @@ def convergence(a, ref=None):
     maxdts = sorted([dt for dt in a])
     if ref is None:
         ref = a[maxdts[0]][1]
-    # print("cost", "maxerr", "meanerr")
     rmaxdts = reversed(maxdts)
     all = []
     for i in rmaxdts:
         (info, v) = a[i]
         cost = info["cost"]
         (maxerr, meanerr) = compare(2, ref, v)
-        # print("{} {:e} {:e}".format(cost, maxerr, meanerr))
         all += [(v, info, cost, maxerr, meanerr)]
     
     return np.array(all, dtype=object)
@@ -82,17 +80,12 @@ def info2name(info, integration=True):
         return "{}_{}_{}_{}_{}".format(info["dim"],info["t0"],info["tend"],info["dx"],info["nx"])
 
 def convall(l, d):
-    # print(l)
-    # print("convergence "+dim+":")
+    [dim,t0,tend,dx,nx] = l
     impl = d["FixPoint"]
     expl = d["Explicit"]
     dt = sorted([dt for dt in impl])[0] # the dt should be the same for expl and impl
-    # print("implicit:")
     cimpl = convergence(impl)
-    # print("explicit:")
     cexpl = convergence(expl)
-    # (maxerr, meanerr) = compare(2, impl[dt][1],expl[dt][1])
-    # print("comparison explicit implicit:\n    maxerr {:e}\n    meanerr {:e}".format(maxerr, meanerr))
     
     cimplref = cimpl[-1][0]
     cexplref = cexpl[-1][0]
@@ -104,12 +97,10 @@ def convall(l, d):
         plt.loglog(a[:,2],a[:,3], label=lab)
     plt.xlabel("cost")
     plt.ylabel("relative error")
+    plt.title("{} t0={} tend={} dx={} cells={}".format(dim, t0, tend, dx, nx))
     plt.legend()
     plt.savefig("figures/convergence_{}.pdf".format(info2name(cimpl[-1][1], False)))
     plt.close()
-    
-    # print()
-    # return best, cimpl, cexpl
 
 def plot1d(datadts):
     maxdts = sorted([dt for dt in datadts])
