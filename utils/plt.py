@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath("%s/.config/" % (os.path.expanduser("~"))))
 import plt_setting
 import numpy as np
 from collections import defaultdict
+from math import sqrt
 
 def dd(n):
     if n == 1:
@@ -106,13 +107,14 @@ def plot1d(datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, data) = datadts[maxdts[0]]
     tend = info["tend"]
-
+    
     x = data[:,0]/tend
     y = data[:,2]
     plt.figure()
-    plt.plot(x,y)
+    plt.plot(x,y, label="numerics")
     plt.xlabel("x/t")
     plt.ylabel("t00")
+    plt.legend()
     plt.savefig("figures/best_{}.pdf".format(info2name(info)))
     plt.close()
 
