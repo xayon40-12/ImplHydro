@@ -14,6 +14,8 @@ def dd(n):
     else:
         return defaultdict(lambda: dd(n-1))
 
+datas = dd(7)
+
 def convert(v):
     try:
         return int(v)
@@ -22,8 +24,6 @@ def convert(v):
             return float(v)
         except:
             return v
-    
-datas = dd(7)
 
 dir = "results/"
 for d in os.listdir(dir):
@@ -45,7 +45,7 @@ for d in os.listdir(dir):
     info["dim"] = dim
     
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
-    datas[dim][integration][t0][tend][dx][nx][maxdt] = (info, data)
+    datas[dim][t0][tend][dx][nx][integration][maxdt] = (info, data)
 
 def compare(i, vss, wss):
     maxerr = 0
@@ -63,61 +63,66 @@ def convergence(a, ref=None):
     maxdts = sorted([dt for dt in a])
     if ref is None:
         ref = a[maxdts[0]][1]
-    print("cost", "maxerr", "meanerr")
+    # print("cost", "maxerr", "meanerr")
     rmaxdts = reversed(maxdts)
     all = []
     for i in rmaxdts:
         (info, v) = a[i]
         cost = info["cost"]
         (maxerr, meanerr) = compare(2, ref, v)
-        print("{} {:e} {:e}".format(cost, maxerr, meanerr))
-        all += [(v, info, maxerr, meanerr)]
+        # print("{} {:e} {:e}".format(cost, maxerr, meanerr))
+        all += [(v, info, cost, maxerr, meanerr)]
     
-    return all
+    return np.array(all, dtype=object)
 
-def testconv(dim, t0, tend, dx, n):
-    print("convergence "+dim+":")
-    impl = datas[dim]["FixPoint"][t0][tend][dx][n]
-    expl = datas[dim]["Explicit"][t0][tend][dx][n]
-    dt = sorted([dt for dt in impl])[0]
-    print("implicit:")
-    cimpl = convergence(impl)
-    print("explicit:")
-    cexpl = convergence(expl)
-    (maxerr, meanerr) = compare(2, impl[dt][1],expl[dt][1])
-    print("comparison explicit implicit:\n    maxerr {:e}\n    meanerr {:e}".format(maxerr, meanerr))
-    
-    cibesterr = cimpl[-2][2]
-    cebesterr = cexpl[-2][2]
-    if cibesterr < cebesterr:
-        best = cimpl[-1]
-        print("explicit with implicit as ref:")
-        cexpl = convergence(expl, best[0])
-        print("implicit with explicit as ref:")
-        convergence(impl, cexpl[-1][0])
+def info2name(info, integration=True):
+    if integration:
+        return "{}_{}_{}_{}_{}_{}".format(info["dim"],info["integration"],info["t0"],info["tend"],info["dx"],info["nx"])
     else:
-        best = cexpl[-1]
-        print("implicit with explicit as ref:")
-        cimpl = convergence(impl, best[0])
+        return "{}_{}_{}_{}_{}".format(info["dim"],info["t0"],info["tend"],info["dx"],info["nx"])
+
+def convall(l, d):
+    # print(l)
+    # print("convergence "+dim+":")
+    impl = d["FixPoint"]
+    expl = d["Explicit"]
+    dt = sorted([dt for dt in impl])[0] # the dt should be the same for expl and impl
+    # print("implicit:")
+    cimpl = convergence(impl)
+    # print("explicit:")
+    cexpl = convergence(expl)
+    # (maxerr, meanerr) = compare(2, impl[dt][1],expl[dt][1])
+    # print("comparison explicit implicit:\n    maxerr {:e}\n    meanerr {:e}".format(maxerr, meanerr))
     
-    print()
-    return best, cimpl, cexpl
-
-testconv("1D", 1.0, 4.5, 0.1, 100)
-testconv("2D", 1.0, 4.5, 0.1, 100)
-
-def info2name(info):
-    return "{}_{}_{}_{}_{}_{}".format(info["dim"],info["integration"],info["t0"],info["tend"],info["dx"],info["nx"])
+    cimplref = cimpl[-1][0]
+    cexplref = cexpl[-1][0]
+    cimplrexpl = convergence(impl, cexplref)
+    cexplrimpl = convergence(expl, cimplref)
+    
+    plt.figure()
+    for (a,lab) in [(cimpl,"impl r impl"),(cimplrexpl,"impl r expl"),(cexpl,"expl r expl"),(cexplrimpl,"expl r impl")]:
+        plt.loglog(a[:,2],a[:,3], label=lab)
+    plt.xlabel("cost")
+    plt.ylabel("relative error")
+    plt.legend()
+    plt.savefig("figures/convergence_{}.pdf".format(info2name(cimpl[-1][1], False)))
+    plt.close()
+    
+    # print()
+    # return best, cimpl, cexpl
 
 def plot1d(datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, data) = datadts[maxdts[0]]
+    tend = info["tend"]
 
-    x = data[:,0]
+    x = data[:,0]/tend
     y = data[:,2]
     plt.figure()
     plt.plot(x,y)
-    plt.savefig("figures/{}.pdf".format(info2name(info)))
+    plt.xlabel("x/t")
+    plt.ylabel("t00")
+    plt.savefig("figures/best_{}.pdf".format(info2name(info)))
     plt.close()
 
 def plot2d(datadts):
@@ -134,26 +139,30 @@ def plot2d(datadts):
     u = y[-1][0]
     plt.figure()
     plt.imshow(z, extent=[l,r,d,u])
-    plt.savefig("figures/{}.pdf".format(info2name(info)))
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.savefig("figures/best_{}.pdf".format(info2name(info)))
     plt.close()
 
-def alldata(data, f):
-    def _all(l, d):
-        if type(d) is dict:
-            f(l, d)
-        else:
-            for p in d:
-                _all(l+[p], d[p])
-    _all([],data)
-        
 def plotall(l, d):
     if l[0] == "1D":
         plot1d(d)
     else:
         plot2d(d)
+
+def alldata(n, data, f):
+    def _all(n, l, d):
+        if n == 0:
+            f(l, d)
+        else:
+            for p in d:
+                _all(n-1, l+[p], d[p])
+    _all(n, [], data)
+        
 try:
     os.mkdir("figures")
 except FileExistsError:
     None
     
-alldata(datas, plotall)
+alldata(5, datas, convall)
+alldata(6, datas, plotall)
