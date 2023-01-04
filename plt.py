@@ -59,60 +59,101 @@ def compare(i, vss, wss):
     meanerr /= len(vss)
     return (maxerr, meanerr)
 
-def convergence(a):
+def convergence(a, ref=None):
     maxdts = sorted([dt for dt in a])
-    (_, ref) = a[maxdts[0]]
-    for i in maxdts:
+    if ref is None:
+        ref = a[maxdts[0]][1]
+    print("cost", "maxerr", "meanerr")
+    rmaxdts = reversed(maxdts)
+    all = []
+    for i in rmaxdts:
         (info, v) = a[i]
         cost = info["cost"]
         (maxerr, meanerr) = compare(2, ref, v)
-        print("cost", cost, "maxerr", maxerr, "meanerr", meanerr)
+        print("{} {:e} {:e}".format(cost, maxerr, meanerr))
+        all += [(v, info, maxerr, meanerr)]
+    
+    return all
 
-def testconv(dim):
+def testconv(dim, t0, tend, dx, n):
     print("convergence "+dim+":")
-    impl = datas[dim]["FixPoint"][1.0][4.5][0.1][100]
-    expl = datas[dim]["Explicit"][1.0][4.5][0.1][100]
+    impl = datas[dim]["FixPoint"][t0][tend][dx][n]
+    expl = datas[dim]["Explicit"][t0][tend][dx][n]
     dt = sorted([dt for dt in impl])[0]
-    convergence(impl)
-    convergence(expl)
+    print("implicit:")
+    cimpl = convergence(impl)
+    print("explicit:")
+    cexpl = convergence(expl)
     (maxerr, meanerr) = compare(2, impl[dt][1],expl[dt][1])
-    print("comparison explicit implicit:\n    ", "maxerr", maxerr, "meanerr", meanerr)
+    print("comparison explicit implicit:\n    maxerr {:e}\n    meanerr {:e}".format(maxerr, meanerr))
+    
+    cibesterr = cimpl[-2][2]
+    cebesterr = cexpl[-2][2]
+    if cibesterr < cebesterr:
+        best = cimpl[-1]
+        print("explicit with implicit as ref:")
+        cexpl = convergence(expl, best[0])
+        print("implicit with explicit as ref:")
+        convergence(impl, cexpl[-1][0])
+    else:
+        best = cexpl[-1]
+        print("implicit with explicit as ref:")
+        cimpl = convergence(impl, best[0])
+    
     print()
+    return best, cimpl, cexpl
 
-testconv("1D")
-testconv("2D")
+testconv("1D", 1.0, 4.5, 0.1, 100)
+testconv("2D", 1.0, 4.5, 0.1, 100)
 
-def plot1d():
-    datadts = datas["1D"]["FixPoint"][1.0][4.5][0.1][100]
-    maxdts = sorted([dt for dt in datadts])
-    print(maxdts)
-    (info, data) = datadts[maxdts[-1]]
+def info2name(info):
+    return "{}_{}_{}_{}_{}_{}".format(info["dim"],info["integration"],info["t0"],info["tend"],info["dx"],info["nx"])
 
-    x = data[:,0]
-    y = data[:,2]
-    plt.plot(x,y)
-    plt.show()
-
-def plot2d():
-    datadts = datas["2D"]["FixPoint"][1.0][4.5][0.1][100]
+def plot1d(datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, data) = datadts[maxdts[0]]
 
-    x = np.reshape(data[:,0], (100,100))
-    y = np.reshape(data[:,1], (100,100))
-    z = np.reshape(data[:,2], (100,100))
-    # fig = plt.figure()
-    # ax = plt.axes(projection='3d')
-    # ax.view_init(90,0)
-    # ax.plot_surface(x, y, z, rstride=1, cstride=1, cmap='viridis', edgecolor='none')
-    print(x)
-    print(y)
+    x = data[:,0]
+    y = data[:,2]
+    plt.figure()
+    plt.plot(x,y)
+    plt.savefig("figures/{}.pdf".format(info2name(info)))
+    plt.close()
+
+def plot2d(datadts):
+    maxdts = sorted([dt for dt in datadts])
+    (info, data) = datadts[maxdts[0]]
+
+    n = info["nx"]
+    x = np.reshape(data[:,0], (n,n))
+    y = np.reshape(data[:,1], (n,n))
+    z = np.reshape(data[:,2], (n,n))
     l = x[0][0]
     r = x[0][-1]
     d = y[0][0]
     u = y[-1][0]
+    plt.figure()
     plt.imshow(z, extent=[l,r,d,u])
-    plt.show()
+    plt.savefig("figures/{}.pdf".format(info2name(info)))
+    plt.close()
 
-# plot1d()
-# plot2d()
+def alldata(data, f):
+    def _all(l, d):
+        if type(d) is dict:
+            f(l, d)
+        else:
+            for p in d:
+                _all(l+[p], d[p])
+    _all([],data)
+        
+def plotall(l, d):
+    if l[0] == "1D":
+        plot1d(d)
+    else:
+        plot2d(d)
+try:
+    os.mkdir("figures")
+except FileExistsError:
+    None
+    
+alldata(datas, plotall)

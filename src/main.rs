@@ -169,8 +169,7 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
 
 fn big_stack() {
     let t0 = 1.0;
-    // let nconv = 12;
-    let nconv = 4;
+    let nconv = 12;
 
     let tend = 4.5;
     run::<100>(t0, tend, 0.1, nconv);
