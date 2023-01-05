@@ -15,61 +15,70 @@ def riemann(e0,emin,cs2,eps,void):
     def xt(e):
         return (v(e) - cs)/(1 - v(e)*cs)
 
-    def cont(el, vv):
-        vel = v(el)
-        vr = -vv
-        vl = (vel+vr)/(1+vel*vr)
-        er = emin
-        gl = 1/(1-vl**2)
-        gr = 1/(1-vr**2)
-        c1 = el*gl*vl-er*vr*gr
-        c2 = 4*el*gl*vl*vl+el-(4*er*gr*vr*vr+er)
-
-        return sqrt(c1*c1+c2*c2)
-                
-    def grad(f, a, b):
-        fab = f(a,b)
-        da = f(a+eps,b)-fab
-        db = f(a,b+eps)-fab
-        d = sqrt(da*da+db*db)
-        return (fab, da/d, db/d)
-        
-    def next(f, e, _, a, b):
-        (fab, da,db) = grad(f, a, b)
-        return (e*0.99, fab, a-e*da, b-e*db)
-
-    # search the energy and speed of the chock front
-    def search(err, e, v, i):
-        if i<eps:
-            return (e, v)
-        else:
-            (nerr, fab, ne, nv) = next(cont, err, 0, e, v)
-            return search(nerr, ne, nv, fab)
-
-    (eq, vc) = search(1e-1, (e0+emin)/3, 0.5, 1)
-
-    def f(x):
-        if x < xt(e0):
-            return e0
-        elif x < xt(eq):
-            return e0*((1-cs)/(1+cs)*(1-x)/(1+x))**((1+cs2)/(2*cs))
-        elif x < vc:
-            return eq
-        else:
-            return emin
-
-    def f2(x):
-        if x < xt(e0):
-            return e0
-        elif x<1:
-            return e0*((1-cs)/(1+cs)*(1-x)/(1+x))**((1+cs2)/(2*cs))
-        else:
-            return 0
-
     if void:
-        return f2
+        def f2(x):
+            if x < xt(e0):
+                return e0
+            elif x<1:
+                return e0*((1-cs)/(1+cs)*(1-x)/(1+x))**((1+cs2)/(2*cs))
+            else:
+                return 0
+    
+        def v2(x):
+            return v(f2(x))
+
+        return (f2, v2)
     else:
-        return f
+        def cont(el, vv):
+            vel = v(el)
+            vr = -vv
+            vl = (vel+vr)/(1+vel*vr)
+            er = emin
+            gl = 1/(1-vl**2)
+            gr = 1/(1-vr**2)
+            c1 = el*gl*vl-er*vr*gr
+            c2 = 4*el*gl*vl*vl+el-(4*er*gr*vr*vr+er)
+
+            return sqrt(c1*c1+c2*c2)
+                
+        def grad(f, a, b):
+            fab = f(a,b)
+            da = f(a+eps,b)-fab
+            db = f(a,b+eps)-fab
+            d = sqrt(da*da+db*db)
+            return (fab, da/d, db/d)
+        
+        def next(f, e, _, a, b):
+            (fab, da,db) = grad(f, a, b)
+            return (e*0.99, fab, a-e*da, b-e*db)
+
+        # search the energy and speed of the chock front
+        def search(err, e, v, i):
+            if i<eps:
+                return (e, v)
+            else:
+                (nerr, fab, ne, nv) = next(cont, err, 0, e, v)
+                return search(nerr, ne, nv, fab)
+
+        (eq, vc) = search(1e-1, (e0+emin)/3, 0.5, 1)
+
+        def f1(x):
+            if x < xt(e0):
+                return e0
+            elif x < xt(eq):
+                return e0*((1-cs)/(1+cs)*(1-x)/(1+x))**((1+cs2)/(2*cs))
+            elif x < vc:
+                return eq
+            else:
+                return emin
+
+        def v1(x):
+            if x < vc:
+                return v(f1(x))
+            else:
+                return 0
+
+        return (f1, v1)
 
 def main() -> int:
     e0 = 10

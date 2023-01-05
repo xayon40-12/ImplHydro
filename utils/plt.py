@@ -8,6 +8,8 @@ import plt_setting
 import numpy as np
 from collections import defaultdict
 from math import sqrt
+from riemann import riemann
+from gubser import gubser
 
 # plt.rcParams['axes.grid'] = False
 
@@ -120,16 +122,37 @@ def plot1d(datadts):
     (info, data) = datadts[maxdts[0]]
     tend = info["tend"]
     
+    name = info["name"]
+    void = "Void" in name
+    e0 = 10
+    emin = 1
+    cs2 = 1/3
+    eps = 1e-10
+
+    e, v = riemann(e0,emin,cs2,eps,void)
+    def p(x):
+        return cs2*e(x)
+    def t00(x):
+        vx = v(x)
+        if vx == 1:
+            return 0
+        else:
+            ut2 = 1/(1-v(x)*v(x))
+            return (e(x)+p(x))*ut2-p(x)
+
+    
     x = data[:,IDx]/tend
     iter = data[:,IDiter]
     y = data[:,IDt00]
+    yt00 = [t00(x) for x in x]
     _,ax = plt.subplots()
-    l1 ,= ax.plot(x,y)
+    numerics ,= ax.plot(x,y)
+    continuum ,= ax.plot(x,yt00)
     ax.set_ylabel("e")
     ax.set_xlabel("x/t")
     ax2 = ax.twinx()
-    l2 ,= ax2.plot(x,iter, 'o', color="gray")
-    plt.legend([l1,l2],["numerics","iterations"])
+    iterations ,= ax2.plot(x,iter, 'o', color="gray")
+    plt.legend([numerics, continuum, iterations],["numerics", "continuum", "iterations"])
     plt.savefig("figures/best_{}.pdf".format(info2name(info)))
     plt.close()
 
