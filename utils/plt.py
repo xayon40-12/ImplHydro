@@ -73,7 +73,7 @@ def convergence(a, ref=None):
         dt = info["maxdt"]
         (maxerr, meanerr) = compare(2, ref, v)
         # all += [(v, info, cost, maxerr, meanerr)]
-        all += [(v, info, dt, maxerr, meanerr)]
+        all += [(v, info, dt, cost, maxerr, meanerr)]
     
     return np.array(all, dtype=object)
 
@@ -91,18 +91,19 @@ def convall(l, d):
     info = any[dtref][0]
     refs = {s: d[s][dtref][1] for s in d}
     
-    all = []
-    plt.figure()
-    for s0 in scs:
-        for s1 in scs:
-            c = convergence(d[s0],refs[s1])
-            plt.loglog(c[:,2],c[:,3], label="{} r {}".format(s0, s1))
-    plt.xlabel("cost")
-    plt.ylabel("relative error")
-    plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
-    plt.legend()
-    plt.savefig("figures/convergence_{}.pdf".format(info2name(info, False)))
-    plt.close()
+    for (dtcost, dci) in [("dt", 2), ("cost", 3)]:
+        plt.figure()
+        for s0 in scs:
+            # for s1 in scs:
+            for s1 in [scs[0]]:
+                c = convergence(d[s0],refs[s1])
+                plt.loglog(c[:,dci],c[:,4], label="{} r {}".format(s0, s1))
+        plt.xlabel(dtcost)
+        plt.ylabel("relative error")
+        plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
+        plt.legend()
+        plt.savefig("figures/convergence_{}_{}.pdf".format(dtcost, info2name(info, False)))
+        plt.close()
 
 def plot1d(datadts):
     maxdts = sorted([dt for dt in datadts])
