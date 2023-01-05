@@ -9,6 +9,8 @@ import numpy as np
 from collections import defaultdict
 from math import sqrt
 
+plt.rcParams['axes.grid'] = False
+
 IDx = 0
 IDy = 1
 IDiter = 2
@@ -119,7 +121,7 @@ def plot1d(datadts):
     
     x = data[:,IDx]/tend
     iter = data[:,IDiter]
-    y = data[:,ID1De]
+    y = data[:,IDt00]
     _,ax = plt.subplots()
     l1 ,= ax.plot(x,y)
     ax.set_ylabel("e")
@@ -137,17 +139,21 @@ def plot2d(datadts):
     n = info["nx"]
     x = np.reshape(data[:,IDx], (n,n))
     y = np.reshape(data[:,IDy], (n,n))
-    z = np.reshape(data[:,ID2De], (n,n))
+    z = np.reshape(data[:,IDt00], (n,n))
+    ziter = np.reshape(data[:,IDiter], (n,n))
     l = x[0][0]
     r = x[0][-1]
     d = y[0][0]
     u = y[-1][0]
-    plt.figure()
-    plt.imshow(z, extent=[l,r,d,u])
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.savefig("figures/best_{}.pdf".format(info2name(info)))
-    plt.close()
+    for (n, z) in [("t00", z), ("iter", ziter)]:
+        fig, ax = plt.subplots()
+        pos = ax.imshow(z, extent=[l,r,d,u])
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        cbar = plt.colorbar(pos)
+        cbar.set_label(n)
+        plt.savefig("figures/best_{}_{}.pdf".format(n, info2name(info)))
+        plt.close()
 
 def plotall(l, d):
     if l[0] == "1D":
