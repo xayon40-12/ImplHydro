@@ -47,10 +47,16 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
     p: Pressure<'a>,
     dpde: Pressure<'a>,
     r: Scheme<S>,
+    use_exponential: bool,
 ) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
-    println!("Gubser");
+    let name = if use_exponential {
+        "Exponential"
+    } else {
+        "Gubser"
+    };
+    println!("{}", name);
     hydro2d::hydro2d::<V, S>(
-        "Gubser",
+        name,
         dt,
         er,
         t0,
@@ -62,6 +68,7 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
         &p,
         &dpde,
         init_gubser(t0, &p, &dpde),
+        use_exponential,
     )
 }
 
@@ -124,7 +131,10 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
         hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
     });
     let r = gl2;
     let dt = dx * 4.0;
@@ -136,7 +146,10 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
         hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, false).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r).0
+        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, true).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, false).0
     });
     let r = heun;
     let dt = dx / 2.0;
@@ -148,17 +161,21 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
         hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
     });
 }
 
 fn big_stack() {
     let t0 = 1.0;
-    let nconv = 6;
+    let nconv = 8;
 
     let tend = 4.5;
     run::<100>(t0, tend, 0.1, nconv);
     // run::<200>(t0, tend, 0.05, nconv);
+    // run::<500>(t0, tend, 0.01, nconv);
 
     // let tend = 9.0;
     // run::<100>(t0, tend, 0.2, nconv);

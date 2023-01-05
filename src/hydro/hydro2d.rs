@@ -138,6 +138,24 @@ fn flux<const V: usize>(
     };
     [rt0[0], rt0[1], rt0[2], rv]
 }
+fn flux_exponential<const V: usize>(
+    [_ov, vs]: [&[[[f64; 4]; V]; V]; 2],
+    _constraints: Constraints<4, 10>,
+    bound: &[Boundary; 2],
+    pos: [i32; 2],
+    _dx: f64,
+    _er: f64,
+    [_ot, _t]: [f64; 2],
+    [_dt, _cdt]: [f64; 2],
+    _opt: &Coordinate,
+    _tocomp: ToCompute,
+    _p: Pressure,
+    _dpde: Pressure,
+) -> [f64; 4] {
+    let x = bound[0](pos[0], V);
+    let y = bound[1](pos[1], V);
+    [-vs[y][x][0], -vs[y][x][1], -vs[y][x][2], -vs[y][x][3]]
+}
 
 pub fn hydro2d<const V: usize, const S: usize>(
     name: &str,
@@ -151,6 +169,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     p: Pressure,
     dpde: Pressure,
     init: impl Fn(f64, f64) -> [f64; 4],
+    use_exponential: bool,
 ) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
     let schemename = r.name;
     let mut vs = [[[0.0; 4]; V]; V];
@@ -172,6 +191,11 @@ pub fn hydro2d<const V: usize, const S: usize>(
     }
     let constraints = gen_constraints(&p, &dpde);
     let integration = r.integration;
+    let flux = if use_exponential {
+        flux_exponential
+    } else {
+        flux
+    };
     let context = Context {
         fun: &flux,
         constraints: &constraints,
