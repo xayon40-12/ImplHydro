@@ -26,10 +26,7 @@ pub fn hydro1d<'a, const V: usize, const S: usize>(
     let void = if use_void { "Void" } else { "" };
     println!("Rieman{}", void);
     hydro1d::hydro1d::<V, S>(
-        &format!(
-            "Riemann{}_{:?}1d{}_{}_{}c_{:e}dt_{:e}dx",
-            void, r.integration, S, &r.name, V, dt, dx
-        ),
+        &format!("Riemann{}", void),
         dt,
         er,
         t0,
@@ -53,10 +50,7 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
 ) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
     println!("Gubser");
     hydro2d::hydro2d::<V, S>(
-        &format!(
-            "Gubser_{:?}2d{}_{}_{}c_{:e}dt_{:e}dx",
-            r.integration, S, &r.name, V, dt, dx
-        ),
+        "Gubser",
         dt,
         er,
         t0,
@@ -147,15 +141,15 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
 
 fn big_stack() {
     let t0 = 1.0;
-    let nconv = 2;
+    let nconv = 6;
 
     let tend = 4.5;
     run::<100>(t0, tend, 0.1, nconv);
-    run::<200>(t0, tend, 0.05, nconv);
+    // run::<200>(t0, tend, 0.05, nconv);
 
     let tend = 9.0;
     run::<100>(t0, tend, 0.2, nconv);
-    run::<200>(t0, tend, 0.1, nconv);
+    // run::<200>(t0, tend, 0.1, nconv);
 }
 
 fn main() {

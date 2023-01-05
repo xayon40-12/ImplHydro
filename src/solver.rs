@@ -15,21 +15,34 @@ use {
 pub type Constraints<'a, const F: usize, const C: usize> =
     &'a (dyn Fn([f64; F]) -> [f64; C] + Sync);
 
-pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
-    v: &[[[f64; F]; VX]; VY],
+pub fn save<
+    Opt: Sync,
+    const F: usize,
+    const C: usize,
+    const VX: usize,
+    const VY: usize,
+    const S: usize,
+>(
+    context: &Context<Opt, F, C, VX, VY, S>,
     constraints: Constraints<F, C>,
     names: &[&str; C],
     name: &str, // simulation name
     schemename: &str,
     elapsed: f64,
-    t0: f64,
-    tend: f64,
-    t: f64,
-    dx: f64,
-    maxdt: f64,
     cost: usize,
     integration: Integration,
 ) -> std::io::Result<()> {
+    let t0 = context.t0;
+    let tend = context.tend;
+    let t = context.t;
+    let dx = context.dx;
+    let maxdt = context.maxdt;
+    let v = context.vs;
+    let dim = if VY == 1 { 1 } else { 2 };
+    let foldername = &format!(
+        "{}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
+        name, context.r.integration, dim, S, &context.r.name, VX, context.dt, context.dx
+    );
     let mut res = format!("# t {:e}\n# cost {}\n# x y", t, cost);
     for c in 0..C {
         res = format!("{} {}", res, names[c]);
@@ -51,12 +64,12 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
         res = format!("{}\n", res);
     }
 
-    let dir = &format!("results/{}/{:e}", name, t);
+    let dir = &format!("results/{}/{:e}", foldername, t);
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!(
-        "elapsed: {:e}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\n",
-        elapsed, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename,
+        "elapsed: {:e}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nname: {}\n",
+        elapsed, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, name,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -112,17 +125,12 @@ pub fn run<
     let elapsed = now.elapsed().as_secs_f64();
     // eprintln!("Elapsed: {:.2?}", elapsed);
     let err = save(
-        &context.vs,
+        &context,
         constraints,
         names,
         name,
         schemename,
         elapsed,
-        context.t0,
-        context.tend,
-        context.t,
-        context.dx,
-        context.maxdt,
         cost,
         integration,
     );

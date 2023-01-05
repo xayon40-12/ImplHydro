@@ -15,7 +15,7 @@ def dd(n):
     else:
         return defaultdict(lambda: dd(n-1))
 
-datas = dd(7)
+datas = dd(8)
 
 def convert(v):
     try:
@@ -34,7 +34,7 @@ for d in os.listdir(dir):
 
     t0 = info["t0"]
     tend = info["tend"]
-    integration = info["integration"]
+    scheme = info["scheme"]
     maxdt = info["maxdt"]
     dx = info["dx"]
     nx = info["nx"]
@@ -44,9 +44,10 @@ for d in os.listdir(dir):
     else:
         dim = "2D"
     info["dim"] = dim
+    name = info["name"]
     
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
-    datas[dim][t0][tend][dx][nx][integration][maxdt] = (info, data)
+    datas[dim][name][t0][tend][dx][nx][scheme][maxdt] = (info, data)
 
 def compare(i, vss, wss):
     maxerr = 0
@@ -69,38 +70,38 @@ def convergence(a, ref=None):
     for i in rmaxdts:
         (info, v) = a[i]
         cost = info["cost"]
+        dt = info["maxdt"]
         (maxerr, meanerr) = compare(2, ref, v)
-        all += [(v, info, cost, maxerr, meanerr)]
+        # all += [(v, info, cost, maxerr, meanerr)]
+        all += [(v, info, dt, maxerr, meanerr)]
     
     return np.array(all, dtype=object)
 
-def info2name(info, integration=True):
-    if integration:
-        return "{}_{}_{}_{}_{}_{}".format(info["dim"],info["integration"],info["t0"],info["tend"],info["dx"],info["nx"])
+def info2name(info, scheme=True):
+    if scheme:
+        return "{}_{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"])
     else:
-        return "{}_{}_{}_{}_{}".format(info["dim"],info["t0"],info["tend"],info["dx"],info["nx"])
+        return "{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["t0"],info["tend"],info["dx"],info["nx"])
 
 def convall(l, d):
-    [dim,t0,tend,dx,nx] = l
-    impl = d["FixPoint"]
-    expl = d["Explicit"]
-    dt = sorted([dt for dt in impl])[0] # the dt should be the same for expl and impl
-    cimpl = convergence(impl)
-    cexpl = convergence(expl)
+    [dim,name,t0,tend,dx,nx] = l
+    scs = sorted(list(d.keys()))
+    any = d[scs[0]]
+    dtref = sorted(list(any.keys()))[0]
+    info = any[dtref][0]
+    refs = {s: d[s][dtref][1] for s in d}
     
-    cimplref = cimpl[-1][0]
-    cexplref = cexpl[-1][0]
-    cimplrexpl = convergence(impl, cexplref)
-    cexplrimpl = convergence(expl, cimplref)
-    
+    all = []
     plt.figure()
-    for (a,lab) in [(cimpl,"impl r impl"),(cimplrexpl,"impl r expl"),(cexpl,"expl r expl"),(cexplrimpl,"expl r impl")]:
-        plt.loglog(a[:,2],a[:,3], label=lab)
+    for s0 in scs:
+        for s1 in scs:
+            c = convergence(d[s0],refs[s1])
+            plt.loglog(c[:,2],c[:,3], label="{} r {}".format(s0, s1))
     plt.xlabel("cost")
     plt.ylabel("relative error")
-    plt.title("{} t0={} tend={} dx={} cells={}".format(dim, t0, tend, dx, nx))
+    plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
     plt.legend()
-    plt.savefig("figures/convergence_{}.pdf".format(info2name(cimpl[-1][1], False)))
+    plt.savefig("figures/convergence_{}.pdf".format(info2name(info, False)))
     plt.close()
 
 def plot1d(datadts):
@@ -157,5 +158,5 @@ try:
 except FileExistsError:
     None
     
-alldata(5, datas, convall)
-alldata(6, datas, plotall)
+alldata(6, datas, convall)
+alldata(7, datas, plotall)
