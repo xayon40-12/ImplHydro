@@ -32,9 +32,10 @@ pub fn explicit<
         p,
         dpde,
     }: &mut Context<Opt, F, C, VX, VY, S>,
-) -> f64 {
+) -> (f64, [[usize; VX]; VY]) {
     *dt = maxdt.min(*dt);
     let cost = S as f64;
+    let nbiter = [[1usize; VX]; VY];
     let mut fu = [[[0.0f64; F]; VX]; VY];
     let mut vdtk = *vs;
 
@@ -131,5 +132,5 @@ pub fn explicit<
         }
     }
     *ot += *dt;
-    cost
+    (cost, nbiter)
 }

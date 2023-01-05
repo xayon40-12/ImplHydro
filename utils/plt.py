@@ -9,6 +9,13 @@ import numpy as np
 from collections import defaultdict
 from math import sqrt
 
+IDx = 0
+IDy = 1
+IDiter = 2
+IDt00 = 3
+ID1De = 6
+ID2De = 7
+
 def dd(n):
     if n == 1:
         return {}
@@ -71,7 +78,7 @@ def convergence(a, ref=None):
         (info, v) = a[i]
         cost = info["cost"]
         dt = info["maxdt"]
-        (maxerr, meanerr) = compare(2, ref, v)
+        (maxerr, meanerr) = compare(IDt00, ref, v)
         # all += [(v, info, cost, maxerr, meanerr)]
         all += [(v, info, dt, cost, maxerr, meanerr)]
     
@@ -110,13 +117,16 @@ def plot1d(datadts):
     (info, data) = datadts[maxdts[0]]
     tend = info["tend"]
     
-    x = data[:,0]/tend
-    y = data[:,2]
-    plt.figure()
-    plt.plot(x,y, label="numerics")
-    plt.xlabel("x/t")
-    plt.ylabel("t00")
-    plt.legend()
+    x = data[:,IDx]/tend
+    iter = data[:,IDiter]
+    y = data[:,ID1De]
+    _,ax = plt.subplots()
+    l1 ,= ax.plot(x,y)
+    ax.set_ylabel("e")
+    ax.set_xlabel("x/t")
+    ax2 = ax.twinx()
+    l2 ,= ax2.plot(x,iter, 'o', color="gray")
+    plt.legend([l1,l2],["numerics","iterations"])
     plt.savefig("figures/best_{}.pdf".format(info2name(info)))
     plt.close()
 
@@ -125,9 +135,9 @@ def plot2d(datadts):
     (info, data) = datadts[maxdts[0]]
 
     n = info["nx"]
-    x = np.reshape(data[:,0], (n,n))
-    y = np.reshape(data[:,1], (n,n))
-    z = np.reshape(data[:,2], (n,n))
+    x = np.reshape(data[:,IDx], (n,n))
+    y = np.reshape(data[:,IDy], (n,n))
+    z = np.reshape(data[:,ID2De], (n,n))
     l = x[0][0]
     r = x[0][-1]
     d = y[0][0]

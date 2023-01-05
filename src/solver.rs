@@ -30,6 +30,7 @@ pub fn save<
     schemename: &str,
     elapsed: f64,
     cost: usize,
+    nbiter: [[usize; VX]; VY],
     integration: Integration,
 ) -> std::io::Result<()> {
     let t0 = context.t0;
@@ -43,7 +44,7 @@ pub fn save<
         "{}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
         name, context.r.integration, dim, S, &context.r.name, VX, context.dt, context.dx
     );
-    let mut res = format!("# t {:e}\n# cost {}\n# x y", t, cost);
+    let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
     for c in 0..C {
         res = format!("{} {}", res, names[c]);
     }
@@ -54,7 +55,7 @@ pub fn save<
             let vars = constraints(v[j][i]);
             let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
             let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
-            let mut s = format!("{:e} {:e}", x, y);
+            let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
             for c in 0..C {
                 s = format!("{} {:e}", s, vars[c]);
             }
@@ -99,6 +100,7 @@ pub fn run<
 
     let next_save = context.tend;
     let mut ctx_dt = None;
+    let mut nbiter = [[1usize; VX]; VY];
     while context.t < context.tend {
         let d = next_save - context.t;
         if d < 0.0 || d > 2.0 * context.dt {
@@ -114,12 +116,13 @@ pub fn run<
             context.dt = d;
         }
         tsteps += 1;
-        let c = match integration {
+        let (c, nbs) = match integration {
             Integration::Explicit => explicit(&mut context),
             Integration::FixPoint => fixpoint(&mut context),
         };
 
         cost += c;
+        nbiter = nbs;
     }
     let cost = cost as usize;
     let elapsed = now.elapsed().as_secs_f64();
@@ -132,6 +135,7 @@ pub fn run<
         schemename,
         elapsed,
         cost,
+        nbiter,
         integration,
     );
     // let _elapsed = now.elapsed().as_secs();
