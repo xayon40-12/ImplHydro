@@ -4,7 +4,7 @@ use fixhydro::{
     hydro::{
         gubser::init_gubser,
         hydro1d,
-        hydro2d::{self, Coordinate::Milne},
+        hydro2d::{self, Coordinate::*},
         ideal_gas,
         riemann::init_riemann,
         Pressure,
@@ -58,6 +58,7 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
         dx,
         r,
         Milne,
+        // Cartesian,
         &p,
         &dpde,
         init_gubser(t0, &p, &dpde),
@@ -86,10 +87,10 @@ pub fn compare<const VX: usize, const VY: usize, const F: usize>(
 }
 
 pub fn converge<const VX: usize, const VY: usize, const F: usize>(
+    mut dt: f64,
     m: usize,
     fun: impl Fn(f64) -> [[[f64; F]; VX]; VY],
 ) -> Vec<[[[f64; F]; VX]; VY]> {
-    let mut dt = 0.05;
     let mut f = fun(dt);
     let mut all = vec![f];
     println!("error convergence:");
@@ -113,30 +114,42 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     let gl2 = gauss_legendre_2();
     let heun = heun();
 
-    for r in [gl1] {
-        println!("{}", r.name);
-        converge(nconv, |dt| {
-            hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
-        });
-        converge(nconv, |dt| {
-            hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
-        });
-        converge(nconv, |dt| {
-            hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
-        });
-    }
-    for r in [heun, gl2] {
-        println!("{}", r.name);
-        converge(nconv, |dt| {
-            hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
-        });
-        converge(nconv, |dt| {
-            hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
-        });
-        converge(nconv, |dt| {
-            hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
-        });
-    }
+    let r = gl1;
+    let dt = dx;
+    println!("{}", r.name);
+    converge(dt, nconv, |dt| {
+        hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+    });
+    let r = gl2;
+    let dt = dx * 4.0;
+    println!("{}", r.name);
+    converge(dt, nconv, |dt| {
+        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, true).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, false).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r).0
+    });
+    let r = heun;
+    let dt = dx / 2.0;
+    println!("{}", r.name);
+    converge(dt, nconv, |dt| {
+        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+    });
 }
 
 fn big_stack() {
@@ -147,8 +160,8 @@ fn big_stack() {
     run::<100>(t0, tend, 0.1, nconv);
     // run::<200>(t0, tend, 0.05, nconv);
 
-    let tend = 9.0;
-    run::<100>(t0, tend, 0.2, nconv);
+    // let tend = 9.0;
+    // run::<100>(t0, tend, 0.2, nconv);
     // run::<200>(t0, tend, 0.1, nconv);
 }
 

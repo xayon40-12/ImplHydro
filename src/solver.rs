@@ -30,6 +30,7 @@ pub fn save<
     schemename: &str,
     elapsed: f64,
     cost: usize,
+    tsteps: usize,
     nbiter: [[usize; VX]; VY],
     integration: Integration,
 ) -> std::io::Result<()> {
@@ -69,8 +70,8 @@ pub fn save<
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!(
-        "elapsed: {:e}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nname: {}\n",
-        elapsed, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, name,
+        "elapsed: {:e}\ntsteps: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nname: {}\n",
+        elapsed, tsteps, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, name,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -135,6 +136,7 @@ pub fn run<
         schemename,
         elapsed,
         cost,
+        tsteps,
         nbiter,
         integration,
     );

@@ -9,7 +9,7 @@ import numpy as np
 from collections import defaultdict
 from math import sqrt
 
-plt.rcParams['axes.grid'] = False
+# plt.rcParams['axes.grid'] = False
 
 IDx = 0
 IDy = 1
@@ -74,15 +74,15 @@ def convergence(a, ref=None):
     maxdts = sorted([dt for dt in a])
     if ref is None:
         ref = a[maxdts[0]][1]
-    rmaxdts = reversed(maxdts)
     all = []
-    for i in rmaxdts:
+    for i in maxdts:
         (info, v) = a[i]
         cost = info["cost"]
         dt = info["maxdt"]
+        avdt = (info["tend"]-info["t0"])/info["tsteps"]
         (maxerr, meanerr) = compare(IDt00, ref, v)
         # all += [(v, info, cost, maxerr, meanerr)]
-        all += [(v, info, dt, cost, maxerr, meanerr)]
+        all += [(v, info, dt, cost, avdt, maxerr, meanerr)]
     
     return np.array(all, dtype=object)
 
@@ -98,15 +98,16 @@ def convall(l, d):
     any = d[scs[0]]
     dtref = sorted(list(any.keys()))[0]
     info = any[dtref][0]
-    refs = {s: d[s][dtref][1] for s in d}
+    refs = {s: d[s][sorted(list(d[s].keys()))[0]][1] for s in d}
     
-    for (dtcost, dci) in [("dt", 2), ("cost", 3)]:
+    for (dtcost, dci) in [("dt", 2), ("cost", 3), ("avdt", 4)]:
         plt.figure()
         for s0 in scs:
             # for s1 in scs:
-            for s1 in [scs[0]]:
+            for s1 in [scs[1]]:
                 c = convergence(d[s0],refs[s1])
-                plt.loglog(c[:,dci],c[:,4], label="{} r {}".format(s0, s1))
+                plt.loglog(c[:,dci],c[:,5], label="{} r {}".format(s0, s1))
+                # plt.loglog(c[:,dci],c[:,6], label="{} r {}".format(s0, s1))
         plt.xlabel(dtcost)
         plt.ylabel("relative error")
         plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
