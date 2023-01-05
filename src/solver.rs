@@ -110,7 +110,7 @@ pub fn run<
     }
     let cost = cost as usize;
     let elapsed = now.elapsed().as_secs_f64();
-    eprintln!("Elapsed: {:.2?}", elapsed);
+    // eprintln!("Elapsed: {:.2?}", elapsed);
     let err = save(
         &context.vs,
         constraints,
@@ -126,8 +126,8 @@ pub fn run<
         cost,
         integration,
     );
-    let _elapsed = now.elapsed().as_secs();
-    eprintln!("Elapsed with save: {:.2?}", _elapsed);
+    // let _elapsed = now.elapsed().as_secs();
+    // eprintln!("Elapsed with save: {:.2?}", _elapsed);
     match err {
         Err(e) => eprintln!("{}", e),
         Ok(()) => {}

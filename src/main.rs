@@ -21,11 +21,14 @@ pub fn hydro1d<'a, const V: usize, const S: usize>(
     p: Pressure<'a>,
     dpde: Pressure<'a>,
     r: Scheme<S>,
+    use_void: bool,
 ) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
+    let void = if use_void { "Void" } else { "" };
+    println!("Rieman{}", void);
     hydro1d::hydro1d::<V, S>(
         &format!(
-            "{:?}1d{}_{}_{}c_{:e}dt_{:e}dx",
-            r.integration, S, &r.name, V, dt, dx
+            "Riemann{}_{:?}1d{}_{}_{}c_{:e}dt_{:e}dx",
+            void, r.integration, S, &r.name, V, dt, dx
         ),
         dt,
         er,
@@ -35,7 +38,7 @@ pub fn hydro1d<'a, const V: usize, const S: usize>(
         r,
         &p,
         &dpde,
-        init_riemann(&p, &dpde),
+        init_riemann(&p, &dpde, use_void),
     )
 }
 pub fn hydro2d<'a, const V: usize, const S: usize>(
@@ -48,9 +51,10 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
     dpde: Pressure<'a>,
     r: Scheme<S>,
 ) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
+    println!("Gubser");
     hydro2d::hydro2d::<V, S>(
         &format!(
-            "{:?}2d{}_{}_{}c_{:e}dt_{:e}dx",
+            "Gubser_{:?}2d{}_{}_{}c_{:e}dt_{:e}dx",
             r.integration, S, &r.name, V, dt, dx
         ),
         dt,
@@ -116,16 +120,24 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     let heun = heun();
 
     for r in [gl1] {
+        println!("{}", r.name);
         converge(nconv, |dt| {
-            hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+            hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+        });
+        converge(nconv, |dt| {
+            hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
         });
         converge(nconv, |dt| {
             hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
         });
     }
     for r in [heun, gl2] {
+        println!("{}", r.name);
         converge(nconv, |dt| {
-            hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+            hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+        });
+        converge(nconv, |dt| {
+            hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
         });
         converge(nconv, |dt| {
             hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r).0

@@ -78,9 +78,6 @@ pub fn explicit<
                 }
             }
         }
-        c = a[s].iter().fold(0.0, |acc, r| acc + r);
-        cdt = c * *dt;
-        t = *ot + cdt;
         fu.par_iter_mut()
             .enumerate()
             .flat_map(|(vy, fsy)| {
@@ -114,6 +111,9 @@ pub fn explicit<
                 }
             }
         }
+        c = a[s].iter().fold(0.0, |acc, r| acc + r);
+        cdt = c * *dt;
+        t = *ot + cdt;
     }
 
     let b = a[S - 1];

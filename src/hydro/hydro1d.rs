@@ -1,5 +1,5 @@
 use crate::solver::{
-    context::{Boundary, Context, Integration, ToCompute},
+    context::{Boundary, Context, ToCompute},
     kt::{kt, Dir},
     newton::newton,
     run,
