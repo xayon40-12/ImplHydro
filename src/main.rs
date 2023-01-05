@@ -9,10 +9,7 @@ use fixhydro::{
         riemann::init_riemann,
         Pressure,
     },
-    solver::{
-        context::Integration::{self, *},
-        schemes::*,
-    },
+    solver::schemes::*,
 };
 
 pub fn hydro1d<'a, const V: usize, const S: usize>(
@@ -23,18 +20,19 @@ pub fn hydro1d<'a, const V: usize, const S: usize>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-    explimpl: Integration,
     r: Scheme<S>,
 ) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
     hydro1d::hydro1d::<V, S>(
-        &format!("{:?}1d{}_{}c_{:e}dt_{:e}dx", explimpl, S, V, dt, dx),
+        &format!(
+            "{:?}1d{}_{}_{}c_{:e}dt_{:e}dx",
+            r.integration, S, &r.name, V, dt, dx
+        ),
         dt,
         er,
         t0,
         tend,
         dx,
         r,
-        explimpl,
         &p,
         &dpde,
         init_riemann(&p, &dpde),
@@ -48,11 +46,13 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-    explimpl: Integration,
     r: Scheme<S>,
 ) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
     hydro2d::hydro2d::<V, S>(
-        &format!("{:?}2d{}_{}c_{:e}dt_{:e}dx", explimpl, S, V, dt, dx),
+        &format!(
+            "{:?}2d{}_{}_{}c_{:e}dt_{:e}dx",
+            r.integration, S, &r.name, V, dt, dx
+        ),
         dt,
         er,
         t0,
@@ -60,7 +60,6 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
         dx,
         r,
         Milne,
-        explimpl,
         &p,
         &dpde,
         init_gubser(t0, &p, &dpde),
@@ -112,64 +111,31 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize>(
 pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     let p = &ideal_gas::p;
     let dpde = &ideal_gas::dpde;
+    let gl1 = gauss_legendre_1();
+    let gl2 = gauss_legendre_2();
+    let heun = heun();
 
-    // Convergenc:
-    println!("Riemann {} {}:\n", V, dx);
-    println!("heun");
-    let v1 = converge(nconv, |dt| {
-        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, Explicit, heun()).0
-    });
-    println!("gl1");
-    let v2 = converge(nconv, |dt| {
-        hydro1d::<V, 1>(
-            t0,
-            tend,
-            dx,
-            dt,
-            dt * dt,
-            p,
-            dpde,
-            FixPoint,
-            gauss_legendre_1(),
-        )
-        .0
-    });
-    let (compmax, compaverage) = compare(0, &v1[nconv - 1], &v2[nconv - 1]);
-    println!(
-        "Comparison heun and gl1:\nmax     error: {:e}\naverage error: {:e}\n",
-        compmax, compaverage
-    );
-
-    println!("Gubser {} {}:\n", V, dx);
-    println!("heun");
-    let v1 = converge(nconv, |dt| {
-        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, Explicit, heun()).0
-    });
-    println!("gl1");
-    let v2 = converge(nconv, |dt| {
-        hydro2d::<V, 1>(
-            t0,
-            tend,
-            dx,
-            dt,
-            dt * dt,
-            p,
-            dpde,
-            FixPoint,
-            gauss_legendre_1(),
-        )
-        .0
-    });
-    let (compmax, compaverage) = compare(0, &v1[nconv - 1], &v2[nconv - 1]);
-    println!(
-        "Comparison heun and gl1:\nmax     error: {:e}\naverage error: {:e}\n",
-        compmax, compaverage
-    );
+    for r in [gl1] {
+        converge(nconv, |dt| {
+            hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+        });
+        converge(nconv, |dt| {
+            hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+        });
+    }
+    for r in [heun, gl2] {
+        converge(nconv, |dt| {
+            hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+        });
+        converge(nconv, |dt| {
+            hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r).0
+        });
+    }
 }
 
 fn big_stack() {
     let t0 = 1.0;
-    let nconv = 12;
+    let nconv = 2;
 
     let tend = 4.5;
     run::<100>(t0, tend, 0.1, nconv);

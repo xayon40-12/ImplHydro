@@ -2,6 +2,8 @@ use rayon::prelude::*;
 
 use crate::solver::context::{Context, ToCompute};
 
+use super::schemes::Scheme;
+
 pub fn explicit<
     Opt: Sync,
     const F: usize,
@@ -18,7 +20,7 @@ pub fn explicit<
         vs,
         k,
         integrated,
-        r: (a, _),
+        r: Scheme { aij: a, .. },
         dt,
         dx,
         maxdt,

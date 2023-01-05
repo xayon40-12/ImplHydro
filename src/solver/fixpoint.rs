@@ -2,6 +2,8 @@ use rayon::prelude::*;
 
 use crate::solver::context::{Context, ToCompute};
 
+use super::schemes::Scheme;
+
 pub fn pfor2d<T: Send, const VX: usize, const VY: usize>(
     vss: &mut [[T; VX]; VY],
     f: &(dyn Fn((usize, usize, &mut T)) + Sync),
@@ -32,7 +34,7 @@ pub fn fixpoint<
         vs,
         k,
         integrated,
-        r: (a, b),
+        r: Scheme { aij: a, bj: b, .. },
         dt: dto,
         dx,
         maxdt,

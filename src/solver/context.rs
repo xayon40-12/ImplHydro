@@ -1,13 +1,14 @@
 use crate::hydro::Pressure;
 
-use super::Constraints;
+use super::{schemes::Scheme, Constraints};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Integration {
     Explicit,
     FixPoint,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum ToCompute {
     Integrated,
     NonIntegrated,
@@ -69,7 +70,7 @@ pub struct Context<
     pub vs: [[[f64; F]; VX]; VY],
     pub k: [[[[f64; F]; VX]; VY]; S],
     pub integrated: [bool; F],
-    pub r: ([[f64; S]; S], Option<[f64; S]>),
+    pub r: Scheme<S>,
     pub dt: f64,
     pub dx: f64,
     pub maxdt: f64,

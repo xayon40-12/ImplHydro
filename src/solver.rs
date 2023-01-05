@@ -20,6 +20,7 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     constraints: Constraints<F, C>,
     names: &[&str; C],
     name: &str, // simulation name
+    schemename: &str,
     elapsed: f64,
     t0: f64,
     tend: f64,
@@ -54,8 +55,8 @@ pub fn save<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     std::fs::create_dir_all(dir)?;
     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     let info = format!(
-        "elapsed: {:e}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}",
-        elapsed, t0, tend, t, cost, VX, VY, dx, maxdt, integration
+        "elapsed: {:e}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\n",
+        elapsed, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -72,6 +73,7 @@ pub fn run<
 >(
     mut context: Context<Opt, F, C, VX, VY, S>,
     name: &str,
+    schemename: &str,
     integration: Integration,
     names: &[&str; C],
     constraints: Constraints<F, C>,
@@ -114,6 +116,7 @@ pub fn run<
         constraints,
         names,
         name,
+        schemename,
         elapsed,
         context.t0,
         context.tend,

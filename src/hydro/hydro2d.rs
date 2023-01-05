@@ -3,6 +3,7 @@ use crate::solver::{
     kt::{kt, Dir},
     newton::newton,
     run,
+    schemes::Scheme,
     utils::ghost,
     Constraints,
 };
@@ -145,13 +146,13 @@ pub fn hydro2d<const V: usize, const S: usize>(
     t: f64,
     tend: f64,
     dx: f64,
-    r: ([[f64; S]; S], Option<[f64; S]>),
+    r: Scheme<S>,
     opt: Coordinate,
-    integration: Integration,
     p: Pressure,
     dpde: Pressure,
     init: impl Fn(f64, f64) -> [f64; 4],
 ) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
+    let schemename = r.name;
     let mut vs = [[[0.0; 4]; V]; V];
     let names = [
         "t00", "t01", "t02", "v", "e", "pe", "dpde", "ut", "ux", "uy",
@@ -170,6 +171,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         }
     }
     let constraints = gen_constraints(&p, &dpde);
+    let integration = r.integration;
     let context = Context {
         fun: &flux,
         constraints: &constraints,
@@ -190,5 +192,12 @@ pub fn hydro2d<const V: usize, const S: usize>(
         p,
         dpde,
     };
-    run(context, name, integration, &names, &constraints)
+    run(
+        context,
+        name,
+        &schemename,
+        integration,
+        &names,
+        &constraints,
+    )
 }
