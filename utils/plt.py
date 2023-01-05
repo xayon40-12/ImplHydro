@@ -118,58 +118,74 @@ def convall(l, d):
         plt.close()
 
 def plot1d(datadts):
-    maxdts = sorted([dt for dt in datadts])
-    (info, data) = datadts[maxdts[0]]
-    tend = info["tend"]
+    maxdt = sorted([dt for dt in datadts])[0]
+    for dt in datadts:
+        timename = "dt{}".format(dt)
+        if dt == maxdt:
+            timename = "best_"+timename
+        (info, data) = datadts[dt]
+        tend = info["tend"]
     
-    name = info["name"]
-    void = "Void" in name
-    e0 = 10
-    emin = 1
-    cs2 = 1/3
-    eps = 1e-10
+        name = info["name"]
+        void = "Void" in name
+        e0 = 10
+        emin = 1
+        cs2 = 1/3
+        eps = 1e-10
 
-    e, v = riemann(e0,emin,cs2,eps,void)
-    def p(x):
-        return cs2*e(x)
-    def t00(x):
-        vx = v(x)
-        if vx == 1:
-            return 0
-        else:
-            ut2 = 1/(1-v(x)*v(x))
-            return (e(x)+p(x))*ut2-p(x)
+        e, v = riemann(e0,emin,cs2,eps,void)
+        def p(x):
+            return cs2*e(x)
+        def t00(x):
+            vx = v(x)
+            if vx == 1:
+                return 0
+            else:
+                ut2 = 1/(1-v(x)*v(x))
+                return (e(x)+p(x))*ut2-p(x)
 
     
-    x = data[:,IDx]/tend
-    iter = data[:,IDiter]
-    y = data[:,IDt00]
-    yt00 = [t00(x) for x in x]
-    _,ax = plt.subplots()
-    numerics ,= ax.plot(x,y)
-    continuum ,= ax.plot(x,yt00)
-    ax.set_ylabel("e")
-    ax.set_xlabel("x/t")
-    ax2 = ax.twinx()
-    iterations ,= ax2.plot(x,iter, 'o', color="gray")
-    plt.legend([numerics, continuum, iterations],["numerics", "continuum", "iterations"])
-    plt.savefig("figures/best_{}.pdf".format(info2name(info)))
-    plt.close()
+        x = data[:,IDx]/tend
+        iter = data[:,IDiter]
+        y = data[:,IDt00]
+        yt00 = [t00(x) for x in x]
+        _,ax = plt.subplots()
+        continuum ,= ax.plot(x,yt00, color="black")
+        numerics ,= ax.plot(x,y)
+        ax.set_ylabel("t00")
+        ax.set_xlabel("x/t")
+        ax2 = ax.twinx()
+        ax2.set_ylabel("iterations")
+        iterations ,= ax2.plot(x,iter, 'o', color="gray")
+        plt.legend([numerics, continuum, iterations],["numerics", "continuum", "iterations"])
+        plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info)))
+        plt.close()
 
 def plot2d(datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, data) = datadts[maxdts[0]]
 
+    t = info["tend"]
     n = info["nx"]
-    x = np.reshape(data[:,IDx], (n,n))
-    y = np.reshape(data[:,IDy], (n,n))
-    z = np.reshape(data[:,IDt00], (n,n))
-    ziter = np.reshape(data[:,IDiter], (n,n))
+    x = data[:,IDx]
+    y = data[:,IDy]
+    z = data[:,ID2De]
+    zt00 = data[:,IDt00]
+    ziter = data[:,IDiter]
+    zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
+    zerr = [abs(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
+    x = np.reshape(x, (n,n))
+    y = np.reshape(y, (n,n))
+    z = np.reshape(z, (n,n))
+    zt00 = np.reshape(zt00, (n,n))
+    ziter = np.reshape(ziter, (n,n))
+    zgubser = np.reshape(zgubser, (n,n))
+    zerr = np.reshape(zerr, (n,n))
     l = x[0][0]
     r = x[0][-1]
     d = y[0][0]
     u = y[-1][0]
-    for (n, z) in [("t00", z), ("iter", ziter)]:
+    for (n, z) in [("t00", zt00), ("e", z), ("iter", ziter), ("t00gubser", zgubser), ("t00err", zerr)]:
         fig, ax = plt.subplots()
         pos = ax.imshow(z, extent=[l,r,d,u])
         ax.set_xlabel("x")
