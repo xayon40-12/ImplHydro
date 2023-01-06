@@ -17,8 +17,8 @@ IDx = 0
 IDy = 1
 IDiter = 2
 IDt00 = 3
-ID1De = 6
-ID2De = 7
+ID1De = 5
+ID2De = 6
 
 def dd(n):
     if n == 1:

@@ -19,10 +19,9 @@ fn gen_transform<'a>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-) -> Box<dyn Fn([f64; 2]) -> [f64; 8] + 'a + Sync> {
+) -> Box<dyn Fn([f64; 2]) -> [f64; 5] + 'a + Sync> {
     Box::new(move |[t00, t01]| {
         let m = t01.abs();
-        let t00 = t00.max(m);
         let sv = solve_v(t00, m, p);
         let v = newton(er, 0.5, |v| sv(v) - v);
         let v = v.max(0.0).min(1.0);
@@ -31,11 +30,11 @@ fn gen_transform<'a>(
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
         let ux = t01 / ((e + pe) * ut);
         let ut = (1.0 + ux * ux).sqrt();
-        [t00, t01, v, e, pe, dpde(e), ut, ux]
+        [e, pe, dpde(e), ut, ux]
     })
 }
 
-fn eigenvalues([_t00, _t01, _, _e, _pe, dpde, ut, ux]: [f64; 8]) -> f64 {
+fn eigenvalues([_e, _pe, dpde, ut, ux]: [f64; 5]) -> f64 {
     let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
@@ -43,19 +42,20 @@ fn eigenvalues([_t00, _t01, _, _e, _pe, dpde, ut, ux]: [f64; 8]) -> f64 {
     (a.abs() + b.sqrt()) / d
 }
 
-pub fn f00([_, _, _, e, pe, _, ut, _]: [f64; 8]) -> f64 {
+pub fn f00([e, pe, _, ut, _]: [f64; 5]) -> f64 {
     (e + pe) * ut * ut - pe
 }
-pub fn f01([_, _, _, e, pe, _, ut, ux]: [f64; 8]) -> f64 {
+pub fn f01([e, pe, _, ut, ux]: [f64; 5]) -> f64 {
     (e + pe) * ut * ux
 }
-fn f11([_, _, _, e, pe, _, _, ux]: [f64; 8]) -> f64 {
+fn f11([e, pe, _, _, ux]: [f64; 5]) -> f64 {
     (e + pe) * ux * ux + pe
 }
 
 fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 2]; V]; 1]; 2],
-    transform: Transform<2, 8>,
+    constraints: Transform<2, 2>,
+    transform: Transform<2, 5>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
@@ -85,7 +85,8 @@ fn flux<const V: usize>(
         pos,
         Dir::X,
         [&f01, &f11],
-        &transform,
+        constraints,
+        transform,
         &eigenvalues,
         pre,
         post,
@@ -110,7 +111,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
 ) -> ([[[f64; 2]; V]; 1], f64, usize, usize) {
     let schemename = r.name;
     let mut vs = [[[0.0; 2]; V]];
-    let names = ["t00", "t01", "v", "e", "pe", "dpde", "ut", "ux"];
+    let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);
     let k = [[[[0.0; 2]; V]]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {

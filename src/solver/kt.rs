@@ -20,7 +20,8 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     [x, y]: [i32; 2],
     dir: Dir,
     flux: [Flux<C>; N],
-    constraints: Transform<F, C>,
+    constraints: Transform<F, F>,
+    transform: Transform<F, C>,
     eigenvalues: Eigenvalues<C>,
     pre_flux_limiter: Transform<F, F>,
     post_flux_limiter: Transform<F, F>,
@@ -41,30 +42,30 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             deriv[l][f] = flux_limiter(theta, vals[l][f], vals[l + 1][f], vals[l + 2][f]);
         }
     }
-    let mut tmpupm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
-    let mut upm: [[[f64; C]; 2]; 2] = [[[0.0; C]; 2]; 2];
+    let mut upm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
+    let mut tupm: [[[f64; C]; 2]; 2] = [[[0.0; C]; 2]; 2];
     for jpm in 0..2 {
         for pm in 0..2 {
             let s = pm as f64 - 0.5;
             let j = jpm + pm;
             for f in 0..F {
-                tmpupm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
+                upm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
             }
-            tmpupm[jpm][pm] = post_flux_limiter(tmpupm[jpm][pm]);
-            upm[jpm][pm] = constraints(tmpupm[jpm][pm]);
+            upm[jpm][pm] = constraints(post_flux_limiter(upm[jpm][pm]));
+            tupm[jpm][pm] = transform(upm[jpm][pm]);
         }
     }
     let mut fpm: [[[f64; N]; 2]; 2] = [[[0.0; N]; 2]; 2];
     for jpm in 0..2 {
         for pm in 0..2 {
             for n in 0..N {
-                fpm[jpm][pm][n] = flux[n](upm[jpm][pm]);
+                fpm[jpm][pm][n] = flux[n](tupm[jpm][pm]);
             }
         }
     }
     let mut a: [f64; 2] = [0.0; 2];
     for jpm in 0..2 {
-        a[jpm] = eigenvalues(upm[jpm][0]).max(eigenvalues(upm[jpm][1]));
+        a[jpm] = eigenvalues(tupm[jpm][0]).max(eigenvalues(tupm[jpm][1]));
     }
     let mut h: [[f64; N]; 2] = [[0.0; N]; 2];
     for jpm in 0..2 {

@@ -1,6 +1,4 @@
-use rayon::prelude::*;
-
-use crate::solver::context::Context;
+use crate::solver::{context::Context, pfor2d};
 
 use super::schemes::Scheme;
 
@@ -24,13 +22,13 @@ pub fn explicit<
         dt,
         dx,
         maxdt,
-        er,
+        er: _,
         t: ot,
         t0: _,
         tend: _,
         opt,
-        p,
-        dpde,
+        p: _,
+        dpde: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
 ) -> (f64, [[usize; VX]; VY]) {
     *dt = maxdt.min(*dt);
@@ -43,30 +41,29 @@ pub fn explicit<
     let mut cdt = 0.0;
     let mut t = *ot;
     for s in 0..S {
-        fu.par_iter_mut()
-            .enumerate()
-            .flat_map(|(vy, fsy)| {
-                fsy.par_iter_mut()
-                    .enumerate()
-                    .map(move |(vx, fsyx)| (vy, vx, fsyx))
-            })
-            .for_each(|(vy, vx, fu)| {
-                *fu = fun(
-                    [&vs, &vdtk],
-                    transform,
-                    boundary,
-                    [vx as i32, vy as i32],
-                    *dx,
-                    [*ot, t],
-                    [*dt, cdt],
-                    opt,
-                );
-            });
+        for vy in 0..VY {
+            for vx in 0..VX {
+                vdtk[vy][vx] = constraints(vdtk[vy][vx]);
+            }
+        }
+        pfor2d(&mut fu, &|(vy, vx, fu)| {
+            *fu = fun(
+                [&vs, &vdtk],
+                constraints,
+                transform,
+                boundary,
+                [vx as i32, vy as i32],
+                *dx,
+                [*ot, t],
+                [*dt, cdt],
+                opt,
+            );
+        });
+        k[s] = fu;
         for vy in 0..VY {
             for vx in 0..VX {
                 for f in 0..F {
                     vdtk[vy][vx][f] = vs[vy][vx][f];
-                    k[s][vy][vx][f] = fu[vy][vx][f];
                     for s1 in 0..S {
                         vdtk[vy][vx][f] += *dt * a[s][s1] * k[s1][vy][vx][f];
                     }
@@ -77,17 +74,8 @@ pub fn explicit<
         cdt = c * *dt;
         t = *ot + cdt;
     }
+    *vs = vdtk;
 
-    let b = a[S - 1];
-    for f in 0..F {
-        for vy in 0..VY {
-            for vx in 0..VX {
-                for s in 0..S {
-                    vs[vy][vx][f] += *dt * b[s] * k[s][vy][vx][f];
-                }
-            }
-        }
-    }
     *ot += *dt;
     (cost, nbiter)
 }

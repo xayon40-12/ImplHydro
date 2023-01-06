@@ -12,6 +12,7 @@ pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
 pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY: usize> =
     &'a (dyn Fn(
         [&[[[f64; F]; VX]; VY]; 2],
+        Transform<F, F>,
         Transform<F, C>,
         &[Boundary; 2],
         [i32; 2], // position in index

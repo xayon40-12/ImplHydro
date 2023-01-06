@@ -20,10 +20,9 @@ fn gen_transform<'a>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-) -> Box<dyn Fn([f64; 3]) -> [f64; 10] + 'a + Sync> {
+) -> Box<dyn Fn([f64; 3]) -> [f64; 6] + 'a + Sync> {
     Box::new(move |[t00, t01, t02]| {
         let m = (t01 * t01 + t02 * t02).sqrt();
-        let t00 = t00.max(m);
         let sv = solve_v(t00, m, p);
         let v = newton(er, 0.5, |v| sv(v) - v);
         let v = v.max(0.0).min(1.0);
@@ -33,42 +32,42 @@ fn gen_transform<'a>(
         let ux = t01 / ((e + pe) * ut);
         let uy = t02 / ((e + pe) * ut);
         let ut = (1.0 + ux * ux + uy * uy).sqrt();
-        [t00, t01, t02, v, e, pe, dpde(e), ut, ux, uy]
+        [e, pe, dpde(e), ut, ux, uy]
     })
 }
 
-fn eigenvaluesx([_t00, _t01, _t02, _v, _e, _pe, dpde, ut, ux, _uy]: [f64; 10]) -> f64 {
+fn eigenvaluesx([_e, _pe, dpde, ut, ux, _uy]: [f64; 6]) -> f64 {
     let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
     (a.abs() + b.sqrt()) / d
 }
-fn eigenvaluesy([t00, t01, t02, v, e, pe, dpde, ut, ux, uy]: [f64; 10]) -> f64 {
-    eigenvaluesx([t00, t01, t02, v, e, pe, dpde, ut, uy, ux])
+fn eigenvaluesy([e, pe, dpde, ut, ux, uy]: [f64; 6]) -> f64 {
+    eigenvaluesx([e, pe, dpde, ut, uy, ux])
 }
 
-pub fn f00([_, _, _, _, e, pe, _, ut, _, _]: [f64; 10]) -> f64 {
+pub fn f00([e, pe, _, ut, _, _]: [f64; 6]) -> f64 {
     (e + pe) * ut * ut - pe
 }
-pub fn f01([_, _, _, _, e, pe, _, ut, ux, _]: [f64; 10]) -> f64 {
+pub fn f01([e, pe, _, ut, ux, _]: [f64; 6]) -> f64 {
     (e + pe) * ut * ux
 }
-pub fn f02([_, _, _, _, e, pe, _, ut, _, uy]: [f64; 10]) -> f64 {
+pub fn f02([e, pe, _, ut, _, uy]: [f64; 6]) -> f64 {
     (e + pe) * uy * ut
 }
 
-fn f11([_, _, _, _, e, pe, _, _, ux, _]: [f64; 10]) -> f64 {
+fn f11([e, pe, _, _, ux, _]: [f64; 6]) -> f64 {
     (e + pe) * ux * ux + pe
 }
-fn f12([_, _, _, _, e, pe, _, _, ux, uy]: [f64; 10]) -> f64 {
+fn f12([e, pe, _, _, ux, uy]: [f64; 6]) -> f64 {
     (e + pe) * ux * uy
 }
 
-fn f21([_, _, _, _, e, pe, _, _, ux, uy]: [f64; 10]) -> f64 {
+fn f21([e, pe, _, _, ux, uy]: [f64; 6]) -> f64 {
     (e + pe) * uy * ux
 }
-fn f22([_, _, _, _, e, pe, _, _, _, uy]: [f64; 10]) -> f64 {
+fn f22([e, pe, _, _, _, uy]: [f64; 6]) -> f64 {
     (e + pe) * uy * uy + pe
 }
 
@@ -79,7 +78,8 @@ pub enum Coordinate {
 
 fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
-    transform: Transform<3, 10>,
+    constraints: Transform<3, 3>,
+    transform: Transform<3, 6>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
@@ -111,7 +111,8 @@ fn flux<const V: usize>(
         pos,
         Dir::X,
         [&f01, &f11, &f12],
-        &transform,
+        constraints,
+        transform,
         &eigenvaluesx,
         pre,
         post,
@@ -124,7 +125,8 @@ fn flux<const V: usize>(
         pos,
         Dir::Y,
         [&f02, &f21, &f22],
-        &transform,
+        constraints,
+        transform,
         &eigenvaluesy,
         pre,
         post,
@@ -132,8 +134,7 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let [_t00, _t01, _t02, _v, e, pe, _dpde, ut, ux, uy] =
-        transform(vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+    let [e, pe, _dpde, ut, ux, uy] = transform(vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
     let source: [f64; 3] = match opt {
         Coordinate::Cartesian => [0.0; 3],
         Coordinate::Milne => [
@@ -150,7 +151,8 @@ fn flux<const V: usize>(
 }
 fn flux_exponential<const V: usize>(
     [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
-    _constraints: Transform<3, 10>,
+    _constraints: Transform<3, 3>,
+    _transform: Transform<3, 6>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     _dx: f64,
@@ -179,9 +181,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
 ) -> ([[[f64; 3]; V]; V], f64, usize, usize) {
     let schemename = r.name;
     let mut vs = [[[0.0; 3]; V]; V];
-    let names = [
-        "t00", "t01", "t02", "v", "e", "pe", "dpde", "ut", "ux", "uy",
-    ];
+    let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
     let k = [[[[0.0; 3]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {

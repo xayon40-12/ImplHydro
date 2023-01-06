@@ -49,7 +49,7 @@ pub fn init_gubser<'a>(
     Box::new(move |x, y| {
         // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
         let [e, ut, ux, uy] = gubser(x, y, t0);
-        let vars = [0.0, 0.0, 0.0, 0.0, e, p(e), dpde(e), ut, ux, uy];
+        let vars = [e, p(e), dpde(e), ut, ux, uy];
         [f00(vars), f01(vars), f02(vars)]
     })
 }

@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 pub mod context;
 pub mod explicit;
 pub mod fixpoint;
@@ -12,6 +14,20 @@ use {
     fixpoint::fixpoint,
 };
 
+pub fn pfor2d<T: Send, const VX: usize, const VY: usize>(
+    vss: &mut [[T; VX]; VY],
+    f: &(dyn Fn((usize, usize, &mut T)) + Sync),
+) {
+    vss.par_iter_mut()
+        .enumerate()
+        .flat_map(|(vy, vs)| {
+            vs.par_iter_mut()
+                .enumerate()
+                .map(move |(vx, v)| (vy, vx, v))
+        })
+        .for_each(f);
+}
+
 pub type Transform<'a, const F: usize, const C: usize> = &'a (dyn Fn([f64; F]) -> [f64; C] + Sync);
 
 pub fn save<
@@ -24,7 +40,7 @@ pub fn save<
 >(
     context: &Context<Opt, F, C, VX, VY, S>,
     transform: Transform<F, C>,
-    names: &[&str; C],
+    (namesf, namesc): &([&str; F], [&str; C]),
     name: &str, // simulation name
     schemename: &str,
     elapsed: f64,
@@ -45,17 +61,23 @@ pub fn save<
         name, context.r.integration, dim, S, &context.r.name, VX, context.maxdt, context.dx
     );
     let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
+    for f in 0..F {
+        res = format!("{} {}", res, namesf[f]);
+    }
     for c in 0..C {
-        res = format!("{} {}", res, names[c]);
+        res = format!("{} {}", res, namesc[c]);
     }
     res = format!("{}\n", res);
 
     for j in 0..VY {
         for i in 0..VX {
-            let vars = transform(v[j][i]);
             let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
             let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
             let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
+            for f in 0..F {
+                s = format!("{} {:e}", s, v[j][i][f]);
+            }
+            let vars = transform(v[j][i]);
             for c in 0..C {
                 s = format!("{} {:e}", s, vars[c]);
             }
@@ -89,7 +111,7 @@ pub fn run<
     name: &str,
     schemename: &str,
     integration: Integration,
-    names: &[&str; C],
+    names: &([&str; F], [&str; C]),
     transform: Transform<F, C>,
 ) -> ([[[f64; F]; VX]; VY], f64, usize, usize) {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;

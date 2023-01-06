@@ -1,22 +1,6 @@
-use rayon::prelude::*;
-
-use crate::solver::context::Context;
+use crate::solver::{context::Context, pfor2d};
 
 use super::schemes::Scheme;
-
-pub fn pfor2d<T: Send, const VX: usize, const VY: usize>(
-    vss: &mut [[T; VX]; VY],
-    f: &(dyn Fn((usize, usize, &mut T)) + Sync),
-) {
-    vss.par_iter_mut()
-        .enumerate()
-        .flat_map(|(vy, vs)| {
-            vs.par_iter_mut()
-                .enumerate()
-                .map(move |(vx, v)| (vy, vx, v))
-        })
-        .for_each(f);
-}
 
 pub fn fixpoint<
     Opt: Sync,
@@ -43,8 +27,8 @@ pub fn fixpoint<
         t0: _,
         tend: _,
         opt,
-        p,
-        dpde,
+        p: _,
+        dpde: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
 ) -> (f64, [[usize; VX]; VY]) {
     let [sizex, sizey] = *local_interaction;
@@ -87,6 +71,7 @@ pub fn fixpoint<
                         for s1 in 0..S {
                             vdtk[vy][vx][f] += dt * a[s][s1] * fu[s1][vy][vx][f];
                         }
+                        vdtk[vy][vx] = constraints(vdtk[vy][vx]);
                     }
                 }
             }
@@ -94,6 +79,7 @@ pub fn fixpoint<
                 if errs[vy][vx] {
                     *fu = fun(
                         [&vs, &vdtk],
+                        constraints,
                         transform,
                         boundary,
                         [vx as i32, vy as i32],
