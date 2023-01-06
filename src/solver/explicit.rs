@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 
-use crate::solver::context::{Context, ToCompute};
+use crate::solver::context::Context;
 
 use super::schemes::Scheme;
 
@@ -19,7 +19,6 @@ pub fn explicit<
         local_interaction: _,
         vs,
         k,
-        integrated,
         r: Scheme { aij: a, .. },
         dt,
         dx,
@@ -57,11 +56,9 @@ pub fn explicit<
                     boundary,
                     [vx as i32, vy as i32],
                     *dx,
-                    *er,
                     [*ot, t],
                     [*dt, cdt],
                     opt,
-                    ToCompute::Integrated,
                     p,
                     dpde,
                 );
@@ -69,45 +66,10 @@ pub fn explicit<
         for vy in 0..VY {
             for vx in 0..VX {
                 for f in 0..F {
-                    if integrated[f] {
-                        vdtk[vy][vx][f] = vs[vy][vx][f];
-                        k[s][vy][vx][f] = fu[vy][vx][f];
-                        for s1 in 0..S {
-                            vdtk[vy][vx][f] += *dt * a[s][s1] * k[s1][vy][vx][f];
-                        }
-                    }
-                }
-            }
-        }
-        fu.par_iter_mut()
-            .enumerate()
-            .flat_map(|(vy, fsy)| {
-                fsy.par_iter_mut()
-                    .enumerate()
-                    .map(move |(vx, fsyx)| (vy, vx, fsyx))
-            })
-            .for_each(|(vy, vx, fu)| {
-                *fu = fun(
-                    [&vs, &vdtk],
-                    constraints,
-                    boundary,
-                    [vx as i32, vy as i32],
-                    *dx,
-                    *er,
-                    [*ot, t],
-                    [*dt, cdt],
-                    opt,
-                    ToCompute::NonIntegrated,
-                    p,
-                    dpde,
-                );
-            });
-        for vy in 0..VY {
-            for vx in 0..VX {
-                for f in 0..F {
-                    if !integrated[f] {
-                        k[s][vy][vx][f] = fu[vy][vx][f];
-                        vdtk[vy][vx][f] = k[s][vy][vx][f];
+                    vdtk[vy][vx][f] = vs[vy][vx][f];
+                    k[s][vy][vx][f] = fu[vy][vx][f];
+                    for s1 in 0..S {
+                        vdtk[vy][vx][f] += *dt * a[s][s1] * k[s1][vy][vx][f];
                     }
                 }
             }
@@ -121,12 +83,8 @@ pub fn explicit<
     for f in 0..F {
         for vy in 0..VY {
             for vx in 0..VX {
-                if integrated[f] {
-                    for s in 0..S {
-                        vs[vy][vx][f] += *dt * b[s] * k[s][vy][vx][f];
-                    }
-                } else {
-                    vs[vy][vx][f] = k[S - 1][vy][vx][f];
+                for s in 0..S {
+                    vs[vy][vx][f] += *dt * b[s] * k[s][vy][vx][f];
                 }
             }
         }

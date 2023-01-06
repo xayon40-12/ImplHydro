@@ -1,6 +1,6 @@
 use crate::solver::{
-    context::{Boundary, Context, ToCompute},
-    kt::{id_flux_limiter, kt, Dir},
+    context::{Boundary, Context},
+    kt::{kt, Dir},
     newton::newton,
     run,
     schemes::Scheme,
@@ -11,14 +11,15 @@ use crate::solver::{
 use super::{solve_v, Pressure};
 
 fn gen_constraints<'a>(
+    er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-) -> Box<dyn Fn([f64; 4]) -> [f64; 10] + 'a + Sync> {
-    Box::new(|[t00, t01, t02, v]| {
+) -> Box<dyn Fn([f64; 3]) -> [f64; 10] + 'a + Sync> {
+    Box::new(move |[t00, t01, t02]| {
         let m = (t01 * t01 + t02 * t02).sqrt();
         let t00 = t00.max(m);
         let sv = solve_v(t00, m, p);
-        let v = newton(1e-10, 0.5, |v| sv(v) - v);
+        let v = newton(er, 0.5, |v| sv(v) - v);
         let v = v.max(0.0).min(1.0);
         let e = (t00 - m * v).max(1e-100);
         let pe = p(e);
@@ -71,114 +72,96 @@ pub enum Coordinate {
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[f64; 4]; V]; V]; 2],
-    constraints: Constraints<4, 10>,
+    [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
+    constraints: Constraints<3, 10>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
-    er: f64,
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     opt: &Coordinate,
-    tocomp: ToCompute,
     p: Pressure,
     _dpde: Pressure,
-) -> [f64; 4] {
-    let [t00, t01, t02, v, e, pe, _dpde, ut, ux, uy] =
+) -> [f64; 3] {
+    let [_t00, _t01, _t02, _v, e, pe, _dpde, ut, ux, uy] =
         constraints(vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
-    let rt0 = if tocomp.integrated() || tocomp.all() {
-        let theta = 1.1;
+    let theta = 1.1;
 
-        let pre = &|vs: [f64; 4]| {
-            let t00 = vs[0];
-            let t01 = vs[1];
-            let t02 = vs[2];
-            let v = vs[3];
-            let k = t01 * t01 + t02 * t02;
-            let m = (t00 * t00 - k).sqrt();
-            [m, t01, t02, v]
-        };
-        let post = &|vs: [f64; 4]| {
-            let m = vs[0];
-            let t01 = vs[1];
-            let t02 = vs[2];
-            let v = vs[3];
-            let k = t01 * t01 + t02 * t02;
-            let t00 = (m * m + k).sqrt();
-            [t00, t01, t02, v]
-        };
-        let divf1 = kt(
-            vs,
-            bound,
-            pos,
-            Dir::X,
-            [&f01, &f11, &f12],
-            &constraints,
-            &eigenvaluesx,
-            pre,
-            post,
-            dx,
-            theta,
-        );
-        let divf2 = kt(
-            vs,
-            bound,
-            pos,
-            Dir::Y,
-            [&f02, &f21, &f22],
-            &constraints,
-            &eigenvaluesy,
-            pre,
-            post,
-            dx,
-            theta,
-        );
+    let pre = &|vs: [f64; 3]| {
+        let t00 = vs[0];
+        let t01 = vs[1];
+        let t02 = vs[2];
+        let k = t01 * t01 + t02 * t02;
+        let m = (t00 * t00 - k).sqrt();
+        [m, t01, t02]
+    };
+    let post = &|vs: [f64; 3]| {
+        let m = vs[0];
+        let t01 = vs[1];
+        let t02 = vs[2];
+        let k = t01 * t01 + t02 * t02;
+        let t00 = (m * m + k).sqrt();
+        [t00, t01, t02]
+    };
+    let divf1 = kt(
+        vs,
+        bound,
+        pos,
+        Dir::X,
+        [&f01, &f11, &f12],
+        &constraints,
+        &eigenvaluesx,
+        pre,
+        post,
+        dx,
+        theta,
+    );
+    let divf2 = kt(
+        vs,
+        bound,
+        pos,
+        Dir::Y,
+        [&f02, &f21, &f22],
+        &constraints,
+        &eigenvaluesy,
+        pre,
+        post,
+        dx,
+        theta,
+    );
 
-        // let re = newton(1e-10, e, |e| {
-        //     t00 - (t01 * t01 + t02 * t02) / (t00 + p(e)) - e
-        // }); // WARNING: the energy density must be solved in the flux and not in the constraints, else there are oscillations
-        let source: [f64; 3] = match opt {
-            Coordinate::Cartesian => [0.0; 3],
-            Coordinate::Milne => [
-                (e + pe) * ut * ut / t,
-                (e + pe) * ut * ux / t,
-                (e + pe) * ut * uy / t,
-            ],
-        };
-        [
-            -divf1[0] - divf2[0] - source[0],
-            -divf1[1] - divf2[1] - source[1],
-            -divf1[2] - divf2[2] - source[2],
-        ]
-    } else {
-        [0.0, 0.0, 0.0]
+    // let re = newton(1e-10, e, |e| {
+    //     t00 - (t01 * t01 + t02 * t02) / (t00 + p(e)) - e
+    // }); // WARNING: the energy density must be solved in the flux and not in the constraints, else there are oscillations
+    let source: [f64; 3] = match opt {
+        Coordinate::Cartesian => [0.0; 3],
+        Coordinate::Milne => [
+            (e + pe) * ut * ut / t,
+            (e + pe) * ut * ux / t,
+            (e + pe) * ut * uy / t,
+        ],
     };
-    let m = (t01 * t01 + t02 * t02).sqrt();
-    let sv = solve_v(t00, m, p);
-    let rv = match tocomp {
-        ToCompute::All => sv(v),
-        ToCompute::NonIntegrated => newton(er, v, |v| sv(v) - v),
-        ToCompute::Integrated => 0.0,
-    };
-    [rt0[0], rt0[1], rt0[2], rv]
+    [
+        -divf1[0] - divf2[0] - source[0],
+        -divf1[1] - divf2[1] - source[1],
+        -divf1[2] - divf2[2] - source[2],
+    ]
 }
 fn flux_exponential<const V: usize>(
-    [_ov, vs]: [&[[[f64; 4]; V]; V]; 2],
-    _constraints: Constraints<4, 10>,
+    [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
+    _constraints: Constraints<3, 10>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     _dx: f64,
-    _er: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     _opt: &Coordinate,
-    _tocomp: ToCompute,
     _p: Pressure,
     _dpde: Pressure,
-) -> [f64; 4] {
+) -> [f64; 3] {
     let x = bound[0](pos[0], V);
     let y = bound[1](pos[1], V);
-    [-vs[y][x][0], -vs[y][x][1], -vs[y][x][2], -vs[y][x][3]]
+    [-vs[y][x][0], -vs[y][x][1], -vs[y][x][2]]
 }
 
 pub fn hydro2d<const V: usize, const S: usize>(
@@ -192,28 +175,24 @@ pub fn hydro2d<const V: usize, const S: usize>(
     opt: Coordinate,
     p: Pressure,
     dpde: Pressure,
-    init: impl Fn(f64, f64) -> [f64; 4],
+    init: impl Fn(f64, f64) -> [f64; 3],
     use_exponential: bool,
-) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
+) -> ([[[f64; 3]; V]; V], f64, usize, usize) {
     let schemename = r.name;
-    let mut vs = [[[0.0; 4]; V]; V];
+    let mut vs = [[[0.0; 3]; V]; V];
     let names = [
         "t00", "t01", "t02", "v", "e", "pe", "dpde", "ut", "ux", "uy",
     ];
-    let mut k = [[[[0.0; 4]; V]; V]; S];
-    let integrated = [true, true, true, false];
+    let k = [[[[0.0; 3]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
             vs[j][i] = init(x, y);
-            for s in 0..S {
-                k[s][j][i][3] = vs[j][i][3];
-            }
         }
     }
-    let constraints = gen_constraints(&p, &dpde);
+    let constraints = gen_constraints(er, &p, &dpde);
     let integration = r.integration;
     let flux = if use_exponential {
         flux_exponential
@@ -227,7 +206,6 @@ pub fn hydro2d<const V: usize, const S: usize>(
         local_interaction: [1, 1],   // use a distance of 0 to emulate 1D
         vs,
         k,
-        integrated,
         r,
         dt: 1e10,
         dx,

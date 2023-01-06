@@ -45,11 +45,11 @@ pub fn init_gubser<'a>(
     t0: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-) -> Box<dyn Fn(f64, f64) -> [f64; 4] + 'a> {
+) -> Box<dyn Fn(f64, f64) -> [f64; 3] + 'a> {
     Box::new(move |x, y| {
         // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
         let [e, ut, ux, uy] = gubser(x, y, t0);
         let vars = [0.0, 0.0, 0.0, 0.0, e, p(e), dpde(e), ut, ux, uy];
-        [f00(vars), f01(vars), f02(vars), 0.0]
+        [f00(vars), f01(vars), f02(vars)]
     })
 }

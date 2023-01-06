@@ -22,7 +22,7 @@ pub fn hydro1d<'a, const V: usize, const S: usize>(
     dpde: Pressure<'a>,
     r: Scheme<S>,
     use_void: bool,
-) -> ([[[f64; 3]; V]; 1], f64, usize, usize) {
+) -> ([[[f64; 2]; V]; 1], f64, usize, usize) {
     let void = if use_void { "Void" } else { "" };
     println!("Rieman{}", void);
     hydro1d::hydro1d::<V, S>(
@@ -48,7 +48,7 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
     dpde: Pressure<'a>,
     r: Scheme<S>,
     use_exponential: bool,
-) -> ([[[f64; 4]; V]; V], f64, usize, usize) {
+) -> ([[[f64; 3]; V]; V], f64, usize, usize) {
     let name = if use_exponential {
         "Exponential"
     } else {
@@ -121,8 +121,8 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     let gl2 = gauss_legendre_2();
     let heun = heun();
 
-    // let r = gl1;
-    // let dt = dx;
+    let r = gl1;
+    let dt = dx;
     // println!("{}", r.name);
     // converge(dt, nconv, |dt| {
     //     hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
@@ -133,9 +133,9 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     // converge(dt, nconv, |dt| {
     //     hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
     // });
-    // converge(dt, nconv, |dt| {
-    //     hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
-    // });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
+    });
     // let r = gl2;
     // let dt = dx * 4.0;
     // println!("{}", r.name);
@@ -155,7 +155,6 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     let dt = dx / 2.0;
     println!("{}", r.name);
     converge(dt, nconv, |dt| {
-        println!("dt: {}", dt);
         hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
     });
     converge(dt, nconv, |dt| {

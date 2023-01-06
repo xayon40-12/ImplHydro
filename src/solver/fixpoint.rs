@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 
-use crate::solver::context::{Context, ToCompute};
+use crate::solver::context::Context;
 
 use super::schemes::Scheme;
 
@@ -33,7 +33,6 @@ pub fn fixpoint<
         local_interaction,
         vs,
         k,
-        integrated,
         r: Scheme { aij: a, bj: b, .. },
         dt: dto,
         dx,
@@ -83,73 +82,27 @@ pub fn fixpoint<
             for vy in 0..VY {
                 for vx in 0..VX {
                     for f in 0..F {
-                        if integrated[f] {
-                            vdtk[vy][vx][f] = vs[vy][vx][f];
-                            for s1 in 0..S {
-                                vdtk[vy][vx][f] += dt * a[s][s1] * fu[s1][vy][vx][f];
-                            }
-                        } else {
-                            vdtk[vy][vx][f] = fu[s][vy][vx][f];
+                        vdtk[vy][vx][f] = vs[vy][vx][f];
+                        for s1 in 0..S {
+                            vdtk[vy][vx][f] += dt * a[s][s1] * fu[s1][vy][vx][f];
                         }
                     }
                 }
             }
             pfor2d(&mut fu[s], &|(vy, vx, fu)| {
                 if errs[vy][vx] {
-                    let tmp = fun(
+                    *fu = fun(
                         [&vs, &vdtk],
                         constraints,
                         boundary,
                         [vx as i32, vy as i32],
                         *dx,
-                        *er,
                         [*ot, t],
                         [dt, cdt],
                         opt,
-                        ToCompute::Integrated,
                         p,
                         dpde,
                     );
-                    for f in 0..F {
-                        if integrated[f] {
-                            fu[f] = tmp[f];
-                        }
-                    }
-                }
-            });
-            for vy in 0..VY {
-                for vx in 0..VX {
-                    for f in 0..F {
-                        if integrated[f] {
-                            vdtk[vy][vx][f] = vs[vy][vx][f];
-                            for s1 in 0..S {
-                                vdtk[vy][vx][f] += dt * a[s][s1] * fu[s1][vy][vx][f];
-                            }
-                        }
-                    }
-                }
-            }
-            pfor2d(&mut fu[s], &|(vy, vx, fu)| {
-                if errs[vy][vx] {
-                    let tmp = fun(
-                        [&vs, &vdtk],
-                        constraints,
-                        boundary,
-                        [vx as i32, vy as i32],
-                        *dx,
-                        *er,
-                        [*ot, t],
-                        [dt, cdt],
-                        opt,
-                        ToCompute::NonIntegrated,
-                        p,
-                        dpde,
-                    );
-                    for f in 0..F {
-                        if !integrated[f] {
-                            fu[f] = tmp[f];
-                        }
-                    }
                 }
             });
         }
@@ -162,11 +115,9 @@ pub fn fixpoint<
                     nbiter[vy][vx] += 1;
                     for s in 0..S {
                         for f in 0..F {
-                            if integrated[f] {
-                                let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
-                                err = err.max(e);
-                                errs[vy][vx] |= e > *er;
-                            }
+                            let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
+                            err = err.max(e);
+                            errs[vy][vx] |= e > *er;
                         }
                     }
                 }
@@ -188,12 +139,8 @@ pub fn fixpoint<
     for f in 0..F {
         for vy in 0..VY {
             for vx in 0..VX {
-                if integrated[f] {
-                    for s in 0..S {
-                        vs[vy][vx][f] += dt * b[s] * k[s][vy][vx][f];
-                    }
-                } else {
-                    vs[vy][vx][f] = k[S - 1][vy][vx][f];
+                for s in 0..S {
+                    vs[vy][vx][f] += dt * b[s] * k[s][vy][vx][f];
                 }
             }
         }
