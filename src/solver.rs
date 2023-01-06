@@ -12,9 +12,7 @@ use {
     fixpoint::fixpoint,
 };
 
-pub type Constraints<'a, const F: usize, const C: usize> =
-    &'a (dyn Fn([f64; F]) -> [f64; C] + Sync);
-pub type Transform<'a, const F: usize> = &'a (dyn Fn([f64; F]) -> [f64; F] + Sync);
+pub type Transform<'a, const F: usize, const C: usize> = &'a (dyn Fn([f64; F]) -> [f64; C] + Sync);
 
 pub fn save<
     Opt: Sync,
@@ -25,7 +23,7 @@ pub fn save<
     const S: usize,
 >(
     context: &Context<Opt, F, C, VX, VY, S>,
-    constraints: Constraints<F, C>,
+    transform: Transform<F, C>,
     names: &[&str; C],
     name: &str, // simulation name
     schemename: &str,
@@ -54,7 +52,7 @@ pub fn save<
 
     for j in 0..VY {
         for i in 0..VX {
-            let vars = constraints(v[j][i]);
+            let vars = transform(v[j][i]);
             let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
             let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
             let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
@@ -92,7 +90,7 @@ pub fn run<
     schemename: &str,
     integration: Integration,
     names: &[&str; C],
-    constraints: Constraints<F, C>,
+    transform: Transform<F, C>,
 ) -> ([[[f64; F]; VX]; VY], f64, usize, usize) {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
@@ -131,7 +129,7 @@ pub fn run<
     // eprintln!("Elapsed: {:.2?}", elapsed);
     let err = save(
         &context,
-        constraints,
+        transform,
         names,
         name,
         schemename,

@@ -5,12 +5,18 @@ use crate::solver::{
     run,
     schemes::Scheme,
     utils::ghost,
-    Constraints,
+    Transform,
 };
 
 use super::{solve_v, Pressure};
 
-fn gen_constraints<'a>(
+fn constraints([t00, t01, t02]: [f64; 3]) -> [f64; 3] {
+    let m = (t01 * t01 + t02 * t02).sqrt();
+    let t00 = t00.max(m);
+    [t00, t01, t02]
+}
+
+fn gen_transform<'a>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
@@ -73,18 +79,14 @@ pub enum Coordinate {
 
 fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
-    constraints: Constraints<3, 10>,
+    transform: Transform<3, 10>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     opt: &Coordinate,
-    p: Pressure,
-    _dpde: Pressure,
 ) -> [f64; 3] {
-    let [_t00, _t01, _t02, _v, e, pe, _dpde, ut, ux, uy] =
-        constraints(vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
     let theta = 1.1;
 
     let pre = &|vs: [f64; 3]| {
@@ -109,7 +111,7 @@ fn flux<const V: usize>(
         pos,
         Dir::X,
         [&f01, &f11, &f12],
-        &constraints,
+        &transform,
         &eigenvaluesx,
         pre,
         post,
@@ -122,7 +124,7 @@ fn flux<const V: usize>(
         pos,
         Dir::Y,
         [&f02, &f21, &f22],
-        &constraints,
+        &transform,
         &eigenvaluesy,
         pre,
         post,
@@ -130,9 +132,8 @@ fn flux<const V: usize>(
         theta,
     );
 
-    // let re = newton(1e-10, e, |e| {
-    //     t00 - (t01 * t01 + t02 * t02) / (t00 + p(e)) - e
-    // }); // WARNING: the energy density must be solved in the flux and not in the constraints, else there are oscillations
+    let [_t00, _t01, _t02, _v, e, pe, _dpde, ut, ux, uy] =
+        transform(vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
     let source: [f64; 3] = match opt {
         Coordinate::Cartesian => [0.0; 3],
         Coordinate::Milne => [
@@ -149,15 +150,13 @@ fn flux<const V: usize>(
 }
 fn flux_exponential<const V: usize>(
     [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
-    _constraints: Constraints<3, 10>,
+    _constraints: Transform<3, 10>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     _dx: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     _opt: &Coordinate,
-    _p: Pressure,
-    _dpde: Pressure,
 ) -> [f64; 3] {
     let x = bound[0](pos[0], V);
     let y = bound[1](pos[1], V);
@@ -192,7 +191,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
             vs[j][i] = init(x, y);
         }
     }
-    let constraints = gen_constraints(er, &p, &dpde);
+    let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
     let flux = if use_exponential {
         flux_exponential
@@ -202,6 +201,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     let context = Context {
         fun: &flux,
         constraints: &constraints,
+        transform: &transform,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
         local_interaction: [1, 1],   // use a distance of 0 to emulate 1D
         vs,
@@ -218,12 +218,5 @@ pub fn hydro2d<const V: usize, const S: usize>(
         p,
         dpde,
     };
-    run(
-        context,
-        name,
-        &schemename,
-        integration,
-        &names,
-        &constraints,
-    )
+    run(context, name, &schemename, integration, &names, &transform)
 }

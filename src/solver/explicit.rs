@@ -15,6 +15,7 @@ pub fn explicit<
     Context {
         fun,
         constraints,
+        transform,
         boundary,
         local_interaction: _,
         vs,
@@ -52,15 +53,13 @@ pub fn explicit<
             .for_each(|(vy, vx, fu)| {
                 *fu = fun(
                     [&vs, &vdtk],
-                    constraints,
+                    transform,
                     boundary,
                     [vx as i32, vy as i32],
                     *dx,
                     [*ot, t],
                     [*dt, cdt],
                     opt,
-                    p,
-                    dpde,
                 );
             });
         for vy in 0..VY {

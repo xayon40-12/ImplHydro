@@ -29,6 +29,7 @@ pub fn fixpoint<
     Context {
         fun,
         constraints,
+        transform,
         boundary,
         local_interaction,
         vs,
@@ -93,15 +94,13 @@ pub fn fixpoint<
                 if errs[vy][vx] {
                     *fu = fun(
                         [&vs, &vdtk],
-                        constraints,
+                        transform,
                         boundary,
                         [vx as i32, vy as i32],
                         *dx,
                         [*ot, t],
                         [dt, cdt],
                         opt,
-                        p,
-                        dpde,
                     );
                 }
             });

@@ -5,12 +5,17 @@ use crate::solver::{
     run,
     schemes::Scheme,
     utils::{ghost, zero},
-    Constraints,
+    Transform,
 };
 
 use super::{solve_v, Pressure};
 
-fn gen_constraints<'a>(
+fn constraints([t00, t01]: [f64; 2]) -> [f64; 2] {
+    let m = t01.abs();
+    let t00 = t00.max(m);
+    [t00, t01]
+}
+fn gen_transform<'a>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
@@ -50,17 +55,14 @@ fn f11([_, _, _, e, pe, _, _, ux]: [f64; 8]) -> f64 {
 
 fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 2]; V]; 1]; 2],
-    constraints: Constraints<2, 8>,
+    transform: Transform<2, 8>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     _opt: &(),
-    _p: Pressure,
-    _dpde: Pressure,
 ) -> [f64; 2] {
-    let [_t00, _t01, _v, _e, _pe, _dpde, _ut, _ux] = constraints(vs[0][bound[0](pos[0], V)]);
     let theta = 1.1;
 
     let pre = &|vs: [f64; 2]| {
@@ -83,7 +85,7 @@ fn flux<const V: usize>(
         pos,
         Dir::X,
         [&f01, &f11],
-        &constraints,
+        &transform,
         &eigenvalues,
         pre,
         post,
@@ -115,11 +117,12 @@ pub fn hydro1d<const V: usize, const S: usize>(
         let x = (i as f64 - v2) * dx;
         vs[0][i] = init(x);
     }
-    let constraints = gen_constraints(er, &p, &dpde);
+    let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
     let context = Context {
         fun: &flux,
         constraints: &constraints,
+        transform: &transform,
         boundary: &[&ghost, &zero], // use noboundary to emulate 1D
         local_interaction: [1, 0],  // use a distance of 0 to emulate 1D
         vs,
@@ -136,12 +139,5 @@ pub fn hydro1d<const V: usize, const S: usize>(
         p,
         dpde,
     };
-    run(
-        context,
-        name,
-        &schemename,
-        integration,
-        &names,
-        &constraints,
-    )
+    run(context, name, &schemename, integration, &names, &transform)
 }

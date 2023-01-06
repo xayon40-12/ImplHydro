@@ -1,6 +1,6 @@
 use crate::hydro::Pressure;
 
-use super::{schemes::Scheme, Constraints};
+use super::{schemes::Scheme, Transform};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Integration {
@@ -12,15 +12,13 @@ pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
 pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY: usize> =
     &'a (dyn Fn(
         [&[[[f64; F]; VX]; VY]; 2],
-        Constraints<F, C>,
+        Transform<F, C>,
         &[Boundary; 2],
         [i32; 2], // position in index
         f64,      // dx
         [f64; 2], // [old t, current t]
         [f64; 2], // [dt, current dt]
         &Opt,
-        Pressure,
-        Pressure,
     ) -> [f64; F]
              + Sync);
 
@@ -34,7 +32,8 @@ pub struct Context<
     const S: usize,
 > {
     pub fun: Fun<'a, Opt, F, C, VX, VY>,
-    pub constraints: Constraints<'a, F, C>,
+    pub constraints: Transform<'a, F, F>,
+    pub transform: Transform<'a, F, C>,
     pub boundary: &'a [Boundary<'a>; 2],
     pub local_interaction: [i32; 2],
     pub vs: [[[f64; F]; VX]; VY],

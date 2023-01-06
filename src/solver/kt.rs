@@ -1,6 +1,6 @@
 use crate::solver::{context::Boundary, utils::flux_limiter};
 
-use super::{Constraints, Transform};
+use super::Transform;
 
 type Flux<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
 type Eigenvalues<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
@@ -20,10 +20,10 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     [x, y]: [i32; 2],
     dir: Dir,
     flux: [Flux<C>; N],
-    constraints: Constraints<F, C>,
+    constraints: Transform<F, C>,
     eigenvalues: Eigenvalues<C>,
-    pre_flux_limiter: Transform<F>,
-    post_flux_limiter: Transform<F>,
+    pre_flux_limiter: Transform<F, F>,
+    post_flux_limiter: Transform<F, F>,
     dx: f64,
     theta: f64,
 ) -> [f64; N] {
