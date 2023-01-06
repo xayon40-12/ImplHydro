@@ -106,7 +106,7 @@ def convall(l, d):
         plt.figure()
         for s0 in scs:
             # for s1 in scs:
-            for s1 in [scs[1]]:
+            for s1 in [scs[0]]:
                 c = convergence(d[s0],refs[s1])
                 plt.loglog(c[:,dci],c[:,5], label="{} r {}".format(s0, s1))
                 # plt.loglog(c[:,dci],c[:,6], label="{} r {}".format(s0, s1))

@@ -1,6 +1,6 @@
 use crate::solver::{context::Boundary, utils::flux_limiter};
 
-use super::Constraints;
+use super::{Constraints, Transform};
 
 type Flux<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
 type Eigenvalues<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
@@ -8,6 +8,10 @@ type Eigenvalues<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
 pub enum Dir {
     X,
     Y,
+}
+
+pub fn id_flux_limiter<const F: usize>(v: [f64; F]) -> [f64; F] {
+    v
 }
 
 pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, const N: usize>(
@@ -18,6 +22,8 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     flux: [Flux<C>; N],
     constraints: Constraints<F, C>,
     eigenvalues: Eigenvalues<C>,
+    pre_flux_limiter: Transform<F>,
+    post_flux_limiter: Transform<F>,
     dx: f64,
     theta: f64,
 ) -> [f64; N] {
@@ -27,7 +33,7 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             Dir::X => (l as i32 - 2, 0),
             Dir::Y => (0, l as i32 - 2),
         };
-        vals[l] = vars[boundy(y + ly, VY)][boundx(x + lx, VX)]
+        vals[l] = pre_flux_limiter(vars[boundy(y + ly, VY)][boundx(x + lx, VX)])
     }
     let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];
     for l in 0..3 {
@@ -44,6 +50,7 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             for f in 0..F {
                 tmpupm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
             }
+            tmpupm[jpm][pm] = post_flux_limiter(tmpupm[jpm][pm]);
             upm[jpm][pm] = constraints(tmpupm[jpm][pm]);
         }
     }

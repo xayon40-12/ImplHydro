@@ -14,6 +14,7 @@ use {
 
 pub type Constraints<'a, const F: usize, const C: usize> =
     &'a (dyn Fn([f64; F]) -> [f64; C] + Sync);
+pub type Transform<'a, const F: usize> = &'a (dyn Fn([f64; F]) -> [f64; F] + Sync);
 
 pub fn save<
     Opt: Sync,
@@ -43,7 +44,7 @@ pub fn save<
     let dim = if VY == 1 { 1 } else { 2 };
     let foldername = &format!(
         "{}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
-        name, context.r.integration, dim, S, &context.r.name, VX, context.dt, context.dx
+        name, context.r.integration, dim, S, &context.r.name, VX, context.maxdt, context.dx
     );
     let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
     for c in 0..C {

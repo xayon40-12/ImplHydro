@@ -1,6 +1,6 @@
 use crate::solver::{
     context::{Boundary, Context, ToCompute},
-    kt::{kt, Dir},
+    kt::{id_flux_limiter, kt, Dir},
     newton::newton,
     run,
     schemes::Scheme,
@@ -17,6 +17,8 @@ fn gen_constraints<'a>(
     Box::new(|[t00, t01, t02, v]| {
         let m = (t01 * t01 + t02 * t02).sqrt();
         let t00 = t00.max(m);
+        let sv = solve_v(t00, m, p);
+        let v = newton(1e-10, 0.5, |v| sv(v) - v);
         let v = v.max(0.0).min(1.0);
         let e = (t00 - m * v).max(1e-100);
         let pe = p(e);
@@ -87,6 +89,24 @@ fn flux<const V: usize>(
     let rt0 = if tocomp.integrated() || tocomp.all() {
         let theta = 1.1;
 
+        let pre = &|vs: [f64; 4]| {
+            let t00 = vs[0];
+            let t01 = vs[1];
+            let t02 = vs[2];
+            let v = vs[3];
+            let k = t01 * t01 + t02 * t02;
+            let m = (t00 * t00 - k).sqrt();
+            [m, t01, t02, v]
+        };
+        let post = &|vs: [f64; 4]| {
+            let m = vs[0];
+            let t01 = vs[1];
+            let t02 = vs[2];
+            let v = vs[3];
+            let k = t01 * t01 + t02 * t02;
+            let t00 = (m * m + k).sqrt();
+            [t00, t01, t02, v]
+        };
         let divf1 = kt(
             vs,
             bound,
@@ -95,6 +115,8 @@ fn flux<const V: usize>(
             [&f01, &f11, &f12],
             &constraints,
             &eigenvaluesx,
+            pre,
+            post,
             dx,
             theta,
         );
@@ -106,6 +128,8 @@ fn flux<const V: usize>(
             [&f02, &f21, &f22],
             &constraints,
             &eigenvaluesy,
+            pre,
+            post,
             dx,
             theta,
         );

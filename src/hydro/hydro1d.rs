@@ -1,6 +1,6 @@
 use crate::solver::{
     context::{Boundary, Context, ToCompute},
-    kt::{kt, Dir},
+    kt::{id_flux_limiter, kt, Dir},
     newton::newton,
     run,
     schemes::Scheme,
@@ -17,6 +17,8 @@ fn gen_constraints<'a>(
     Box::new(move |[t00, t01, v]| {
         let m = t01.abs();
         let t00 = t00.max(m);
+        let sv = solve_v(t00, m, p);
+        let v = newton(1e-10, 0.5, |v| sv(v) - v);
         let v = v.max(0.0).min(1.0);
         let e = (t00 - m * v).max(1e-100);
         let pe = p(e);
@@ -63,6 +65,22 @@ fn flux<const V: usize>(
     let rt0 = if tocomp.integrated() || tocomp.all() {
         let theta = 1.1;
 
+        let pre = &|vs: [f64; 3]| {
+            let t00 = vs[0];
+            let t01 = vs[1];
+            let v = vs[2];
+            let k = t01 * t01;
+            let m = (t00 * t00 - k).sqrt();
+            [m, t01, v]
+        };
+        let post = &|vs: [f64; 3]| {
+            let m = vs[0];
+            let t01 = vs[1];
+            let v = vs[2];
+            let k = t01 * t01;
+            let t00 = (m * m + k).sqrt();
+            [t00, t01, v]
+        };
         let divf0 = kt(
             vs,
             bound,
@@ -71,6 +89,8 @@ fn flux<const V: usize>(
             [&f01, &f11],
             &constraints,
             &eigenvalues,
+            pre,
+            post,
             dx,
             theta,
         );
