@@ -39,7 +39,6 @@ pub fn save<
     const S: usize,
 >(
     context: &Context<Opt, F, C, VX, VY, S>,
-    transform: Transform<F, C>,
     (namesf, namesc): &([&str; F], [&str; C]),
     name: &str, // simulation name
     schemename: &str,
@@ -74,10 +73,11 @@ pub fn save<
             let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
             let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
             let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
+            let v = v[j][i];
             for f in 0..F {
-                s = format!("{} {:e}", s, v[j][i][f]);
+                s = format!("{} {:e}", s, v[f]);
             }
-            let vars = transform(v[j][i]);
+            let vars = (context.transform)((context.constraints)(v));
             for c in 0..C {
                 s = format!("{} {:e}", s, vars[c]);
             }
@@ -112,7 +112,6 @@ pub fn run<
     schemename: &str,
     integration: Integration,
     names: &([&str; F], [&str; C]),
-    transform: Transform<F, C>,
 ) -> ([[[f64; F]; VX]; VY], f64, usize, usize) {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
@@ -151,7 +150,6 @@ pub fn run<
     // eprintln!("Elapsed: {:.2?}", elapsed);
     let err = save(
         &context,
-        transform,
         names,
         name,
         schemename,

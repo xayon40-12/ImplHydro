@@ -218,5 +218,5 @@ pub fn hydro2d<const V: usize, const S: usize>(
         p,
         dpde,
     };
-    run(context, name, &schemename, integration, &names, &transform)
+    run(context, name, &schemename, integration, &names)
 }
