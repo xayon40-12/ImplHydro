@@ -37,7 +37,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
         r,
         p,
         dpde,
-        &init_riemann(p, dpde, use_void),
+        &init_riemann(1.0, p, dpde, use_void),
     )
 }
 pub fn hydro2d<const V: usize, const S: usize>(
@@ -69,7 +69,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         (&ideal_gas::p, &ideal_gas::dpde)
     };
     let init = if let Some(es) = init_e {
-        init_from_energy_2d(es, p, dpde)
+        init_from_energy_2d(t0, es, p, dpde)
     } else {
         init_gubser(t0, p, dpde)
     };

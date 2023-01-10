@@ -9,7 +9,7 @@ use crate::solver::{
 
 use super::{solve_v, Pressure};
 
-fn constraints([t00, t01]: [f64; 2]) -> [f64; 2] {
+fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
     let m = t01.abs();
     let t00 = t00.max(m);
     [t00, t01]
@@ -18,8 +18,8 @@ fn gen_transform<'a>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-) -> Box<dyn Fn([f64; 2]) -> [f64; 5] + 'a + Sync> {
-    Box::new(move |[t00, t01]| {
+) -> Box<dyn Fn(f64, [f64; 2]) -> [f64; 5] + 'a + Sync> {
+    Box::new(move |_t, [t00, t01]| {
         let m = t01.abs();
         let sv = solve_v(t00, m, p);
         let v = newton(er, 0.5, |v| sv(v) - v);
@@ -33,7 +33,7 @@ fn gen_transform<'a>(
     })
 }
 
-fn eigenvalues([_e, _pe, dpde, ut, ux]: [f64; 5]) -> f64 {
+fn eigenvalues(_t: f64, [_e, _pe, dpde, ut, ux]: [f64; 5]) -> f64 {
     let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
@@ -41,13 +41,13 @@ fn eigenvalues([_e, _pe, dpde, ut, ux]: [f64; 5]) -> f64 {
     (a.abs() + b.sqrt()) / d
 }
 
-pub fn f00([e, pe, _, ut, _]: [f64; 5]) -> f64 {
+pub fn f00(_t: f64, [e, pe, _, ut, _]: [f64; 5]) -> f64 {
     (e + pe) * ut * ut - pe
 }
-pub fn f01([e, pe, _, ut, ux]: [f64; 5]) -> f64 {
+pub fn f01(_t: f64, [e, pe, _, ut, ux]: [f64; 5]) -> f64 {
     (e + pe) * ut * ux
 }
-fn f11([e, pe, _, _, ux]: [f64; 5]) -> f64 {
+fn f11(_t: f64, [e, pe, _, _, ux]: [f64; 5]) -> f64 {
     (e + pe) * ux * ux + pe
 }
 
@@ -64,14 +64,14 @@ fn flux<const V: usize>(
 ) -> [f64; 2] {
     let theta = 1.1;
 
-    let pre = &|vs: [f64; 2]| {
+    let pre = &|_t: f64, vs: [f64; 2]| {
         let t00 = vs[0];
         let t01 = vs[1];
         let k = t01 * t01;
         let m = (t00 * t00 - k).sqrt();
         [m, t01]
     };
-    let post = &|vs: [f64; 2]| {
+    let post = &|_t: f64, vs: [f64; 2]| {
         let m = vs[0];
         let t01 = vs[1];
         let k = t01 * t01;
@@ -83,6 +83,7 @@ fn flux<const V: usize>(
         bound,
         pos,
         Dir::X,
+        1.0,
         [&f01, &f11],
         constraints,
         transform,

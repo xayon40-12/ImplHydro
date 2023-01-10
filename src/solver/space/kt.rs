@@ -1,7 +1,7 @@
 use crate::solver::{context::Boundary, utils::flux_limiter, Transform};
 
-type Flux<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
-type Eigenvalues<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
+type Flux<'a, const C: usize> = &'a dyn Fn(f64, [f64; C]) -> f64;
+type Eigenvalues<'a, const C: usize> = &'a dyn Fn(f64, [f64; C]) -> f64;
 
 pub enum Dir {
     X,
@@ -17,6 +17,7 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     [boundx, boundy]: &[Boundary; 2],
     [x, y]: [i32; 2],
     dir: Dir,
+    t: f64,
     flux: [Flux<C>; N],
     constraints: Transform<F, F>,
     transform: Transform<F, C>,
@@ -32,7 +33,7 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             Dir::X => (l as i32 - 2, 0),
             Dir::Y => (0, l as i32 - 2),
         };
-        vals[l] = pre_flux_limiter(vars[boundy(y + ly, VY)][boundx(x + lx, VX)])
+        vals[l] = pre_flux_limiter(t, vars[boundy(y + ly, VY)][boundx(x + lx, VX)])
     }
     let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];
     for l in 0..3 {
@@ -49,21 +50,21 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             for f in 0..F {
                 upm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
             }
-            upm[jpm][pm] = constraints(post_flux_limiter(upm[jpm][pm]));
-            tupm[jpm][pm] = transform(upm[jpm][pm]);
+            upm[jpm][pm] = constraints(t, post_flux_limiter(t, upm[jpm][pm]));
+            tupm[jpm][pm] = transform(t, upm[jpm][pm]);
         }
     }
     let mut fpm: [[[f64; N]; 2]; 2] = [[[0.0; N]; 2]; 2];
     for jpm in 0..2 {
         for pm in 0..2 {
             for n in 0..N {
-                fpm[jpm][pm][n] = flux[n](tupm[jpm][pm]);
+                fpm[jpm][pm][n] = flux[n](t, tupm[jpm][pm]);
             }
         }
     }
     let mut a: [f64; 2] = [0.0; 2];
     for jpm in 0..2 {
-        a[jpm] = eigenvalues(tupm[jpm][0]).max(eigenvalues(tupm[jpm][1]));
+        a[jpm] = eigenvalues(t, tupm[jpm][0]).max(eigenvalues(t, tupm[jpm][1]));
     }
     let mut h: [[f64; N]; 2] = [[0.0; N]; 2];
     for jpm in 0..2 {

@@ -43,7 +43,7 @@ pub fn explicit<
     for s in 0..S {
         for vy in 0..VY {
             for vx in 0..VX {
-                vdtk[vy][vx] = constraints(vdtk[vy][vx]);
+                vdtk[vy][vx] = constraints(t, vdtk[vy][vx]);
             }
         }
         pfor2d(&mut fu, &|(vy, vx, fu)| {

@@ -42,6 +42,7 @@ pub fn load_matrix<const VX: usize, const VY: usize>(
 }
 
 pub fn init_from_energy_1d<'a, const VX: usize>(
+    t0: f64,
     es: [f64; VX],
     p: Pressure<'a>,
     dpde: Pressure<'a>,
@@ -50,11 +51,12 @@ pub fn init_from_energy_1d<'a, const VX: usize>(
         // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
         let e = es[i].max(1e-100);
         let vars = [e, p(e), dpde(e), 1.0, 0.0];
-        [hydro1d::f00(vars), hydro1d::f01(vars)]
+        [hydro1d::f00(t0, vars), hydro1d::f01(t0, vars)]
     })
 }
 
 pub fn init_from_energy_2d<'a, const VX: usize, const VY: usize>(
+    t0: f64,
     es: [[f64; VX]; VY],
     p: Pressure<'a>,
     dpde: Pressure<'a>,
@@ -63,6 +65,10 @@ pub fn init_from_energy_2d<'a, const VX: usize, const VY: usize>(
         // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
         let e = es[j][i].max(1e-100);
         let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0];
-        [hydro2d::f00(vars), hydro2d::f01(vars), hydro2d::f02(vars)]
+        [
+            hydro2d::f00(t0, vars),
+            hydro2d::f01(t0, vars),
+            hydro2d::f02(t0, vars),
+        ]
     })
 }

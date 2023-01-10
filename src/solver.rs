@@ -24,7 +24,8 @@ pub fn pfor2d<T: Send, const VX: usize, const VY: usize>(
         .for_each(f);
 }
 
-pub type Transform<'a, const F: usize, const C: usize> = &'a (dyn Fn([f64; F]) -> [f64; C] + Sync);
+pub type Transform<'a, const F: usize, const C: usize> =
+    &'a (dyn Fn(f64, [f64; F]) -> [f64; C] + Sync);
 
 pub fn save<
     Opt: Sync,
@@ -73,7 +74,7 @@ pub fn save<
             for f in 0..F {
                 s = format!("{} {:e}", s, v[f]);
             }
-            let vars = (context.transform)((context.constraints)(v));
+            let vars = (context.transform)(t, (context.constraints)(t, v));
             for c in 0..C {
                 s = format!("{} {:e}", s, vars[c]);
             }

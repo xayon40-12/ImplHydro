@@ -9,7 +9,7 @@ use crate::solver::{
 
 use super::{solve_v, Pressure};
 
-fn constraints([t00, t01, t02]: [f64; 3]) -> [f64; 3] {
+fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
     let m = (t01 * t01 + t02 * t02).sqrt();
     let t00 = t00.max(m);
     [t00, t01, t02]
@@ -19,8 +19,17 @@ fn gen_transform<'a>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-) -> Box<dyn Fn([f64; 3]) -> [f64; 6] + 'a + Sync> {
-    Box::new(move |[t00, t01, t02]| {
+    opt: &Coordinate,
+) -> Box<dyn Fn(f64, [f64; 3]) -> [f64; 6] + 'a + Sync> {
+    let st = match opt {
+        Coordinate::Cartesian => |_| 1.0,
+        Coordinate::Milne => |t| t,
+    };
+    Box::new(move |t, [t00, t01, t02]| {
+        let t = st(t);
+        let t00 = t00 / t;
+        let t01 = t01 / t;
+        let t02 = t02 / t;
         let m = (t01 * t01 + t02 * t02).sqrt();
         let sv = solve_v(t00, m, p);
         let v = newton(er, 0.5, |v| sv(v) - v);
@@ -35,39 +44,39 @@ fn gen_transform<'a>(
     })
 }
 
-fn eigenvaluesx([_e, _pe, dpde, ut, ux, _uy]: [f64; 6]) -> f64 {
+fn eigenvaluesx(_t: f64, [_e, _pe, dpde, ut, ux, _uy]: [f64; 6]) -> f64 {
     let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
     (a.abs() + b.sqrt()) / d
 }
-fn eigenvaluesy([e, pe, dpde, ut, ux, uy]: [f64; 6]) -> f64 {
-    eigenvaluesx([e, pe, dpde, ut, uy, ux])
+fn eigenvaluesy(t: f64, [e, pe, dpde, ut, ux, uy]: [f64; 6]) -> f64 {
+    eigenvaluesx(t, [e, pe, dpde, ut, uy, ux])
 }
 
-pub fn f00([e, pe, _, ut, _, _]: [f64; 6]) -> f64 {
-    (e + pe) * ut * ut - pe
+pub fn f00(t: f64, [e, pe, _, ut, _, _]: [f64; 6]) -> f64 {
+    t * ((e + pe) * ut * ut - pe)
 }
-pub fn f01([e, pe, _, ut, ux, _]: [f64; 6]) -> f64 {
-    (e + pe) * ut * ux
+pub fn f01(t: f64, [e, pe, _, ut, ux, _]: [f64; 6]) -> f64 {
+    t * ((e + pe) * ut * ux)
 }
-pub fn f02([e, pe, _, ut, _, uy]: [f64; 6]) -> f64 {
-    (e + pe) * uy * ut
-}
-
-fn f11([e, pe, _, _, ux, _]: [f64; 6]) -> f64 {
-    (e + pe) * ux * ux + pe
-}
-fn f12([e, pe, _, _, ux, uy]: [f64; 6]) -> f64 {
-    (e + pe) * ux * uy
+pub fn f02(t: f64, [e, pe, _, ut, _, uy]: [f64; 6]) -> f64 {
+    t * ((e + pe) * uy * ut)
 }
 
-fn f21([e, pe, _, _, ux, uy]: [f64; 6]) -> f64 {
-    (e + pe) * uy * ux
+fn f11(t: f64, [e, pe, _, _, ux, _]: [f64; 6]) -> f64 {
+    t * ((e + pe) * ux * ux + pe)
 }
-fn f22([e, pe, _, _, _, uy]: [f64; 6]) -> f64 {
-    (e + pe) * uy * uy + pe
+fn f12(t: f64, [e, pe, _, _, ux, uy]: [f64; 6]) -> f64 {
+    t * ((e + pe) * ux * uy)
+}
+
+fn f21(t: f64, [e, pe, _, _, ux, uy]: [f64; 6]) -> f64 {
+    t * ((e + pe) * uy * ux)
+}
+fn f22(t: f64, [e, pe, _, _, _, uy]: [f64; 6]) -> f64 {
+    t * ((e + pe) * uy * uy + pe)
 }
 
 pub enum Coordinate {
@@ -88,7 +97,12 @@ fn flux<const V: usize>(
 ) -> [f64; 3] {
     let theta = 1.1;
 
-    let pre = &|vs: [f64; 3]| {
+    let t = match opt {
+        Coordinate::Cartesian => 1.0,
+        Coordinate::Milne => t,
+    };
+
+    let pre = &|_t: f64, vs: [f64; 3]| {
         let t00 = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -96,7 +110,7 @@ fn flux<const V: usize>(
         let m = (t00 * t00 - k).sqrt();
         [m, t01, t02]
     };
-    let post = &|vs: [f64; 3]| {
+    let post = &|_t: f64, vs: [f64; 3]| {
         let m = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -109,6 +123,7 @@ fn flux<const V: usize>(
         bound,
         pos,
         Dir::X,
+        t,
         [&f01, &f11, &f12],
         constraints,
         transform,
@@ -123,6 +138,7 @@ fn flux<const V: usize>(
         bound,
         pos,
         Dir::Y,
+        t,
         [&f02, &f21, &f22],
         constraints,
         transform,
@@ -133,19 +149,18 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let [e, pe, _dpde, ut, ux, uy] = transform(vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
-    let source: [f64; 3] = match opt {
-        Coordinate::Cartesian => [0.0; 3],
-        Coordinate::Milne => [
-            (e + pe) * ut * ut / t,
-            (e + pe) * ut * ux / t,
-            (e + pe) * ut * uy / t,
-        ],
+    let s: f64 = match opt {
+        Coordinate::Cartesian => 0.0,
+        Coordinate::Milne => {
+            let [_e, pe, _dpde, _ut, _ux, _uy] =
+                transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+            pe
+        }
     };
     [
-        -divf1[0] - divf2[0] - source[0],
-        -divf1[1] - divf2[1] - source[1],
-        -divf1[2] - divf2[2] - source[2],
+        -divf1[0] - divf2[0] - s,
+        -divf1[1] - divf2[1],
+        -divf1[2] - divf2[2],
     ]
 }
 fn flux_exponential<const V: usize>(
@@ -192,7 +207,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
             vs[j][i] = init((i, j), (x, y));
         }
     }
-    let transform = gen_transform(er, &p, &dpde);
+    let transform = gen_transform(er, &p, &dpde, &opt);
     let integration = r.integration;
     let flux = if use_exponential {
         flux_exponential

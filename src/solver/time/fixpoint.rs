@@ -71,7 +71,7 @@ pub fn fixpoint<
                         for s1 in 0..S {
                             vdtk[vy][vx][f] += dt * a[s][s1] * fu[s1][vy][vx][f];
                         }
-                        vdtk[vy][vx] = constraints(vdtk[vy][vx]);
+                        vdtk[vy][vx] = constraints(t, vdtk[vy][vx]);
                     }
                 }
             }
