@@ -1,17 +1,13 @@
 use rayon::prelude::*;
 
 pub mod context;
-pub mod explicit;
-pub mod fixpoint;
-pub mod kt;
-pub mod newton;
-pub mod schemes;
+pub mod space;
+pub mod time;
 pub mod utils;
 
 use {
     context::{Context, Integration},
-    explicit::explicit,
-    fixpoint::fixpoint,
+    time::{explicit::explicit, fixpoint::fixpoint},
 };
 
 pub fn pfor2d<T: Send, const VX: usize, const VY: usize>(

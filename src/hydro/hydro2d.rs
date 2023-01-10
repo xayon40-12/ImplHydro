@@ -1,9 +1,8 @@
 use crate::solver::{
     context::{Boundary, Context},
-    kt::{kt, Dir},
-    newton::newton,
     run,
-    schemes::Scheme,
+    space::kt::{kt, Dir},
+    time::{newton::newton, schemes::Scheme},
     utils::ghost,
     Transform,
 };

@@ -1,3 +1,4 @@
+pub mod eos;
 pub mod gubser;
 pub mod hydro1d;
 pub mod hydro2d;

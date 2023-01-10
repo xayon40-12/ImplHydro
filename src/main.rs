@@ -9,7 +9,7 @@ use fixhydro::{
         riemann::init_riemann,
         Pressure,
     },
-    solver::schemes::*,
+    solver::time::schemes::*,
 };
 
 pub fn hydro1d<'a, const V: usize, const S: usize>(
@@ -125,13 +125,13 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     let dt = dx;
     println!("{}", r.name);
     converge(dt, nconv, |dt| {
-        hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+        hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, true).0
     });
     converge(dt, nconv, |dt| {
-        hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
+        hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, false).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, true).0
     });
     converge(dt, nconv, |dt| {
         hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
@@ -166,6 +166,15 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
     converge(dt, nconv, |dt| {
         hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
     });
+
+    // use arder 6 Gauss-Legendre as reference
+    let r = gauss_legendre_3();
+    let dt = 1e-3;
+    println!("{}", r.name);
+    hydro1d::<V, 3>(t0, tend, dx, dt, dt * dt, p, dpde, r, true);
+    hydro1d::<V, 3>(t0, tend, dx, dt, dt * dt, p, dpde, r, false);
+    hydro2d::<V, 3>(t0, tend, dx, dt, dt * dt, p, dpde, r, true);
+    hydro2d::<V, 3>(t0, tend, dx, dt, dt * dt, p, dpde, r, false);
 }
 
 fn big_stack() {

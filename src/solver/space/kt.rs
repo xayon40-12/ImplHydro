@@ -1,6 +1,4 @@
-use crate::solver::{context::Boundary, utils::flux_limiter};
-
-use super::Transform;
+use crate::solver::{context::Boundary, utils::flux_limiter, Transform};
 
 type Flux<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;
 type Eigenvalues<'a, const C: usize> = &'a dyn Fn([f64; C]) -> f64;

@@ -1,6 +1,6 @@
 use crate::hydro::Pressure;
 
-use super::{schemes::Scheme, Transform};
+use super::{time::schemes::Scheme, Transform};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Integration {
