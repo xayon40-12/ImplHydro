@@ -1,4 +1,5 @@
 pub mod eos;
+pub mod from_file;
 pub mod gubser;
 pub mod hydro1d;
 pub mod hydro2d;

@@ -164,6 +164,8 @@ fn flux_exponential<const V: usize>(
     [-vs[y][x][0], -vs[y][x][1], -vs[y][x][2]]
 }
 
+pub type Init2D<'a> = &'a dyn Fn((usize, usize), (f64, f64)) -> [f64; 3];
+
 pub fn hydro2d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
@@ -175,7 +177,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     opt: Coordinate,
     p: Pressure,
     dpde: Pressure,
-    init: impl Fn(f64, f64) -> [f64; 3],
+    init: Init2D,
     use_exponential: bool,
 ) -> ([[[f64; 3]; V]; V], f64, usize, usize) {
     let schemename = r.name;
@@ -187,7 +189,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         for i in 0..V {
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
-            vs[j][i] = init(x, y);
+            vs[j][i] = init((i, j), (x, y));
         }
     }
     let transform = gen_transform(er, &p, &dpde);

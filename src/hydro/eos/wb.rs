@@ -1,5 +1,5 @@
 // converted from cpp to rust by using src/eos_WB.cpp written by Chun Shen on MUSIC-fluid/MUSIC github
-pub fn p_e_func(e_local: f64) -> f64 {
+pub fn dpde(e_local: f64) -> f64 {
     let e1 = e_local;
     let e2 = e1 * e1;
     let e3 = e2 * e1;
@@ -46,7 +46,8 @@ pub fn p_e_func(e_local: f64) -> f64 {
 
 // This function returns the local temperature in [1/fm]
 // input local energy density eps [1/fm^4] and rhob [1/fm^3]
-pub fn get_temperature(e_local: f64) -> f64 {
+#[allow(non_snake_case)]
+pub fn T(e_local: f64) -> f64 {
     let e1 = e_local;
     let e2 = e1 * e1;
     let e3 = e2 * e1;
@@ -87,7 +88,7 @@ pub fn get_temperature(e_local: f64) -> f64 {
 
 // This function returns the local pressure in [1/fm^4]
 // the input local energy density [1/fm^4], rhob [1/fm^3]
-pub fn get_pressure(e_local: f64) -> f64 {
+pub fn p(e_local: f64) -> f64 {
     let e1 = e_local;
     let e2 = e1 * e_local;
     let e3 = e2 * e_local;

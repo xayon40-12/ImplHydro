@@ -2,6 +2,8 @@ use std::thread;
 
 use fixhydro::{
     hydro::{
+        eos::wb,
+        from_file::{init_from_energy_2d, load_matrix},
         gubser::init_gubser,
         hydro1d,
         hydro2d::{self, Coordinate::*},
@@ -12,19 +14,19 @@ use fixhydro::{
     solver::time::schemes::*,
 };
 
-pub fn hydro1d<'a, const V: usize, const S: usize>(
+pub fn hydro1d<const V: usize, const S: usize>(
     t0: f64,
     tend: f64,
     dx: f64,
     dt: f64,
     er: f64,
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
     r: Scheme<S>,
     use_void: bool,
 ) -> ([[[f64; 2]; V]; 1], f64, usize, usize) {
     let void = if use_void { "Void" } else { "" };
     println!("Rieman{}", void);
+    let p = &ideal_gas::p;
+    let dpde = &ideal_gas::dpde;
     hydro1d::hydro1d::<V, S>(
         &format!("Riemann{}", void),
         dt,
@@ -33,26 +35,43 @@ pub fn hydro1d<'a, const V: usize, const S: usize>(
         tend,
         dx,
         r,
-        &p,
-        &dpde,
-        init_riemann(&p, &dpde, use_void),
+        p,
+        dpde,
+        &init_riemann(p, dpde, use_void),
     )
 }
-pub fn hydro2d<'a, const V: usize, const S: usize>(
+pub fn hydro2d<const V: usize, const S: usize>(
     t0: f64,
     tend: f64,
     dx: f64,
     dt: f64,
     er: f64,
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
     r: Scheme<S>,
     use_exponential: bool,
+    init_e: Option<[[f64; V]; V]>,
 ) -> ([[[f64; 3]; V]; V], f64, usize, usize) {
     let name = if use_exponential {
-        "Exponential"
+        if init_e.is_some() {
+            "ExponentialTrento"
+        } else {
+            "ExponentialGubser"
+        }
     } else {
-        "Gubser"
+        if init_e.is_some() {
+            "InitTrento"
+        } else {
+            "Gubser"
+        }
+    };
+    let (p, dpde): (Pressure, Pressure) = if init_e.is_some() {
+        (&wb::p, &wb::dpde)
+    } else {
+        (&ideal_gas::p, &ideal_gas::dpde)
+    };
+    let init = if let Some(es) = init_e {
+        init_from_energy_2d(es, p, dpde)
+    } else {
+        init_gubser(t0, p, dpde)
     };
     println!("{}", name);
     hydro2d::hydro2d::<V, S>(
@@ -67,7 +86,7 @@ pub fn hydro2d<'a, const V: usize, const S: usize>(
         // Cartesian,
         &p,
         &dpde,
-        init_gubser(t0, &p, &dpde),
+        &init,
         use_exponential,
     )
 }
@@ -115,66 +134,76 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize>(
 }
 
 pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, nconv: usize) {
-    let p = &ideal_gas::p;
-    let dpde = &ideal_gas::dpde;
     let gl1 = gauss_legendre_1();
     let gl2 = gauss_legendre_2();
     let heun = heun();
+
+    const TRENTO: usize = 1;
+    let mut trentos = [[[0.0f64; V]; V]; TRENTO];
+    for i in 0..TRENTO {
+        trentos[i] = load_matrix("e/0.dat").expect("Could not load trento initial condition");
+    }
+    let trento = Some(trentos[0]);
+
+    let p2 = |v: f64| v.powi(2);
+    let p4 = |v: f64| v.powi(4);
 
     let r = gl1;
     let dt = dx;
     println!("{}", r.name);
     converge(dt, nconv, |dt| {
-        hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, true).0
+        hydro1d::<V, 1>(t0, tend, dx, dt, p2(dt), r, true).0
     });
     converge(dt, nconv, |dt| {
-        hydro1d::<V, 1>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, false).0
+        hydro1d::<V, 1>(t0, tend, dx, dt, p2(dt), r, false).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, true).0
+        hydro2d::<V, 1>(t0, tend, dx, dt, p2(dt), r, true, None).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 1>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
+        hydro2d::<V, 1>(t0, tend, dx, dt, p2(dt), r, false, None).0
+    });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 1>(t0, tend, dx, dt, p2(dt), r, false, trento).0
     });
     let r = gl2;
     let dt = dx;
     println!("{}", r.name);
     converge(dt, nconv, |dt| {
-        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, true).0
+        hydro1d::<V, 2>(t0, tend, dx, dt, p4(dt), r, true).0
     });
     converge(dt, nconv, |dt| {
-        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, false).0
+        hydro1d::<V, 2>(t0, tend, dx, dt, p4(dt), r, false).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt * dt * dt, p, dpde, r, true).0
+        hydro2d::<V, 2>(t0, tend, dx, dt, p4(dt), r, true, None).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0 // for unknown reason the order of accuracy is correctly 4 with only using dt^2
+        hydro2d::<V, 2>(t0, tend, dx, dt, p2(dt), r, false, None).0
+        // for unknown reason the order of accuracy is correctly 4 with only using dt^2
+    });
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 2>(t0, tend, dx, dt, p2(dt), r, false, trento).0
+        // using dt^2 does not give 4th order, but using dt^4 is no better but a lot slower
     });
     let r = heun;
     let dt = dx / 2.0;
     println!("{}", r.name);
     converge(dt, nconv, |dt| {
-        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+        hydro1d::<V, 2>(t0, tend, dx, dt, p2(dt), r, true).0
     });
     converge(dt, nconv, |dt| {
-        hydro1d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
+        hydro1d::<V, 2>(t0, tend, dx, dt, p2(dt), r, false).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, true).0
+        hydro2d::<V, 2>(t0, tend, dx, dt, p2(dt), r, true, None).0
     });
     converge(dt, nconv, |dt| {
-        hydro2d::<V, 2>(t0, tend, dx, dt, dt * dt, p, dpde, r, false).0
+        hydro2d::<V, 2>(t0, tend, dx, dt, p2(dt), r, false, None).0
     });
-
-    // use arder 6 Gauss-Legendre as reference
-    let r = gauss_legendre_3();
-    let dt = 1e-3;
-    println!("{}", r.name);
-    hydro1d::<V, 3>(t0, tend, dx, dt, dt * dt, p, dpde, r, true);
-    hydro1d::<V, 3>(t0, tend, dx, dt, dt * dt, p, dpde, r, false);
-    hydro2d::<V, 3>(t0, tend, dx, dt, dt * dt, p, dpde, r, true);
-    hydro2d::<V, 3>(t0, tend, dx, dt, dt * dt, p, dpde, r, false);
+    converge(dt, nconv, |dt| {
+        hydro2d::<V, 2>(t0, tend, dx, dt, p2(dt), r, false, trento).0
+    });
 }
 
 fn big_stack() {

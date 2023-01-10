@@ -96,6 +96,8 @@ fn flux<const V: usize>(
     [-divf0[0], -divf0[1]]
 }
 
+pub type Init1D<'a> = &'a dyn Fn(usize, f64) -> [f64; 2];
+
 pub fn hydro1d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
@@ -106,7 +108,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
     r: Scheme<S>,
     p: Pressure,
     dpde: Pressure,
-    init: impl Fn(f64) -> [f64; 2],
+    init: Init1D,
 ) -> ([[[f64; 2]; V]; 1], f64, usize, usize) {
     let schemename = r.name;
     let mut vs = [[[0.0; 2]; V]];
@@ -115,7 +117,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
     let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {
         let x = (i as f64 - v2) * dx;
-        vs[0][i] = init(x);
+        vs[0][i] = init(i, x);
     }
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
