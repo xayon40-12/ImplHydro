@@ -40,7 +40,6 @@ def convert(v):
 dir = "results/"
 for d in os.listdir(dir):
     p = dir+d+"/"+os.listdir(dir+d)[0]
-    data = np.loadtxt(p+"/data.txt")
     info = {k: convert(v.strip()) for [k, v] in np.loadtxt(p+"/info.txt", dtype=object, delimiter=":")}
 
     t0 = info["t0"]
@@ -52,10 +51,15 @@ for d in os.listdir(dir):
     info["l"] = str(dx*nx)
     if info["ny"] == 1:
         dim = "1D"
+        n = nx
     else:
         dim = "2D"
+        n = nx*nx
     info["dim"] = dim
     name = info["name"]
+
+    # data = np.loadtxt(p+"/data.txt")
+    data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
     
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
     datas[dim][name][t0][tend][dx][nx][scheme][maxdt] = (info, data)

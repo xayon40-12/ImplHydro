@@ -30,7 +30,7 @@ pub fn fixpoint<
         p: _,
         dpde: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
-) -> (f64, [[usize; VX]; VY]) {
+) -> Option<(f64, [[usize; VX]; VY])> {
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
     let mut err = 1.0;
@@ -42,13 +42,19 @@ pub fn fixpoint<
     let mut nbiter = [[0usize; VX]; VY];
     let mut dt = *dto;
     let mut iter = 0;
-    let maxiter = 10;
+    let mut failed = 0;
+    let maxiter = 50;
+    let maxfailed = 10;
     let muldt: f64 = 1.01;
     let divdt: f64 = 0.5;
     let mut reset = false;
     while err > *er {
         iter += 1;
         if iter > maxiter {
+            failed += 1;
+            if failed >= maxfailed {
+                return None;
+            }
             if reset {
                 dt *= divdt;
             } else {
@@ -132,5 +138,5 @@ pub fn fixpoint<
     }
     *ot += dt;
     *dto = maxdt.min(dt * 1.1);
-    (cost / (VX * VY) as f64, nbiter)
+    Some((cost / (VX * VY) as f64, nbiter))
 }

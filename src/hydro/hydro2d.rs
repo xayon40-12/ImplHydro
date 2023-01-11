@@ -194,7 +194,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     dpde: Pressure,
     init: Init2D,
     use_exponential: bool,
-) -> ([[[f64; 3]; V]; V], f64, usize, usize) {
+) -> Option<([[[f64; 3]; V]; V], f64, usize, usize)> {
     let schemename = r.name;
     let mut vs = [[[0.0; 3]; V]; V];
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);

@@ -110,7 +110,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
     p: Pressure,
     dpde: Pressure,
     init: Init1D,
-) -> ([[[f64; 2]; V]; 1], f64, usize, usize) {
+) -> Option<([[[f64; 2]; V]; 1], f64, usize, usize)> {
     let schemename = r.name;
     let mut vs = [[[0.0; 2]; V]];
     let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);

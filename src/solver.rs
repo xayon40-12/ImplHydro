@@ -56,37 +56,67 @@ pub fn save<
         "{}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
         name, context.r.integration, dim, S, &context.r.name, VX, context.maxdt, context.dx
     );
-    let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
-    for f in 0..F {
-        res = format!("{} {}", res, namesf[f]);
-    }
-    for c in 0..C {
-        res = format!("{} {}", res, namesc[c]);
-    }
-    res = format!("{}\n", res);
 
-    for j in 0..VY {
-        for i in 0..VX {
-            let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
-            let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
-            let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
-            let v = v[j][i];
-            for f in 0..F {
-                s = format!("{} {:e}", s, v[f]);
-            }
-            let vars = (context.transform)(t, (context.constraints)(t, v));
-            for c in 0..C {
-                s = format!("{} {:e}", s, vars[c]);
-            }
-            s = format!("{}\n", s);
-            res = format!("{}{}", res, s);
+    const TXT: bool = false;
+    let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
+    if TXT {
+        for f in 0..F {
+            res = format!("{} {}", res, namesf[f]);
+        }
+        for c in 0..C {
+            res = format!("{} {}", res, namesc[c]);
         }
         res = format!("{}\n", res);
     }
 
+    let fc3 = F + C + 3;
+    let mut ligne = vec![0.0f64; VY * VX * fc3];
+    for j in 0..VY {
+        for i in 0..VX {
+            let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
+            let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
+            let v = v[j][i];
+            let vars = (context.transform)(t, (context.constraints)(t, v));
+
+            if TXT {
+                let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
+                for f in 0..F {
+                    s = format!("{} {:e}", s, v[f]);
+                }
+                for c in 0..C {
+                    s = format!("{} {:e}", s, vars[c]);
+                }
+                s = format!("{}\n", s);
+                res = format!("{}{}", res, s);
+            }
+
+            ligne[0 + fc3 * (i + j * VX)] = x;
+            ligne[1 + fc3 * (i + j * VX)] = y;
+            ligne[2 + fc3 * (i + j * VX)] = nbiter[j][i] as f64;
+            for f in 0..F {
+                ligne[3 + f + fc3 * (i + j * VX)] = v[f];
+            }
+            for c in 0..C {
+                ligne[3 + F + c + fc3 * (i + j * VX)] = vars[c];
+            }
+        }
+        if TXT {
+            res = format!("{}\n", res);
+        }
+    }
+
     let dir = &format!("results/{}/{:e}", foldername, t);
     std::fs::create_dir_all(dir)?;
-    std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
+    std::fs::write(
+        &format!("{}/data.dat", dir),
+        ligne
+            .into_iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect::<Vec<_>>(),
+    )?;
+    if TXT {
+        std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
+    }
     let info = format!(
         "elapsed: {:e}\ntsteps: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nname: {}\n",
         elapsed, tsteps, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, name,
@@ -109,7 +139,7 @@ pub fn run<
     schemename: &str,
     integration: Integration,
     names: &([&str; F], [&str; C]),
-) -> ([[[f64; F]; VX]; VY], f64, usize, usize) {
+) -> Option<([[[f64; F]; VX]; VY], f64, usize, usize)> {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
     let mut tsteps = 0;
@@ -134,13 +164,18 @@ pub fn run<
             context.dt = d;
         }
         tsteps += 1;
-        let (c, nbs) = match integration {
+        let res = match integration {
             Integration::Explicit => explicit(&mut context),
             Integration::FixPoint => fixpoint(&mut context),
         };
-
-        cost += c;
-        nbiter = nbs;
+        if let Some((c, nbs)) = res {
+            cost += c;
+            nbiter = nbs;
+        } else {
+            eprintln!("Integration failed, abort current run.");
+            eprintln!("");
+            return None;
+        }
     }
     let cost = cost as usize;
     let elapsed = now.elapsed().as_secs_f64();
@@ -162,5 +197,5 @@ pub fn run<
         Err(e) => eprintln!("{}", e),
         Ok(()) => {}
     }
-    (context.vs, context.t, cost, tsteps)
+    Some((context.vs, context.t, cost, tsteps))
 }
