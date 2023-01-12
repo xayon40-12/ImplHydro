@@ -27,7 +27,7 @@ def dd(n):
     else:
         return defaultdict(lambda: dd(n-1))
 
-datas = dd(8)
+datas = dd(10)
 
 def convert(v):
     try:
@@ -37,6 +37,14 @@ def convert(v):
             return float(v)
         except:
             return v
+
+def extractCase(n):
+    l = n[-1]
+    if l in "0123456789":
+        (name, v) = extractCase(n[:-1])
+        return (name, int(l)+10*v)
+    else:
+        return (n,0)
 
 dir = "results/"
 for d in os.listdir(dir):
@@ -49,6 +57,7 @@ for d in os.listdir(dir):
     maxdt = info["maxdt"]
     dx = info["dx"]
     nx = info["nx"]
+    t = info["t"]
     info["l"] = str(dx*nx)
     if info["ny"] == 1:
         dim = "1D"
@@ -58,12 +67,15 @@ for d in os.listdir(dir):
         n = nx*nx
     info["dim"] = dim
     name = info["name"]
+    (name, case) = extractCase(name)
+    info["name"] = name
+    info["case"] = case
 
     # data = np.loadtxt(p+"/data.txt")
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
     
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
-    datas[dim][name][t0][tend][dx][nx][scheme][maxdt] = (info, data)
+    datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data)
 
 def compare(i, vss, wss):
     maxerr = 0
@@ -99,31 +111,47 @@ def convergence(a, ref=None):
 
 def info2name(info, scheme=True):
     if scheme:
-        return "{}_{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"])
+        return "{}_{}{}_{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["case"],info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
     else:
-        return "{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["t0"],info["tend"],info["dx"],info["nx"])
+        return "{}_{}{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["case"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
 
-def convall(l, d):
-    [dim,name,t0,tend,dx,nx] = l
-    scs = sorted(list(d.keys()))
-    if len(scs) <= 1:
-        return 
-    any = d[scs[0]]
-    dtref = sorted(list(any.keys()))[0]
-    info = any[dtref][0]
-    refs = {s: d[s][sorted(list(d[s].keys()))[0]][1] for s in d}
-    
+def convall(l, ds):
+    [dim,name,t0,tend,dx,nx,t] = l
     for (dtcost, dci) in [("dt", 2), ("cost", 3), ("avdt", 4)]:
         plt.figure()
-        for s0 in scs:
-            # for s1 in scs:
-            for s1 in ["GL2"]:
-                c = convergence(d[s0],refs[s1])
-                plt.loglog(c[:,dci],c[:,5], label="{} r {}".format(s0, s1))
-                # plt.loglog(c[:,dci],c[:,6], label="{} r {}".format(s0, s1))
         plt.xlabel(dtcost)
         plt.ylabel("relative error")
         plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
+        d = ds[list(ds)[0]]
+        scs = sorted(list(d.keys()))
+        scs.reverse()
+        if len(scs) <= 1:
+            plt.close()
+            return 
+        for (s0,col) in zip(scs,plt_setting.clist):
+            for case in ds: 
+                d = ds[case]
+                scs = sorted(list(d.keys()))
+                scs.reverse()
+                if len(scs) <= 1:
+                    plt.close()
+                    return 
+                any = d[scs[0]]
+                dtref = sorted(list(any.keys()))[0]
+                info = any[dtref][0]
+                refs = {s: d[s][sorted(list(d[s].keys()))[0]][1] for s in d}
+    
+                for s1 in ["GL2"]:
+                    c = convergence(d[s0],refs[s1])
+                    plt.loglog(c[:,dci],c[:,5], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
+                    # plt.loglog(c[:,dci],c[:,6], label="{} r {}".format(s0, s1))
+        labels = []
+        for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
+            label = p.get_label()
+            if label in labels:    # check for Name already exists
+                p.set_label('_' + label)       # hide label in auto-legend
+            else:
+                labels += [label]
         plt.legend()
         plt.savefig("figures/convergence_{}_{}.pdf".format(dtcost, info2name(info, False)))
         plt.close()
@@ -238,5 +266,5 @@ try:
 except FileExistsError:
     None
     
-alldata(6, datas, convall)
-alldata(7, datas, plotall)
+alldata(7, datas, convall)
+alldata(9, datas, plotall)
