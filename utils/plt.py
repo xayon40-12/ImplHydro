@@ -3,6 +3,7 @@ import sys
 import os
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 sys.path.append(os.path.abspath("%s/.config/" % (os.path.expanduser("~"))))
 import plt_setting
 import numpy as np
@@ -86,7 +87,11 @@ def convergence(a, ref=None):
         cost = info["cost"]
         dt = info["maxdt"]
         avdt = (info["tend"]-info["t0"])/info["tsteps"]
-        (maxerr, meanerr) = compare(IDt00, ref, v)
+        if info["dim"] == "1D":
+            id = ID1De
+        else:
+            id = ID2De
+        (maxerr, meanerr) = compare(id, ref, v)
         # all += [(v, info, cost, maxerr, meanerr)]
         all += [(v, info, dt, cost, avdt, maxerr, meanerr)]
     
@@ -101,6 +106,8 @@ def info2name(info, scheme=True):
 def convall(l, d):
     [dim,name,t0,tend,dx,nx] = l
     scs = sorted(list(d.keys()))
+    if len(scs) <= 1:
+        return 
     any = d[scs[0]]
     dtref = sorted(list(any.keys()))[0]
     info = any[dtref][0]
@@ -151,17 +158,17 @@ def plot1d(datadts):
     
         x = data[:,IDx]/tend
         iter = data[:,IDiter]
-        y = data[:,IDt00]
-        yt00 = [t00(x) for x in x]
-        _,ax = plt.subplots()
-        continuum ,= ax.plot(x,yt00, color="black")
-        numerics ,= ax.plot(x,y)
-        ax.set_ylabel("t00")
-        ax.set_xlabel("x/t")
-        ax2 = ax.twinx()
-        ax2.set_ylabel("iterations")
-        iterations ,= ax2.plot(x,iter, 'o', color="gray")
-        plt.legend([numerics, continuum, iterations],["numerics", "continuum", "iterations"])
+        y = data[:,ID1De]
+        ycontinuum = [e(x) for x in x]
+        _,axs = plt.subplots(2, 1, sharex=True)
+        iterations ,= axs[0].plot(x,iter, 'o', color="gray", label="iterations")
+        axs[0].set_ylabel("iterations")
+        axs[0].legend()
+        continuum ,= axs[1].plot(x,ycontinuum, color="black", label="continuum")
+        numerics ,= axs[1].plot(x,y, label="numerics")
+        axs[1].set_ylabel("e")
+        axs[1].set_xlabel("x/t")
+        axs[1].legend()
         plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info)))
         plt.close()
 
@@ -174,14 +181,12 @@ def plot2d(datadts):
     x = data[:,IDx]
     y = data[:,IDy]
     z = data[:,ID2De]
-    zt00 = data[:,IDt00]
     ziter = data[:,IDiter]
     zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
     zerr = [abs(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
     x = np.reshape(x, (n,n))
     y = np.reshape(y, (n,n))
     z = np.reshape(z, (n,n))
-    zt00 = np.reshape(zt00, (n,n))
     ziter = np.reshape(ziter, (n,n))
     zgubser = np.reshape(zgubser, (n,n))
     zerr = np.reshape(zerr, (n,n))
@@ -189,15 +194,29 @@ def plot2d(datadts):
     r = x[0][-1]
     d = y[0][0]
     u = y[-1][0]
-    for (n, z) in [("t00", zt00), ("e", z), ("iter", ziter), ("t00gubser", zgubser), ("t00err", zerr)]:
-        fig, ax = plt.subplots()
-        pos = ax.imshow(z, extent=[l,r,d,u])
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        cbar = plt.colorbar(pos)
-        cbar.set_label(n)
-        plt.savefig("figures/best_{}_{}.pdf".format(n, info2name(info)))
-        plt.close()
+    if "Trento" in info["name"]:
+        all = [("iter", ziter), ("e", z)]
+    else:
+        all = [("iter", ziter), ("e", z), ("err", zerr)]
+    nb = len(all)
+    fig, axs = plt.subplots(1,nb, sharey=True)
+    for (i, (n, z)) in zip(range(nb),all):
+        im = axs[i].imshow(z, extent=[l,r,d,u])
+        axs[i].set_xlabel("x")
+        axs[i].xaxis.tick_top()
+        axs[i].xaxis.set_label_position('top') 
+        if i == 0:
+            axs[i].set_ylabel("y")
+        divider = make_axes_locatable(axs[i])
+        cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
+        fig.add_axes(cax)
+        cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+        cbar.formatter.set_powerlimits((0, 0))
+        cbar.formatter.set_useMathText(True)
+        cbar.update_ticks()
+        cbar.set_label(n, labelpad=-60)
+    plt.savefig("figures/best_e_{}.pdf".format(info2name(info)))
+    plt.close()
 
 def plotall(l, d):
     if l[0] == "1D":
