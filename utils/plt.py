@@ -141,7 +141,7 @@ def convall(l, ds):
                 info = any[dtref][0]
                 refs = {s: d[s][sorted(list(d[s].keys()))[0]][1] for s in d}
     
-                for s1 in ["GL2"]:
+                for s1 in [scs[0]]:
                     c = convergence(d[s0],refs[s1])
                     plt.loglog(c[:,dci],c[:,5], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
                     # plt.loglog(c[:,dci],c[:,6], label="{} r {}".format(s0, s1))
