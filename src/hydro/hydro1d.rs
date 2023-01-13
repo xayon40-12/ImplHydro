@@ -1,7 +1,7 @@
 use crate::solver::{
     context::{Boundary, Context},
     run,
-    space::kt::{kt, Dir},
+    space::{order, Dir, Order::*},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zero},
     Transform,
@@ -62,7 +62,8 @@ fn flux<const V: usize>(
     [_dt, _cdt]: [f64; 2],
     _opt: &(),
 ) -> [f64; 2] {
-    let theta = 1.1;
+    // let theta = 1.1;
+    let theta = 2.0;
 
     let pre = &|_t: f64, vs: [f64; 2]| {
         let t00 = vs[0];
@@ -78,7 +79,10 @@ fn flux<const V: usize>(
         let t00 = (m * m + k).sqrt();
         [t00, t01]
     };
-    let divf0 = kt(
+
+    let diff = order(O3);
+
+    let divf0 = diff(
         vs,
         bound,
         pos,

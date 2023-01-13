@@ -1,7 +1,7 @@
 use crate::solver::{
     context::{Boundary, Context},
     run,
-    space::kt::{kt, Dir},
+    space::{order, Dir, Order::*},
     time::{newton::newton, schemes::Scheme},
     utils::ghost,
     Transform,
@@ -95,7 +95,8 @@ fn flux<const V: usize>(
     [_dt, _cdt]: [f64; 2],
     opt: &Coordinate,
 ) -> [f64; 3] {
-    let theta = 1.1;
+    // let theta = 1.1;
+    let theta = 2.0;
 
     let t = match opt {
         Coordinate::Cartesian => 1.0,
@@ -118,7 +119,8 @@ fn flux<const V: usize>(
         let t00 = (m * m + k).sqrt();
         [t00, t01, t02]
     };
-    let divf1 = kt(
+    let diff = order(O3);
+    let divf1 = diff(
         vs,
         bound,
         pos,
@@ -133,7 +135,7 @@ fn flux<const V: usize>(
         dx,
         theta,
     );
-    let divf2 = kt(
+    let divf2 = diff(
         vs,
         bound,
         pos,

@@ -1,16 +1,6 @@
 use crate::solver::{context::Boundary, utils::flux_limiter, Transform};
 
-type Flux<'a, const C: usize> = &'a dyn Fn(f64, [f64; C]) -> f64;
-type Eigenvalues<'a, const C: usize> = &'a dyn Fn(f64, [f64; C]) -> f64;
-
-pub enum Dir {
-    X,
-    Y,
-}
-
-pub fn id_flux_limiter<const F: usize>(v: [f64; F]) -> [f64; F] {
-    v
-}
+use super::{Dir, Eigenvalues, Flux};
 
 pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, const N: usize>(
     vars: &[[[f64; F]; VX]; VY],
