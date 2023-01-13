@@ -163,6 +163,7 @@ def plot1d(datadts):
         if dt == maxdt:
             timename = "best_"+timename
         (info, data) = datadts[dt]
+        t0 = info["t0"]
         tend = info["tend"]
     
         name = info["name"]
@@ -184,7 +185,7 @@ def plot1d(datadts):
                 return (e(x)+p(x))*ut2-p(x)
 
     
-        x = data[:,IDx]/tend
+        x = data[:,IDx]/(tend-t0)
         iter = data[:,IDiter]
         y = data[:,ID1De]
         ycontinuum = [e(x) for x in x]
@@ -212,12 +213,15 @@ def plot2d(datadts):
     ziter = data[:,IDiter]
     zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
     zerr = [abs(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
-    x = np.reshape(x, (n,n))
-    y = np.reshape(y, (n,n))
-    z = np.reshape(z, (n,n))
-    ziter = np.reshape(ziter, (n,n))
-    zgubser = np.reshape(zgubser, (n,n))
-    zerr = np.reshape(zerr, (n,n))
+    s = 10
+    nl = int(n/s)
+    nr = int(n*(s-1)/s)
+    x = np.reshape(x, (n,n))[nl:nr,nl:nr]
+    y = np.reshape(y, (n,n))[nl:nr,nl:nr]
+    z = np.reshape(z, (n,n))[nl:nr,nl:nr]
+    ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
+    zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
+    zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
     l = x[0][0]
     r = x[0][-1]
     d = y[0][0]
