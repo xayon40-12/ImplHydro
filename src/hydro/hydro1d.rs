@@ -62,8 +62,8 @@ fn flux<const V: usize>(
     [_dt, _cdt]: [f64; 2],
     _opt: &(),
 ) -> [f64; 2] {
-    // let theta = 1.1;
-    let theta = 2.0;
+    let theta = 1.1;
+    // let theta = 2.0;
 
     let pre = &|_t: f64, vs: [f64; 2]| {
         let t00 = vs[0];

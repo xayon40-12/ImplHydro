@@ -52,7 +52,7 @@ pub fn kl<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             diff[l][2][f] = vals[l + 2][f] - vals[l + 1][f];
 
             diff2[l][f] = vals[l + 2][f] - 2.0 * vals[l + 1][f] + vals[l][f];
-            diff2o[l][f] = valso[l][2][f] - 2.0 * valso[l][1][f] + valso[l][0][f];
+            diff2o[l][f] = valso[l][2][f] - 2.0 * valso[l][1][f] + valso[l][0][f]; // this is automatically 0 in 1D
 
             is[l][0] += diff[l][0][f].powi(2);
             is[l][1] += 13.0 / 3.0 * diff2[l][f].powi(2) + 1.0 / 4.0 * diff[l][1][f].powi(2);

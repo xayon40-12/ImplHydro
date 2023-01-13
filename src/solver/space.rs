@@ -13,7 +13,7 @@ pub enum Dir {
     Y,
 }
 
-pub fn id_flux_limiter<const F: usize>(v: [f64; F]) -> [f64; F] {
+pub fn id_flux_limiter<const F: usize>(_t: f64, v: [f64; F]) -> [f64; F] {
     v
 }
 

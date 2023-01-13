@@ -224,7 +224,7 @@ fn big_stack() {
     let l = 10.0;
     let tend = 4.5;
 
-    let ermin = 1e-4;
+    let ermin = 1e-5;
     run::<100>(t0, tend, 2.0 * l / 100.0, ermin);
     run::<200>(t0, tend, 2.0 * l / 200.0, ermin);
 }
