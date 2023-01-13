@@ -18,14 +18,27 @@ pub fn kl<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     p: f64, // in kl 'p' is the equivalent of 'theta' in the minmod flux limiter of kt
 ) -> [f64; N] {
     let mut vals: [[f64; F]; 5] = [[0.0; F]; 5];
-    let mut valso: [[f64; F]; 5] = [[0.0; F]; 5];
     for l in 0..5 {
         let (lx, ly) = match dir {
             Dir::X => (l as i32 - 2, 0),
             Dir::Y => (0, l as i32 - 2),
         };
         vals[l] = pre_flux_limiter(t, vars[boundy(y + ly, VY)][boundx(x + lx, VX)]);
-        valso[l] = pre_flux_limiter(t, vars[boundy(y + lx, VY)][boundx(x + ly, VX)]);
+    }
+    let mut valso: [[[f64; F]; 3]; 3] = [[[0.0; F]; 3]; 3];
+    for l in 0..3 {
+        let (lx, ly) = match dir {
+            Dir::X => (l as i32 - 1, 0),
+            Dir::Y => (0, l as i32 - 1),
+        };
+        for o in 0..3 {
+            let (ox, oy) = match dir {
+                Dir::X => (0, l as i32 - 1),
+                Dir::Y => (l as i32 - 1, 0),
+            };
+            valso[l][o] =
+                pre_flux_limiter(t, vars[boundy(y + ly + oy, VY)][boundx(x + lx + ox, VX)]);
+        }
     }
     let eps: f64 = 1e-14;
     let mut is: [[f64; 3]; 3] = [[0.0; 3]; 3];
@@ -39,7 +52,7 @@ pub fn kl<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             diff[l][2][f] = vals[l + 2][f] - vals[l + 1][f];
 
             diff2[l][f] = vals[l + 2][f] - 2.0 * vals[l + 1][f] + vals[l][f];
-            // diff2o[l][f] = valso[l + 2][f] - 2.0 * valso[l + 1][f] + valso[l][f];
+            diff2o[l][f] = valso[l][2][f] - 2.0 * valso[l][1][f] + valso[l][0][f];
 
             is[l][0] += diff[l][0][f].powi(2);
             is[l][1] += 13.0 / 3.0 * diff2[l][f].powi(2) + 1.0 / 4.0 * diff[l][1][f].powi(2);
