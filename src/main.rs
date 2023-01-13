@@ -143,7 +143,7 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
     // let gl2 = gauss_legendre_2();
     let heun = heun();
 
-    const TRENTO: usize = 0;
+    const TRENTO: usize = 10;
     let mut trentos = [[[0.0f64; V]; V]; TRENTO];
     for i in 0..TRENTO {
         trentos[i] = load_matrix(&format!("e{}/{:0>2}.dat", V, i)).expect(&format!(
@@ -224,9 +224,9 @@ fn big_stack() {
     let l = 10.0;
     let tend = 4.5;
 
-    let ermin = 1e-5;
+    let ermin = 1e-9;
     run::<100>(t0, tend, 2.0 * l / 100.0, ermin);
-    run::<200>(t0, tend, 2.0 * l / 200.0, ermin);
+    run::<300>(t0, tend, 2.0 * l / 300.0, ermin);
 }
 
 fn main() {

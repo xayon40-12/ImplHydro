@@ -212,7 +212,7 @@ def plot2d(datadts):
     z = data[:,ID2De]
     ziter = data[:,IDiter]
     zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
-    zerr = [abs(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
+    zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
     s = 10
     nl = int(n/s)
     nr = int(n*(s-1)/s)
