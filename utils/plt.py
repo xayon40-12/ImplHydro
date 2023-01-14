@@ -216,9 +216,8 @@ def plot2d(datadts):
     zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
     zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
     zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
-    s = 10
-    nl = int(n/s)
-    nr = int(n*(s-1)/s)
+    nl = next(i for (i,v) in zip(range(n*n),x) if v >= -9)
+    nr = n-1-nl
     x = np.reshape(x, (n,n))[nl:nr,nl:nr]
     y = np.reshape(y, (n,n))[nl:nr,nl:nr]
     z = np.reshape(z, (n,n))[nl:nr,nl:nr]
@@ -250,7 +249,8 @@ def plot2d(datadts):
         cbar.formatter.set_useMathText(True)
         cbar.update_ticks()
         cbar.set_label(n, labelpad=-60)
-    plt.savefig("figures/best_e_{}.pdf".format(info2name(info)))
+    plt.rcParams["figure.figsize"] = [18, 5]
+    plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
     plt.close()
 
 def plotall(l, d):
