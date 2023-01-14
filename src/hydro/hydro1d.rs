@@ -11,7 +11,7 @@ use super::{solve_v, Pressure};
 
 fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
     let m = t01.abs();
-    let t00 = t00.max(m);
+    let t00 = t00.max(m + 1e-15);
     [t00, t01]
 }
 fn gen_transform<'a>(
@@ -22,8 +22,7 @@ fn gen_transform<'a>(
     Box::new(move |_t, [t00, t01]| {
         let m = t01.abs();
         let sv = solve_v(t00, m, p);
-        let v = newton(er, 0.5, |v| sv(v) - v);
-        let v = v.max(0.0).min(1.0);
+        let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
         let e = (t00 - m * v).max(1e-100);
         let pe = p(e);
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);

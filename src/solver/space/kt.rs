@@ -23,7 +23,10 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             Dir::X => (l as i32 - 2, 0),
             Dir::Y => (0, l as i32 - 2),
         };
-        vals[l] = pre_flux_limiter(t, vars[boundy(y + ly, VY)][boundx(x + lx, VX)])
+        vals[l] = pre_flux_limiter(
+            t,
+            constraints(t, vars[boundy(y + ly, VY)][boundx(x + lx, VX)]),
+        )
     }
     let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];
     for l in 0..3 {

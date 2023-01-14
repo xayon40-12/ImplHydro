@@ -81,11 +81,12 @@ def compare(i, vss, wss):
     maxerr = 0
     meanerr = 0
     for (vs, ws) in zip(vss,wss):
-        a = vs[i]
-        b = ws[i]
-        err = abs(a-b)/max(abs(a),abs(b))
-        maxerr = max(err,maxerr)
-        meanerr += err
+        if vs[0] >= -9 and vs[0] <= 9 and vs[1] >= -9 and vs[1] <= 9:
+            a = vs[i]
+            b = ws[i]
+            err = abs(a-b)/max(abs(a),abs(b))
+            maxerr = max(err,maxerr)
+            meanerr += err
     meanerr /= len(vss)
     return (maxerr, meanerr)
 
@@ -143,8 +144,7 @@ def convall(l, ds):
     
                 for s1 in [scs[0]]:
                     c = convergence(d[s0],refs[s1])
-                    plt.loglog(c[:,dci],c[:,5], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
-                    # plt.loglog(c[:,dci],c[:,6], label="{} r {}".format(s0, s1))
+                    plt.loglog(c[1:,dci],c[1:,5], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
             label = p.get_label()
@@ -203,16 +203,19 @@ def plot1d(datadts):
 
 def plot2d(datadts):
     maxdts = sorted([dt for dt in datadts])
-    (info, data) = datadts[maxdts[0]]
+    (info, ref) = datadts[maxdts[0]]
+    (_, data) = datadts[maxdts[1]]
 
     t = info["tend"]
     n = info["nx"]
     x = data[:,IDx]
     y = data[:,IDy]
     z = data[:,ID2De]
+    zref = ref[:,ID2De]
     ziter = data[:,IDiter]
     zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
     zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
+    zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
     s = 10
     nl = int(n/s)
     nr = int(n*(s-1)/s)
@@ -222,14 +225,14 @@ def plot2d(datadts):
     ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
     zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
     zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
+    zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
     l = x[0][0]
     r = x[0][-1]
     d = y[0][0]
     u = y[-1][0]
-    if "Trento" in info["name"]:
-        all = [("iter", ziter), ("e", z)]
-    else:
-        all = [("iter", ziter), ("e", z), ("err", zerr)]
+    all = [("iter", ziter), ("e", z), ("err ref", zerrref)]
+    if "Gubser" in info["name"]:
+        all += [("err continuum", zerr)]
     nb = len(all)
     fig, axs = plt.subplots(1,nb, sharey=True)
     for (i, (n, z)) in zip(range(nb),all):
