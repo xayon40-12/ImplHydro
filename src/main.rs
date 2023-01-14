@@ -142,6 +142,7 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
     let gl1 = gauss_legendre_1();
     // let gl2 = gauss_legendre_2();
     let heun = heun();
+    // let cn = crank_nicolson();
 
     const TRENTO: usize = 1;
     let mut trentos = [[[0.0f64; V]; V]; TRENTO];
@@ -197,6 +198,26 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
     //         hydro2d::<V, 2>(t0, tend, dx, sq4(er), er, r, false, trento)
     //     });
     // }
+    // let r = cn;
+    // println!("{}", r.name);
+    // converge(er0, ermin, |er| {
+    //     hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, true)
+    // });
+    // converge(er0, ermin, |er| {
+    //     hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, false)
+    // });
+    // converge(er0, ermin, |er| {
+    //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, true, None)
+    // });
+    // converge(er0, ermin, |er| {
+    //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, None)
+    // });
+    // for i in 0..TRENTO {
+    //     let trento = Some((trentos[i], i));
+    //     converge(er0, ermin, |er| {
+    //         hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, trento)
+    //     });
+    // }
     let r = heun;
     println!("{}", r.name);
     converge(er0, ermin, |er| {
@@ -224,7 +245,7 @@ fn big_stack() {
     let l = 10.0;
     let tend = 4.5;
 
-    let ermin = 1e-5;
+    let ermin = 1e-8;
     run::<100>(t0, tend, 2.0 * l / 100.0, ermin);
     // run::<300>(t0, tend, 2.0 * l / 300.0, ermin);
 }

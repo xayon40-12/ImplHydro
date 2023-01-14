@@ -32,6 +32,14 @@ pub fn heun() -> Scheme<2> {
         integration: Explicit,
     }
 }
+pub fn crank_nicolson() -> Scheme<2> {
+    Scheme {
+        aij: [[0.0, 0.0], [0.5, 0.5]],
+        bj: None,
+        name: "CrankNicolson",
+        integration: FixPoint,
+    }
+}
 pub fn radauiia2() -> Scheme<2> {
     Scheme {
         aij: [[5.0 / 12.0, -1.0 / 12.0], [3.0 / 4.0, 1.0 / 4.0]],

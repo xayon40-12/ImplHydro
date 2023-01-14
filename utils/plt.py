@@ -21,6 +21,8 @@ IDt00 = 3
 ID1De = 5
 ID2De = 6
 
+crop = 6
+
 def dd(n):
     if n == 1:
         return {}
@@ -80,14 +82,16 @@ for d in os.listdir(dir):
 def compare(i, vss, wss):
     maxerr = 0
     meanerr = 0
+    count = 0
     for (vs, ws) in zip(vss,wss):
-        if vs[0] >= -9 and vs[0] <= 9 and vs[1] >= -9 and vs[1] <= 9:
+        if vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
+            count += 1
             a = vs[i]
             b = ws[i]
             err = abs(a-b)/max(abs(a),abs(b))
             maxerr = max(err,maxerr)
             meanerr += err
-    meanerr /= len(vss)
+    meanerr /= count
     return (maxerr, meanerr)
 
 def convergence(a, ref=None):
@@ -119,6 +123,7 @@ def info2name(info, scheme=True):
 def convall(l, ds):
     [dim,name,t0,tend,dx,nx,t] = l
     for (dtcost, dci) in [("dt", 2), ("cost", 3), ("avdt", 4)]:
+        plt.rcParams["figure.figsize"] = [8, 5]
         plt.figure()
         plt.xlabel(dtcost)
         plt.ylabel("relative error")
@@ -165,6 +170,7 @@ def plot1d(datadts):
         (info, data) = datadts[dt]
         t0 = info["t0"]
         tend = info["tend"]
+        n = info["nx"]
     
         name = info["name"]
         void = "Void" in name
@@ -185,10 +191,16 @@ def plot1d(datadts):
                 return (e(x)+p(x))*ut2-p(x)
 
     
-        x = data[:,IDx]/(tend-t0)
+        x = data[:,IDx]
         iter = data[:,IDiter]
         y = data[:,ID1De]
+        nl = next(i for (i,v) in zip(range(n),x) if v >= -crop)
+        nr = n-1-nl
+        x = x[nl:nr]/(tend-t0)
+        iter = iter[nl:nr]
+        y = y[nl:nr]
         ycontinuum = [e(x) for x in x]
+        plt.rcParams["figure.figsize"] = [8, 5]
         _,axs = plt.subplots(2, 1, sharex=True)
         iterations ,= axs[0].plot(x,iter, 'o', color="gray", label="iterations")
         axs[0].set_ylabel("iterations")
@@ -216,7 +228,7 @@ def plot2d(datadts):
     zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
     zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
     zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
-    nl = next(i for (i,v) in zip(range(n*n),x) if v >= -9)
+    nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
     nr = n-1-nl
     x = np.reshape(x, (n,n))[nl:nr,nl:nr]
     y = np.reshape(y, (n,n))[nl:nr,nl:nr]
@@ -229,10 +241,13 @@ def plot2d(datadts):
     r = x[0][-1]
     d = y[0][0]
     u = y[-1][0]
-    all = [("iter", ziter), ("e", z), ("err ref", zerrref)]
-    if "Gubser" in info["name"]:
+    all = [("e", z), ("err ref", zerrref)]
+    if "Gubser" in info["name"] and not "Exponential" in info["name"]:
         all += [("err continuum", zerr)]
+    if not "Heun" in info["scheme"]:
+        all += [("iter", ziter)]
     nb = len(all)
+    plt.rcParams["figure.figsize"] = [2+nb*4, 5]
     fig, axs = plt.subplots(1,nb, sharey=True)
     for (i, (n, z)) in zip(range(nb),all):
         im = axs[i].imshow(z, extent=[l,r,d,u])
@@ -249,7 +264,6 @@ def plot2d(datadts):
         cbar.formatter.set_useMathText(True)
         cbar.update_ticks()
         cbar.set_label(n, labelpad=-60)
-    plt.rcParams["figure.figsize"] = [18, 5]
     plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
     plt.close()
 
