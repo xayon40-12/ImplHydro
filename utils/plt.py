@@ -105,13 +105,14 @@ def convergence(a, ref=None):
         cost = info["cost"]
         dt = info["maxdt"]
         avdt = (info["tend"]-info["t0"])/info["tsteps"]
+        elapsed = info["elapsed"]
         if info["dim"] == "1D":
             id = ID1De
         else:
             id = ID2De
         (maxerr, meanerr) = compare(id, ref, v)
         # all += [(v, info, cost, maxerr, meanerr)]
-        all += [(v, info, dt, cost, avdt, maxerr, meanerr)]
+        all += [(v, info, maxerr, meanerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
 
@@ -123,7 +124,7 @@ def info2name(info, scheme=True):
 
 def convall(l, ds):
     [dim,name,t0,tend,dx,nx,t] = l
-    for (dtcost, dci) in [("dt", 2), ("cost", 3), ("avdt", 4)]:
+    for (dtcost, dci) in [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]:
         plt.rcParams["figure.figsize"] = [8, 5]
         plt.figure()
         plt.xlabel(dtcost)
@@ -150,7 +151,7 @@ def convall(l, ds):
     
                 for s1 in [scs[0]]:
                     c = convergence(d[s0],refs[s1])
-                    plt.loglog(c[1:,dci],c[1:,5], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
+                    plt.loglog(c[1:,dci],c[1:,2], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
             label = p.get_label()

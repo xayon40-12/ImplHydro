@@ -1,4 +1,6 @@
-use crate::solver::{context::Context, pfor2d};
+use rayon::prelude::*;
+
+use crate::solver::{context::Context, pfor2d, pfor2d2};
 
 use super::schemes::Scheme;
 
@@ -33,8 +35,7 @@ pub fn fixpoint<
 ) -> Option<(f64, [[usize; VX]; VY])> {
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
-    let mut err = 1.0;
-    let mut cost = 0.0;
+    let mut iserr = true;
     let ko = *k;
     let mut fu = *k;
     let mut vdtk = [[[0.0f64; F]; VX]; VY];
@@ -48,7 +49,7 @@ pub fn fixpoint<
     let muldt: f64 = 1.01;
     let divdt: f64 = 0.5;
     let mut reset = false;
-    while err > *er {
+    while iserr {
         iter += 1;
         if iter > maxiter {
             failed += 1;
@@ -65,22 +66,19 @@ pub fn fixpoint<
             *k = ko;
             errs = [[true; VX]; VY];
         }
-        err = 0.0;
         for s in 0..S {
             let c = a[s].iter().fold(0.0, |acc, r| acc + r);
             let cdt = c * dt;
             let t = *ot + cdt;
-            for vy in 0..VY {
-                for vx in 0..VX {
-                    for f in 0..F {
-                        vdtk[vy][vx][f] = vs[vy][vx][f];
-                        for s1 in 0..S {
-                            vdtk[vy][vx][f] += dt * a[s][s1] * fu[s1][vy][vx][f];
-                        }
-                        vdtk[vy][vx] = constraints(t, vdtk[vy][vx]);
+            pfor2d(&mut vdtk, &|(vy, vx, vdtk)| {
+                for f in 0..F {
+                    vdtk[f] = vs[vy][vx][f];
+                    for s1 in 0..S {
+                        vdtk[f] += dt * a[s][s1] * fu[s1][vy][vx][f];
                     }
+                    *vdtk = constraints(t, *vdtk);
                 }
-            }
+            });
             pfor2d(&mut fu[s], &|(vy, vx, fu)| {
                 if errs[vy][vx] {
                     *fu = fun(
@@ -98,22 +96,24 @@ pub fn fixpoint<
             });
         }
 
-        for vy in 0..VY {
-            for vx in 0..VX {
-                if errs[vy][vx] {
-                    cost += S as f64;
-                    errs[vy][vx] = false;
-                    nbiter[vy][vx] += 1;
-                    for s in 0..S {
-                        for f in 0..F {
-                            let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
-                            err = err.max(e);
-                            errs[vy][vx] |= e > *er;
-                        }
+        pfor2d2(&mut errs, &mut nbiter, &|(vy, vx, errs, nbiter)| {
+            if *errs {
+                *errs = false;
+                *nbiter += 1;
+                for s in 0..S {
+                    for f in 0..F {
+                        let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
+                        *errs |= e > *er;
                     }
                 }
             }
-        }
+        });
+
+        iserr = errs
+            .par_iter()
+            .flat_map(|e| e.par_iter())
+            .map(|v| *v)
+            .reduce(|| false, |acc, a| acc || a);
         *k = fu;
         let mut tmperrs = [[false; VX]; VY];
         pfor2d(&mut tmperrs, &|(vy, vx, tmperrs)| {
@@ -136,6 +136,11 @@ pub fn fixpoint<
             }
         }
     }
+    let cost = (S * nbiter
+        .par_iter()
+        .flat_map(|e| e.par_iter())
+        .map(|v| *v)
+        .reduce(|| 0, |acc, a| acc + a)) as f64;
     *ot += dt;
     *dto = maxdt.min(dt * 1.1);
     Some((cost / (VX * VY) as f64, nbiter))

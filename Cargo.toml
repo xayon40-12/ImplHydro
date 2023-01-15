@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 rayon = "1.6.1"
+
+[profile.release]
+lto = true

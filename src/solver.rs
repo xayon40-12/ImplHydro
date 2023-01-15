@@ -23,6 +23,22 @@ pub fn pfor2d<T: Send, const VX: usize, const VY: usize>(
         })
         .for_each(f);
 }
+pub fn pfor2d2<T: Send, U: Send, const VX: usize, const VY: usize>(
+    vss: &mut [[T; VX]; VY],
+    wss: &mut [[U; VX]; VY],
+    f: &(dyn Fn((usize, usize, &mut T, &mut U)) + Sync),
+) {
+    vss.par_iter_mut()
+        .zip(wss.par_iter_mut())
+        .enumerate()
+        .flat_map(|(vy, (vs, ws))| {
+            vs.par_iter_mut()
+                .zip(ws.par_iter_mut())
+                .enumerate()
+                .map(move |(vx, (v, w))| (vy, vx, v, w))
+        })
+        .for_each(f);
+}
 
 pub type Transform<'a, const F: usize, const C: usize> =
     &'a (dyn Fn(f64, [f64; F]) -> [f64; C] + Sync);

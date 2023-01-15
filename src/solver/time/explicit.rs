@@ -60,16 +60,14 @@ pub fn explicit<
             );
         });
         k[s] = fu;
-        for vy in 0..VY {
-            for vx in 0..VX {
-                for f in 0..F {
-                    vdtk[vy][vx][f] = vs[vy][vx][f];
-                    for s1 in 0..S {
-                        vdtk[vy][vx][f] += *dt * a[s][s1] * k[s1][vy][vx][f];
-                    }
+        pfor2d(&mut vdtk, &|(vy, vx, vdtk)| {
+            for f in 0..F {
+                vdtk[f] = vs[vy][vx][f];
+                for s1 in 0..S {
+                    vdtk[f] += *dt * a[s][s1] * k[s1][vy][vx][f];
                 }
             }
-        }
+        });
         c = a[s].iter().fold(0.0, |acc, r| acc + r);
         cdt = c * *dt;
         t = *ot + cdt;
