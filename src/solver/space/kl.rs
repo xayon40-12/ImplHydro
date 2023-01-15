@@ -56,7 +56,7 @@ pub fn kl<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             diff[l][1][f] = vals[l + 2][f] - vals[l][f];
             diff[l][2][f] = vals[l + 2][f] - vals[l + 1][f];
 
-            diff2[l][f] = vals[l + 2][f] - 2.0 * vals[l + 1][f] + vals[l][f];
+            diff2[l][f] = diff[l][2][f] - diff[l][0][f];
             diff2o[l][f] = valso[l][2][f] - 2.0 * valso[l][1][f] + valso[l][0][f]; // this is automatically 0 in 1D
 
             is[l][0] += diff[l][0][f].powi(2);
@@ -84,7 +84,6 @@ pub fn kl<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
         }
     }
 
-    let dx2 = dx * dx;
     let mut aa: [[f64; F]; 3] = [[0.0; F]; 3];
     let mut bb: [[f64; F]; 3] = [[0.0; F]; 3];
     let mut cc: [[f64; F]; 3] = [[0.0; F]; 3];
@@ -92,13 +91,11 @@ pub fn kl<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
         for f in 0..F {
             aa[l][f] = vals[l + 1][f] - w[l][1] / 12.0 * (diff2[l][f] + diff2o[l][f]);
             bb[l][f] =
-                (w[l][2] * diff[l][2][f] + w[l][1] * diff[l][1][f] / 2.0 + w[l][0] * diff[l][0][f])
-                    / dx;
-            cc[l][f] = 2.0 * w[l][1] * diff2[l][f] / dx2;
+                w[l][2] * diff[l][2][f] + w[l][1] * diff[l][1][f] / 2.0 + w[l][0] * diff[l][0][f]; // remove '/dx' as it is canceled in upm
+            cc[l][f] = w[l][1] * diff2[l][f]; // remove '*2.0/dx2' as it is canceled in upm
         }
     }
 
-    let dx2s8 = dx2 / 8.0;
     let mut upm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
     let mut tupm: [[[f64; C]; 2]; 2] = [[[0.0; C]; 2]; 2];
     for jpm in 0..2 {
@@ -106,7 +103,8 @@ pub fn kl<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             let s = pm as f64 - 0.5;
             let j = jpm + pm;
             for f in 0..F {
-                upm[jpm][pm][f] = aa[j][f] - s * dx * bb[j][f] + dx2s8 * cc[j][f];
+                upm[jpm][pm][f] = aa[j][f] - s * bb[j][f] + 0.25 * cc[j][f];
+                // remove '*dx' for bb and '*dx2/2.0' for cc
             }
             upm[jpm][pm] = constraints(t, post_flux_limiter(t, upm[jpm][pm]));
             tupm[jpm][pm] = transform(t, upm[jpm][pm]);
