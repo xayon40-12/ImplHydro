@@ -11,7 +11,7 @@ use super::{solve_v, Pressure};
 
 fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
     let m = (t01 * t01 + t02 * t02).sqrt();
-    let t00 = t00.max(m + 1e-15);
+    let t00 = t00.max(m * (1.0 + 1e-15));
     [t00, t01, t02]
 }
 
