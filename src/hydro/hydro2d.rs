@@ -1,5 +1,5 @@
 use crate::solver::{
-    context::{Boundary, Context},
+    context::{Boundary, Context, Integration},
     run,
     space::{order, Dir, Order::*},
     time::{newton::newton, schemes::Scheme},
@@ -203,7 +203,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     let schemename = r.name;
     let mut vs = [[[0.0; 3]; V]; V];
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
-    let k = [[[[0.0; 3]; V]; V]; S];
+    let mut k = [[[[0.0; 3]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {
@@ -211,6 +211,10 @@ pub fn hydro2d<const V: usize, const S: usize>(
             let y = (j as f64 - v2) * dx;
             vs[j][i] = init((i, j), (x, y));
         }
+    }
+    match r.integration {
+        Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
+        Integration::FixPoint => {}
     }
     let transform = gen_transform(er, &p, &dpde, &opt);
     let integration = r.integration;

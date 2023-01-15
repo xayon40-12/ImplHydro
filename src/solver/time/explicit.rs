@@ -17,7 +17,7 @@ pub fn explicit<
         boundary,
         local_interaction: _,
         vs,
-        k,
+        k, // k[S-1] is used as old vs
         r: Scheme { aij: a, .. },
         dt,
         dx,
@@ -38,7 +38,7 @@ pub fn explicit<
     let mut vdtk = *vs;
 
     let mut c;
-    let mut cdt = 0.0;
+    let mut cdt = *dt;
     let mut t = *ot;
     for s in 0..S {
         for vy in 0..VY {
@@ -48,7 +48,7 @@ pub fn explicit<
         }
         pfor2d(&mut fu, &|(vy, vx, fu)| {
             *fu = fun(
-                [&vs, &vdtk],
+                [&k[S - 1], &vdtk],
                 constraints,
                 transform,
                 boundary,
@@ -59,6 +59,7 @@ pub fn explicit<
                 opt,
             );
         });
+        k[S - 1] = vdtk;
         k[s] = fu;
         pfor2d(&mut vdtk, &|(vy, vx, vdtk)| {
             for f in 0..F {
@@ -69,9 +70,11 @@ pub fn explicit<
             }
         });
         c = a[s].iter().fold(0.0, |acc, r| acc + r);
-        cdt = c * *dt;
-        t = *ot + cdt;
+        cdt = t;
+        t = *ot + c * *dt;
+        cdt = t - cdt; // difference between current time and previous time
     }
+    k[S - 1] = *vs; // store the old vs in k[S-1] for next time step
     *vs = vdtk;
 
     *ot += *dt;
