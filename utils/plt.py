@@ -23,6 +23,7 @@ ID1De = 5
 ID2De = 6
 
 crop = 6
+fromref = 1
 
 def dd(n):
     if n == 1:
@@ -151,7 +152,7 @@ def convall(l, ds):
     
                 for s1 in [scs[0]]:
                     c = convergence(d[s0],refs[s1])
-                    plt.loglog(c[1:,dci],c[1:,2], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
+                    plt.loglog(c[fromref:,dci],c[fromref:,2], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
             label = p.get_label()
@@ -164,10 +165,11 @@ def convall(l, ds):
         plt.close()
 
 def plot1d(datadts):
-    maxdt = sorted([dt for dt in datadts])[0]
+    mindt = sorted([dt for dt in datadts])[0]
+    (_,ref) = datadts[mindt]
     for dt in datadts:
         timename = "dt{}".format(dt)
-        if dt == maxdt:
+        if dt == mindt:
             timename = "best_"+timename
         (info, data) = datadts[dt]
         t0 = info["t0"]
@@ -196,19 +198,22 @@ def plot1d(datadts):
         x = data[:,IDx]
         iter = data[:,IDiter]
         y = data[:,ID1De]
+        yref = ref[:,ID1De]
         nl = next(i for (i,v) in zip(range(n),x) if v >= -crop)
         nr = n-1-nl
         x = x[nl:nr]/(tend-t0)
         iter = iter[nl:nr]
         y = y[nl:nr]
+        yref = yref[nl:nr]
         ycontinuum = [e(x) for x in x]
         plt.rcParams["figure.figsize"] = [8, 5]
         _,axs = plt.subplots(2, 1, sharex=True)
         iterations ,= axs[0].plot(x,iter, 'o', color="gray", label="iterations")
         axs[0].set_ylabel("iterations")
         axs[0].legend()
-        continuum ,= axs[1].plot(x,ycontinuum, color="black", label="continuum")
-        numerics ,= axs[1].plot(x,y, label="numerics")
+        continuum ,= axs[1].plot(x,ycontinuum, color="black", label="continuum", linewidth=2)
+        numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
+        numerics ,= axs[1].plot(x,y, label="numerics", linestyle="-.", linewidth=2 )
         axs[1].set_ylabel("e")
         axs[1].set_xlabel("x/t")
         axs[1].legend()
@@ -218,7 +223,7 @@ def plot1d(datadts):
 def plot2d(datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, ref) = datadts[maxdts[0]]
-    (_, data) = datadts[maxdts[1]]
+    (_, data) = datadts[maxdts[fromref]]
 
     t = info["tend"]
     n = info["nx"]
