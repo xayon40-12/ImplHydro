@@ -7,7 +7,7 @@ use crate::solver::{
     Transform,
 };
 
-use super::{solve_v, Pressure};
+use super::{solve_v, Pressure, VOID};
 
 fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
     let m = t01.abs();
@@ -23,7 +23,7 @@ fn gen_transform<'a>(
         let m = t01.abs();
         let sv = solve_v(t00, m, p);
         let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
-        let e = (t00 - m * v).max(1e-100);
+        let e = (t00 - m * v).max(VOID);
         let pe = p(e);
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
         let ux = t01 / ((e + pe) * ut);

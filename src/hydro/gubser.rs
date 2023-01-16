@@ -47,7 +47,6 @@ pub fn init_gubser<'a>(
     dpde: Pressure<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; 3] + 'a> {
     Box::new(move |_, (x, y)| {
-        // let e = if x == 0.0 && y == 0.0 { 10.0 } else { 1e-100 };
         let [e, ut, ux, uy] = gubser(x, y, t0);
         let vars = [e, p(e), dpde(e), ut, ux, uy];
         [f00(t0, vars), f01(t0, vars), f02(t0, vars)]

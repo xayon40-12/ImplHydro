@@ -165,18 +165,18 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
     converge(er0, ermin, |er| {
         hydro1d::<V, 1>(t0, tend, dx, sq2(er), er, r, false)
     });
-    converge(er0, ermin, |er| {
-        hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, true, None)
-    });
-    converge(er0, ermin, |er| {
-        hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, None)
-    });
-    for i in 0..TRENTO {
-        let trento = Some((trentos[i], i));
-        converge(er0, ermin, |er| {
-            hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, trento)
-        });
-    }
+    // converge(er0, ermin, |er| {
+    //     hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, true, None)
+    // });
+    // converge(er0, ermin, |er| {
+    //     hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, None)
+    // });
+    // for i in 0..TRENTO {
+    //     let trento = Some((trentos[i], i));
+    //     converge(er0, ermin, |er| {
+    //         hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, trento)
+    //     });
+    // }
     // let r = gl2;
     // let p = 1.5;
     // println!("{}", r.name);
@@ -226,18 +226,18 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
     converge(er0, ermin, |er| {
         hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, false)
     });
-    converge(er0, ermin, |er| {
-        hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, true, None)
-    });
-    converge(er0, ermin, |er| {
-        hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, None)
-    });
-    for i in 0..TRENTO {
-        let trento = Some((trentos[i], i));
-        converge(er0, ermin, |er| {
-            hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, trento)
-        });
-    }
+    // converge(er0, ermin, |er| {
+    //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, true, None)
+    // });
+    // converge(er0, ermin, |er| {
+    //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, None)
+    // });
+    // for i in 0..TRENTO {
+    //     let trento = Some((trentos[i], i));
+    //     converge(er0, ermin, |er| {
+    //         hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, trento)
+    //     });
+    // }
 }
 
 fn big_stack() {
@@ -247,6 +247,7 @@ fn big_stack() {
 
     let ermin = 1e-5;
     run::<100>(t0, tend, 2.0 * l / 100.0, ermin);
+    run::<200>(t0, tend, 2.0 * l / 200.0, ermin);
     // run::<300>(t0, tend, 2.0 * l / 300.0, ermin);
 }
 
