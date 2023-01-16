@@ -20,9 +20,14 @@ IDy = 1
 IDiter = 2
 IDt00 = 3
 ID1De = 5
+ID1Dut = 8
+ID1Dux = 9
 ID2De = 6
+ID2Dut = 9
+ID2Dux = 10
+ID2Duy = 11
 
-crop = 6
+crop = 9
 fromref = 1
 
 def dd(n):
@@ -198,6 +203,9 @@ def plot1d(datadts):
         x = data[:,IDx]
         iter = data[:,IDiter]
         y = data[:,ID1De]
+        yut = data[:,ID1Dut]
+        yux = data[:,ID1Dux]
+        yvx = yux/yut
         yref = ref[:,ID1De]
         nl = next(i for (i,v) in zip(range(n),x) if v >= -crop)
         nr = n-1-nl
@@ -205,9 +213,12 @@ def plot1d(datadts):
         iter = iter[nl:nr]
         y = y[nl:nr]
         yref = yref[nl:nr]
+        yvx = yvx[nl:nr]
         ycontinuum = [e(x) for x in x]
-        plt.rcParams["figure.figsize"] = [8, 5]
-        _,axs = plt.subplots(2, 1, sharex=True)
+        yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
+        
+        plt.rcParams["figure.figsize"] = [8, 12]
+        _,axs = plt.subplots(4, 1, sharex=True)
         iterations ,= axs[0].plot(x,iter, 'o', color="gray", label="iterations")
         axs[0].set_ylabel("iterations")
         axs[0].legend()
@@ -215,8 +226,14 @@ def plot1d(datadts):
         numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
         numerics ,= axs[1].plot(x,y, label="numerics", linestyle="-.", linewidth=2 )
         axs[1].set_ylabel("e")
-        axs[1].set_xlabel("x/t")
         axs[1].legend()
+        errcontinuum ,= axs[2].plot(x,yerr, label="err continuum", linestyle="-.", linewidth=2 )
+        axs[2].set_ylabel("err")
+        axs[2].legend()
+        numericsvx ,= axs[3].plot(x,yvx, label="numerics", linestyle="-.", linewidth=2 )
+        axs[3].set_ylabel("vx")
+        axs[3].set_xlabel("x/t")
+        axs[3].legend()
         plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info)))
         plt.close()
 
@@ -232,6 +249,9 @@ def plot2d(datadts):
     z = data[:,ID2De]
     zref = ref[:,ID2De]
     ziter = data[:,IDiter]
+    zut = data[:,ID2Dut]
+    zux = data[:,ID2Dux]
+    zvx = zux/zut
     zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
     zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
     zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
@@ -244,11 +264,12 @@ def plot2d(datadts):
     zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
     zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
     zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
+    zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
     l = x[0][0]
     r = x[0][-1]
     d = y[0][0]
     u = y[-1][0]
-    all = [("e", z), ("err ref", zerrref)]
+    all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
     if "Gubser" in info["name"] and not "Exponential" in info["name"]:
         all += [("err continuum", zerr)]
     if not "Heun" in info["scheme"]:
