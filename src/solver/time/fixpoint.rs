@@ -16,6 +16,7 @@ pub fn fixpoint<
         fun,
         constraints,
         transform,
+        post_constraints,
         boundary,
         local_interaction,
         vs,
@@ -143,5 +144,12 @@ pub fn fixpoint<
         .reduce(|| 0, |acc, a| acc + a)) as f64;
     *ot += dt;
     *dto = maxdt.min(dt * 1.1);
+    if let Some(post) = post_constraints {
+        for vy in 0..VY {
+            for vx in 0..VX {
+                vs[vy][vx] = post(*ot, vs[vy][vx]);
+            }
+        }
+    }
     Some((cost / (VX * VY) as f64, nbiter))
 }

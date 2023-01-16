@@ -171,12 +171,12 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
     // converge(er0, ermin, |er| {
     //     hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, None)
     // });
-    // for i in 0..TRENTO {
-    //     let trento = Some((trentos[i], i));
-    //     converge(er0, ermin, |er| {
-    //         hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, trento)
-    //     });
-    // }
+    for i in 0..TRENTO {
+        let trento = Some((trentos[i], i));
+        converge(er0, ermin, |er| {
+            hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, trento)
+        });
+    }
     // let r = gl2;
     // let p = 1.5;
     // println!("{}", r.name);
@@ -232,12 +232,12 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
     // converge(er0, ermin, |er| {
     //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, None)
     // });
-    // for i in 0..TRENTO {
-    //     let trento = Some((trentos[i], i));
-    //     converge(er0, ermin, |er| {
-    //         hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, trento)
-    //     });
-    // }
+    for i in 0..TRENTO {
+        let trento = Some((trentos[i], i));
+        converge(er0, ermin, |er| {
+            hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, trento)
+        });
+    }
 }
 
 fn big_stack() {

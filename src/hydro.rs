@@ -9,6 +9,7 @@ pub mod viscoushydro2d;
 pub type Pressure<'a> = &'a (dyn Fn(f64) -> f64 + Sync);
 
 pub static VOID: f64 = 1e-100;
+pub static T00CUT: f64 = 1e-9;
 
 pub mod ideal_gas {
     pub fn p(e: f64) -> f64 {

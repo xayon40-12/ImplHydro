@@ -15,6 +15,7 @@ pub fn explicit<
         constraints,
         transform,
         boundary,
+        post_constraints,
         local_interaction: _,
         vs,
         k, // k[S-1] is used as old vs
@@ -78,5 +79,12 @@ pub fn explicit<
     *vs = vdtk;
 
     *ot += *dt;
+    if let Some(post) = post_constraints {
+        for vy in 0..VY {
+            for vx in 0..VX {
+                vs[vy][vx] = post(*ot, vs[vy][vx]);
+            }
+        }
+    }
     Some((cost, nbiter))
 }

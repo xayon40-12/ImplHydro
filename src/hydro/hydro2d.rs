@@ -7,7 +7,7 @@ use crate::solver::{
     Transform,
 };
 
-use super::{solve_v, Pressure, VOID};
+use super::{solve_v, Pressure, T00CUT, VOID};
 
 fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
     let m = (t01 * t01 + t02 * t02).sqrt();
@@ -223,12 +223,20 @@ pub fn hydro2d<const V: usize, const S: usize>(
     } else {
         flux
     };
+    let post = |_t: f64, [t00, t01, t02]: [f64; 3]| {
+        if t00 < T00CUT {
+            [VOID, 0.0, 0.0]
+        } else {
+            [t00, t01, t02]
+        }
+    };
     let context = Context {
         fun: &flux,
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
-        local_interaction: [1, 1],   // use a distance of 0 to emulate 1D
+        post_constraints: Some(&post),
+        local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vs,
         k,
         r,

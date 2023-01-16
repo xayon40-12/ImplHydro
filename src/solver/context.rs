@@ -36,6 +36,7 @@ pub struct Context<
     pub constraints: Transform<'a, F, F>,
     pub transform: Transform<'a, F, C>,
     pub boundary: &'a [Boundary<'a>; 2],
+    pub post_constraints: Option<Transform<'a, F, F>>,
     pub local_interaction: [i32; 2],
     pub vs: [[[f64; F]; VX]; VY],
     pub k: [[[[f64; F]; VX]; VY]; S],

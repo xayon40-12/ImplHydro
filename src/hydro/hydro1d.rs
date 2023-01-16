@@ -7,7 +7,7 @@ use crate::solver::{
     Transform,
 };
 
-use super::{solve_v, Pressure, VOID};
+use super::{solve_v, Pressure, T00CUT, VOID};
 
 fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
     let m = t01.abs();
@@ -129,12 +129,20 @@ pub fn hydro1d<const V: usize, const S: usize>(
     }
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
+    let post = |_t: f64, [t00, t01]: [f64; 2]| {
+        if t00 < T00CUT {
+            [VOID, 0.0]
+        } else {
+            [t00, t01]
+        }
+    };
     let context = Context {
         fun: &flux,
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &zero], // use noboundary to emulate 1D
-        local_interaction: [1, 0],  // use a distance of 0 to emulate 1D
+        post_constraints: Some(&post),
+        local_interaction: [1, 0], // use a distance of 0 to emulate 1D
         vs,
         k,
         r,

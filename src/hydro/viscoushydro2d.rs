@@ -253,7 +253,8 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
-        local_interaction: [1, 1],   // use a distance of 0 to emulate 1D
+        post_constraints: None,
+        local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vs,
         k,
         r,
