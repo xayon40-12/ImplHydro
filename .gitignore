@@ -1,7 +1,5 @@
 /target
 .*
 __pycache__
-trento/
-results/
-figures/
-ttt
+tmp
+tmp/
