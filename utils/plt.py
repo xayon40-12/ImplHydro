@@ -278,7 +278,7 @@ def plot2d(datadts):
     plt.rcParams["figure.figsize"] = [2+nb*4, 5]
     fig, axs = plt.subplots(1,nb, sharey=True)
     for (i, (n, z)) in zip(range(nb),all):
-        im = axs[i].imshow(z, extent=[l,r,d,u], norm=CenteredNorm(0), cmap="terrain")
+        im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", norm=CenteredNorm(0), cmap="terrain")
         axs[i].set_xlabel("x")
         axs[i].xaxis.tick_top()
         axs[i].xaxis.set_label_position('top') 
