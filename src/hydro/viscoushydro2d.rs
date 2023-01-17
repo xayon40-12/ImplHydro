@@ -7,7 +7,7 @@ use crate::solver::{
     Transform,
 };
 
-use super::{Init2D, Pressure, T00CUT, VOID};
+use super::{Init2D, Pressure, VOID};
 
 fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let t00 = vs[0];
@@ -238,8 +238,12 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     }
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
+    let t00cut: f64 = match space_order {
+        Order::Order2 => VOID,
+        Order::Order3(t00cut) => t00cut,
+    };
     let post = |_t: f64, vs: [f64; 9]| {
-        if vs[0] < T00CUT {
+        if vs[0] < t00cut {
             [VOID, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         } else {
             vs
@@ -247,7 +251,7 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     };
     let post: Option<Transform<9, 9>> = match space_order {
         Order::Order2 => None,
-        Order::Order3 => Some(&post),
+        Order::Order3(_) => Some(&post),
     };
     let context = Context {
         fun: &flux,

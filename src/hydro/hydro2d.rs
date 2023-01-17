@@ -7,7 +7,7 @@ use crate::solver::{
     Transform,
 };
 
-use super::{solve_v, Init2D, Pressure, T00CUT, VOID};
+use super::{solve_v, Init2D, Pressure, VOID};
 
 fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
     let m = (t01 * t01 + t02 * t02).sqrt();
@@ -222,8 +222,12 @@ pub fn hydro2d<const V: usize, const S: usize>(
     } else {
         flux
     };
+    let t00cut: f64 = match space_order {
+        Order::Order2 => VOID,
+        Order::Order3(t00cut) => t00cut,
+    };
     let post = |_t: f64, [t00, t01, t02]: [f64; 3]| {
-        if t00 < T00CUT {
+        if t00 < t00cut {
             [VOID, 0.0, 0.0]
         } else {
             [t00, t01, t02]
@@ -231,7 +235,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     };
     let post: Option<Transform<3, 3>> = match space_order {
         Order::Order2 => None,
-        Order::Order3 => Some(&post),
+        Order::Order3(_) => Some(&post),
     };
     let context = Context {
         fun: &flux,

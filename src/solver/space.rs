@@ -43,7 +43,7 @@ pub type SpaceDiff<
 #[derive(Debug, Clone, Copy)]
 pub enum Order {
     Order2,
-    Order3,
+    Order3(f64),
 }
 
 pub fn order<
@@ -58,6 +58,6 @@ pub fn order<
 ) -> SpaceDiff<'a, F, VX, VY, C, N> {
     match o {
         Order::Order2 => &kt,
-        Order::Order3 => &kl,
+        Order::Order3(_) => &kl,
     }
 }
