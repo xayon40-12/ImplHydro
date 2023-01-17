@@ -1,7 +1,7 @@
 use crate::solver::{
     context::{Boundary, Context, Integration},
     run,
-    space::{order, Dir, Order::*},
+    space::{order, Dir, Order},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zero},
     Transform,
@@ -59,7 +59,7 @@ fn flux<const V: usize>(
     dx: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
-    _opt: &(),
+    ord: &Order,
 ) -> [f64; 2] {
     let theta = 1.1;
     // let theta = 2.0;
@@ -79,7 +79,7 @@ fn flux<const V: usize>(
         [t00, t01]
     };
 
-    let diff = order(O3);
+    let diff = order(*ord);
 
     let divf0 = diff(
         vs,
@@ -113,6 +113,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
     p: Pressure,
     dpde: Pressure,
     init: Init1D,
+    space_order: Order,
 ) -> Option<([[[f64; 2]; V]; 1], f64, usize, usize)> {
     let schemename = r.name;
     let mut vs = [[[0.0; 2]; V]];
@@ -136,12 +137,16 @@ pub fn hydro1d<const V: usize, const S: usize>(
             [t00, t01]
         }
     };
+    let post: Option<Transform<2, 2>> = match space_order {
+        Order::Order2 => None,
+        Order::Order3 => Some(&post),
+    };
     let context = Context {
         fun: &flux,
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &zero], // use noboundary to emulate 1D
-        post_constraints: Some(&post),
+        post_constraints: post,
         local_interaction: [1, 0], // use a distance of 0 to emulate 1D
         vs,
         k,
@@ -153,7 +158,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
         t,
         t0: t,
         tend,
-        opt: (),
+        opt: space_order,
         p,
         dpde,
     };

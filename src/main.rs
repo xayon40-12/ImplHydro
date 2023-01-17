@@ -11,7 +11,10 @@ use fixhydro::{
         riemann::init_riemann,
         Pressure,
     },
-    solver::time::schemes::*,
+    solver::{
+        space::Order::{self, *},
+        time::schemes::*,
+    },
 };
 
 pub fn hydro1d<const V: usize, const S: usize>(
@@ -22,6 +25,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
     er: f64,
     r: Scheme<S>,
     use_void: bool,
+    space_order: Order,
 ) -> Option<([[[f64; 2]; V]; 1], f64, usize, usize)> {
     let void = if use_void { "Void" } else { "" };
     println!("Rieman{}", void);
@@ -38,6 +42,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
         p,
         dpde,
         &init_riemann(1.0, p, dpde, use_void),
+        space_order,
     )
 }
 pub fn hydro2d<const V: usize, const S: usize>(
@@ -49,6 +54,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     r: Scheme<S>,
     use_exponential: bool,
     init_e: Option<([[f64; V]; V], usize)>,
+    space_order: Order,
 ) -> Option<([[[f64; 3]; V]; V], f64, usize, usize)> {
     let name = if use_exponential {
         if let Some((_, i)) = init_e {
@@ -88,6 +94,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         &dpde,
         &init,
         use_exponential,
+        space_order,
     )
 }
 
@@ -138,7 +145,7 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize>(
     Some(all)
 }
 
-pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
+pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64, ord: Order) {
     let gl1 = gauss_legendre_1();
     // let gl2 = gauss_legendre_2();
     let heun = heun();
@@ -160,82 +167,41 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64) {
     let r = gl1;
     println!("{}", r.name);
     converge(er0, ermin, |er| {
-        hydro1d::<V, 1>(t0, tend, dx, sq2(er), er, r, true)
+        hydro1d::<V, 1>(t0, tend, dx, sq2(er), er, r, true, ord)
     });
     converge(er0, ermin, |er| {
-        hydro1d::<V, 1>(t0, tend, dx, sq2(er), er, r, false)
+        hydro1d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, ord)
     });
-    // converge(er0, ermin, |er| {
-    //     hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, true, None)
-    // });
-    // converge(er0, ermin, |er| {
-    //     hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, None)
-    // });
+    converge(er0, ermin, |er| {
+        hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, true, None, ord)
+    });
+    converge(er0, ermin, |er| {
+        hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, None, ord)
+    });
     for i in 0..TRENTO {
         let trento = Some((trentos[i], i));
         converge(er0, ermin, |er| {
-            hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, trento)
+            hydro2d::<V, 1>(t0, tend, dx, sq2(er), er, r, false, trento, ord)
         });
     }
-    // let r = gl2;
-    // let p = 1.5;
-    // println!("{}", r.name);
-    // converge(er0.powf(p), ermin.powf(p), |er| {
-    //     hydro1d::<V, 2>(t0, tend, dx, sq4(er), er, r, true)
-    // });
-    // converge(er0.powf(p), ermin.powf(p), |er| {
-    //     hydro1d::<V, 2>(t0, tend, dx, sq4(er), er, r, false)
-    // });
-    // converge(er0.powf(p), ermin.powf(p), |er| {
-    //     hydro2d::<V, 2>(t0, tend, dx, sq4(er), er, r, true, None)
-    // });
-    // converge(er0.powf(p), ermin.powf(p), |er| {
-    //     hydro2d::<V, 2>(t0, tend, dx, sq4(er), er, r, false, None)
-    // });
-    // for i in 0..TRENTO {
-    //     let trento = Some((trentos[i], i));
-    //     converge(er0.powf(p), ermin.powf(p), |er| {
-    //         hydro2d::<V, 2>(t0, tend, dx, sq4(er), er, r, false, trento)
-    //     });
-    // }
-    // let r = cn;
-    // println!("{}", r.name);
-    // converge(er0, ermin, |er| {
-    //     hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, true)
-    // });
-    // converge(er0, ermin, |er| {
-    //     hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, false)
-    // });
-    // converge(er0, ermin, |er| {
-    //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, true, None)
-    // });
-    // converge(er0, ermin, |er| {
-    //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, None)
-    // });
-    // for i in 0..TRENTO {
-    //     let trento = Some((trentos[i], i));
-    //     converge(er0, ermin, |er| {
-    //         hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, trento)
-    //     });
-    // }
     let r = heun;
     println!("{}", r.name);
     converge(er0, ermin, |er| {
-        hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, true)
+        hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, true, ord)
     });
     converge(er0, ermin, |er| {
-        hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, false)
+        hydro1d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, ord)
     });
-    // converge(er0, ermin, |er| {
-    //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, true, None)
-    // });
-    // converge(er0, ermin, |er| {
-    //     hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, None)
-    // });
+    converge(er0, ermin, |er| {
+        hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, true, None, ord)
+    });
+    converge(er0, ermin, |er| {
+        hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, None, ord)
+    });
     for i in 0..TRENTO {
         let trento = Some((trentos[i], i));
         converge(er0, ermin, |er| {
-            hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, trento)
+            hydro2d::<V, 2>(t0, tend, dx, sq2(er), er, r, false, trento, ord)
         });
     }
 }
@@ -244,11 +210,12 @@ fn big_stack() {
     let t0 = 1.0;
     let l = 10.0;
     let tend = 4.5;
+    let ord = Order2;
 
     let ermin = 1e-5;
-    run::<100>(t0, tend, 2.0 * l / 100.0, ermin);
-    run::<200>(t0, tend, 2.0 * l / 200.0, ermin);
-    // run::<300>(t0, tend, 2.0 * l / 300.0, ermin);
+    run::<100>(t0, tend, 2.0 * l / 100.0, ermin, ord);
+    // run::<200>(t0, tend, 2.0 * l / 200.0, ermin, ord);
+    // run::<300>(t0, tend, 2.0 * l / 300.0, ermin, ord);
 }
 
 fn main() {

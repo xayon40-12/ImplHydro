@@ -1,13 +1,13 @@
 use crate::solver::{
     context::{Boundary, Context, Integration},
     run,
-    space::{id_flux_limiter, order, Dir, Order::*},
+    space::{id_flux_limiter, order, Dir, Order},
     time::{newton::newton, schemes::Scheme},
     utils::ghost,
     Transform,
 };
 
-use super::{solve_v, Pressure, VOID};
+use super::{Init2D, Pressure, T00CUT, VOID};
 
 fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let t00 = vs[0];
@@ -24,36 +24,37 @@ fn gen_transform<'a>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-    opt: &Coordinate,
 ) -> Box<dyn Fn(f64, [f64; 9]) -> [f64; 12] + 'a + Sync> {
-    let st = match opt {
-        Coordinate::Cartesian => |_| 1.0,
-        Coordinate::Milne => |t| t,
-    };
     Box::new(
         move |t, [t00, t01, t02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22]| {
-            let t = st(t);
             let t00 = t00 / t;
             let t01 = t01 / t;
             let t02 = t02 / t;
-            let m = (t01 * t01 + t02 * t02).sqrt();
+            // the 'i' in it00 stends for 'ideal'
             let sv = |v: f64| {
                 let g = (1.0 - v * v).sqrt(); // inverse of ut
-                let t00 = t00 - g * utpi00;
+                let it00 = t00 - g * utpi00;
+                let it01 = t01 - g * utpi01;
+                let it02 = t02 - g * utpi02;
+                let m = (it01 * it01 + it02 * it02).sqrt();
+                let e = (it00 - m * v).max(VOID);
+                let v = m / (it00 + p(e));
 
                 v
             };
             let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
             let g = (1.0 - v * v).sqrt();
 
-            let t00 = t00 - g * utpi00;
-            // TODO: same for other t0i
+            let it00 = t00 - g * utpi00;
+            let it01 = t01 - g * utpi01;
+            let it02 = t02 - g * utpi02;
+            let m = (it01 * it01 + it02 * it02).sqrt();
 
-            let e = (t00 - m * v).max(VOID);
+            let e = (it00 - m * v).max(VOID);
             let pe = p(e);
-            let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
-            let ux = t01 / ((e + pe) * ut);
-            let uy = t02 / ((e + pe) * ut);
+            let ut = ((it00 + pe) / (e + pe)).sqrt().max(1.0);
+            let ux = it01 / ((e + pe) * ut);
+            let uy = it02 / ((e + pe) * ut);
             let ut = (1.0 + ux * ux + uy * uy).sqrt();
             [
                 e,
@@ -125,15 +126,10 @@ fn flux<const V: usize>(
     dx: f64,
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
-    opt: &Coordinate,
+    ord: &Order,
 ) -> [f64; 9] {
     let theta = 1.1;
     // let theta = 2.0;
-
-    let t = match opt {
-        Coordinate::Cartesian => 1.0,
-        Coordinate::Milne => t,
-    };
 
     // let pre = &|_t: f64, vs: [f64; 9]| {
     //     let t00 = vs[0];
@@ -155,7 +151,7 @@ fn flux<const V: usize>(
     let pre = &id_flux_limiter;
     let post = &id_flux_limiter;
 
-    let diff = order(O3);
+    let diff = order(*ord);
     let divf1 = diff(
         vs,
         bound,
@@ -187,14 +183,9 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let s: f64 = match opt {
-        Coordinate::Cartesian => 0.0,
-        Coordinate::Milne => {
-            let [_e, pe, _dpde, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22] =
-                transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
-            pe
-        }
-    };
+    let [_e, pe, _dpde, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22] =
+        transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+    let s = pe;
     [
         -divf1[0] - divf2[0] - s,
         -divf1[1] - divf2[1],
@@ -208,8 +199,7 @@ fn flux<const V: usize>(
     ]
 }
 
-pub type Init2D<'a, const F: usize> = &'a dyn Fn((usize, usize), (f64, f64)) -> [f64; F];
-
+// viscous hydro is in Milne coordinates
 pub fn viscoushydro2d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
@@ -218,10 +208,10 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     tend: f64,
     dx: f64,
     r: Scheme<S>,
-    opt: Coordinate,
     p: Pressure,
     dpde: Pressure,
     init: Init2D<9>,
+    space_order: Order,
 ) -> Option<([[[f64; 9]; V]; V], f64, usize, usize)> {
     let schemename = r.name;
     let mut vs = [[[0.0; 9]; V]; V];
@@ -246,14 +236,25 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
         Integration::FixPoint => {}
     }
-    let transform = gen_transform(er, &p, &dpde, &opt);
+    let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
+    let post = |_t: f64, vs: [f64; 9]| {
+        if vs[0] < T00CUT {
+            [VOID, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        } else {
+            vs
+        }
+    };
+    let post: Option<Transform<9, 9>> = match space_order {
+        Order::Order2 => None,
+        Order::Order3 => Some(&post),
+    };
     let context = Context {
         fun: &flux,
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
-        post_constraints: None,
+        post_constraints: post,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vs,
         k,
@@ -265,7 +266,7 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
         t,
         t0: t,
         tend,
-        opt,
+        opt: space_order,
         p,
         dpde,
     };

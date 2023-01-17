@@ -8,6 +8,8 @@ pub mod viscoushydro2d;
 
 pub type Pressure<'a> = &'a (dyn Fn(f64) -> f64 + Sync);
 
+pub type Init2D<'a, const F: usize> = &'a dyn Fn((usize, usize), (f64, f64)) -> [f64; F];
+
 pub static VOID: f64 = 1e-100;
 pub static T00CUT: f64 = 1e-9;
 

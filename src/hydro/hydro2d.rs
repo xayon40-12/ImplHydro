@@ -1,13 +1,13 @@
 use crate::solver::{
     context::{Boundary, Context, Integration},
     run,
-    space::{order, Dir, Order::*},
+    space::{order, Dir, Order},
     time::{newton::newton, schemes::Scheme},
     utils::ghost,
     Transform,
 };
 
-use super::{solve_v, Pressure, T00CUT, VOID};
+use super::{solve_v, Init2D, Pressure, T00CUT, VOID};
 
 fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
     let m = (t01 * t01 + t02 * t02).sqrt();
@@ -19,9 +19,9 @@ fn gen_transform<'a>(
     er: f64,
     p: Pressure<'a>,
     dpde: Pressure<'a>,
-    opt: &Coordinate,
+    coord: &Coordinate,
 ) -> Box<dyn Fn(f64, [f64; 3]) -> [f64; 6] + 'a + Sync> {
-    let st = match opt {
+    let st = match coord {
         Coordinate::Cartesian => |_| 1.0,
         Coordinate::Milne => |t| t,
     };
@@ -92,12 +92,12 @@ fn flux<const V: usize>(
     dx: f64,
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
-    opt: &Coordinate,
+    (coord, ord): &(Coordinate, Order),
 ) -> [f64; 3] {
     let theta = 1.1;
     // let theta = 2.0;
 
-    let t = match opt {
+    let t = match coord {
         Coordinate::Cartesian => 1.0,
         Coordinate::Milne => t,
     };
@@ -122,7 +122,7 @@ fn flux<const V: usize>(
     // let pre = &id_flux_limiter;
     // let post = &id_flux_limiter;
 
-    let diff = order(O3);
+    let diff = order(*ord);
     let divf1 = diff(
         vs,
         bound,
@@ -154,7 +154,7 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let s: f64 = match opt {
+    let s: f64 = match coord {
         Coordinate::Cartesian => 0.0,
         Coordinate::Milne => {
             let [_e, pe, _dpde, _ut, _ux, _uy] =
@@ -177,14 +177,12 @@ fn flux_exponential<const V: usize>(
     _dx: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
-    _opt: &Coordinate,
+    _opt: &(Coordinate, Order),
 ) -> [f64; 3] {
     let x = bound[0](pos[0], V);
     let y = bound[1](pos[1], V);
     [-vs[y][x][0], -vs[y][x][1], -vs[y][x][2]]
 }
-
-pub type Init2D<'a> = &'a dyn Fn((usize, usize), (f64, f64)) -> [f64; 3];
 
 pub fn hydro2d<const V: usize, const S: usize>(
     name: &str,
@@ -194,11 +192,12 @@ pub fn hydro2d<const V: usize, const S: usize>(
     tend: f64,
     dx: f64,
     r: Scheme<S>,
-    opt: Coordinate,
+    coord: Coordinate,
     p: Pressure,
     dpde: Pressure,
-    init: Init2D,
+    init: Init2D<3>,
     use_exponential: bool,
+    space_order: Order,
 ) -> Option<([[[f64; 3]; V]; V], f64, usize, usize)> {
     let schemename = r.name;
     let mut vs = [[[0.0; 3]; V]; V];
@@ -216,7 +215,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
         Integration::FixPoint => {}
     }
-    let transform = gen_transform(er, &p, &dpde, &opt);
+    let transform = gen_transform(er, &p, &dpde, &coord);
     let integration = r.integration;
     let flux = if use_exponential {
         flux_exponential
@@ -230,12 +229,16 @@ pub fn hydro2d<const V: usize, const S: usize>(
             [t00, t01, t02]
         }
     };
+    let post: Option<Transform<3, 3>> = match space_order {
+        Order::Order2 => None,
+        Order::Order3 => Some(&post),
+    };
     let context = Context {
         fun: &flux,
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
-        post_constraints: Some(&post),
+        post_constraints: post,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vs,
         k,
@@ -247,7 +250,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         t,
         t0: t,
         tend,
-        opt,
+        opt: (coord, space_order),
         p,
         dpde,
     };
