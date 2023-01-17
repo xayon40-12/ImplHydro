@@ -22,7 +22,7 @@ def riemann(e0,emin,cs2,eps,void):
             elif x<1:
                 return e0*((1-cs)/(1+cs)*(1-x)/(1+x))**((1+cs2)/(2*cs))
             else:
-                return 0
+                return 1e-100
     
         def v2(x):
             return v(f2(x))
