@@ -157,7 +157,7 @@ def convall(l, ds):
     
                 for s1 in [scs[0]]:
                     c = convergence(d[s0],refs[s1])
-                    plt.loglog(c[fromref:,dci],c[fromref:,2], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1)
+                    plt.loglog(c[fromref:,dci],c[fromref:,2], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1, alpha=0.5)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
             label = p.get_label()
