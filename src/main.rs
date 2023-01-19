@@ -9,7 +9,7 @@ use fixhydro::{
         hydro2d::{self, Coordinate::*},
         ideal_gas,
         riemann::init_riemann,
-        Pressure,
+        Pressure, VOID,
     },
     solver::{
         space::Order::{self, *},
@@ -211,7 +211,7 @@ fn big_stack() {
     let l = 10.0;
     let tend = 4.5;
     // let ord = Order2;
-    let ord = Order3(1e-6);
+    let ord = Order3(VOID);
 
     let ermin = 1e-5;
     run::<100>(t0, tend, 2.0 * l / 100.0, ermin, ord);
