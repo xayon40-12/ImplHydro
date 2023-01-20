@@ -168,21 +168,6 @@ fn flux<const V: usize>(
         -divf1[2] - divf2[2],
     ]
 }
-fn flux_exponential<const V: usize>(
-    [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
-    _constraints: Transform<3, 3>,
-    _transform: Transform<3, 6>,
-    bound: &[Boundary; 2],
-    pos: [i32; 2],
-    _dx: f64,
-    [_ot, _t]: [f64; 2],
-    [_dt, _cdt]: [f64; 2],
-    _opt: &(Coordinate, Order),
-) -> [f64; 3] {
-    let x = bound[0](pos[0], V);
-    let y = bound[1](pos[1], V);
-    [-vs[y][x][0], -vs[y][x][1], -vs[y][x][2]]
-}
 
 pub fn hydro2d<const V: usize, const S: usize>(
     name: &str,
@@ -192,13 +177,12 @@ pub fn hydro2d<const V: usize, const S: usize>(
     tend: f64,
     dx: f64,
     r: Scheme<S>,
-    coord: Coordinate,
     p: Pressure,
     dpde: Pressure,
     init: Init2D<3>,
-    use_exponential: bool,
     space_order: Order,
 ) -> Option<([[[f64; 3]; V]; V], f64, usize, usize)> {
+    let coord = Coordinate::Milne;
     let schemename = r.name;
     let mut vs = [[[0.0; 3]; V]; V];
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
@@ -217,11 +201,6 @@ pub fn hydro2d<const V: usize, const S: usize>(
     }
     let transform = gen_transform(er, &p, &dpde, &coord);
     let integration = r.integration;
-    let flux = if use_exponential {
-        flux_exponential
-    } else {
-        flux
-    };
     let t00cut: f64 = match space_order {
         Order::Order2 => VOID,
         Order::Order3(t00cut) => t00cut,

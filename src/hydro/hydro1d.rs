@@ -7,7 +7,7 @@ use crate::solver::{
     Transform,
 };
 
-use super::{solve_v, Pressure, VOID};
+use super::{solve_v, Init1D, Pressure, VOID};
 
 fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
     let m = t01.abs();
@@ -100,8 +100,6 @@ fn flux<const V: usize>(
     [-divf0[0], -divf0[1]]
 }
 
-pub type Init1D<'a> = &'a dyn Fn(usize, f64) -> [f64; 2];
-
 pub fn hydro1d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
@@ -112,7 +110,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
     r: Scheme<S>,
     p: Pressure,
     dpde: Pressure,
-    init: Init1D,
+    init: Init1D<2>,
     space_order: Order,
 ) -> Option<([[[f64; 2]; V]; 1], f64, usize, usize)> {
     let schemename = r.name;

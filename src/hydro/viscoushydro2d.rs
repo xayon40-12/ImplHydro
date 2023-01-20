@@ -10,13 +10,13 @@ use crate::solver::{
 use super::{Init2D, Pressure, VOID};
 
 fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
-    let t00 = vs[0];
-    let t01 = vs[1];
-    let t02 = vs[2];
-    let m = (t01 * t01 + t02 * t02).sqrt();
-    let t00 = t00.max(m * (1.0 + 1e-15));
+    let tt00 = vs[0];
+    let tt01 = vs[1];
+    let tt02 = vs[2];
+    let tm = (tt01 * tt01 + tt02 * tt02).sqrt();
+    let tt00 = tt00.max(tm * (1.0 + 1e-15));
     // TODO: add constraints on shear viscosity
-    vs[0] = t00;
+    vs[0] = tt00;
     vs
 }
 
@@ -26,10 +26,10 @@ fn gen_transform<'a>(
     dpde: Pressure<'a>,
 ) -> Box<dyn Fn(f64, [f64; 9]) -> [f64; 12] + 'a + Sync> {
     Box::new(
-        move |t, [t00, t01, t02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22]| {
-            let t00 = t00 / t;
-            let t01 = t01 / t;
-            let t02 = t02 / t;
+        move |t, [tt00, tt01, tt02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22]| {
+            let t00 = tt00 / t;
+            let t01 = tt01 / t;
+            let t02 = tt02 / t;
             // the 'i' in it00 stends for 'ideal'
             let sv = |v: f64| {
                 let g = (1.0 - v * v).sqrt(); // inverse of ut
@@ -217,7 +217,7 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     let mut vs = [[[0.0; 9]; V]; V];
     let names = (
         [
-            "t00", "t01", "t02", "utpi00", "utpi01", "utpi02", "utpi11", "utpi12", "utpi22",
+            "tt00", "tt01", "tt02", "utpi00", "utpi01", "utpi02", "utpi11", "utpi12", "utpi22",
         ],
         [
             "e", "pe", "dpde", "ut", "ux", "uy", "pi00", "pi01", "pi02", "pi11", "pi12", "pi22",
