@@ -1,6 +1,9 @@
 use rayon::prelude::*;
 
-use crate::solver::{context::Context, pfor2d, pfor2d2};
+use crate::solver::{
+    context::Context,
+    utils::{pfor2d, pfor2d2, Coord},
+};
 
 use super::schemes::Scheme;
 
@@ -71,23 +74,23 @@ pub fn fixpoint<
             let c = a[s].iter().fold(0.0, |acc, r| acc + r);
             let cdt = c * dt;
             let t = *ot + cdt;
-            pfor2d(&mut vdtk, &|(vy, vx, vdtk)| {
+            pfor2d(&mut vdtk, &|(Coord { x, y }, vdtk)| {
                 for f in 0..F {
-                    vdtk[f] = vs[vy][vx][f];
+                    vdtk[f] = vs[y][x][f];
                     for s1 in 0..S {
-                        vdtk[f] += dt * a[s][s1] * fu[s1][vy][vx][f];
+                        vdtk[f] += dt * a[s][s1] * fu[s1][y][x][f];
                     }
                     *vdtk = constraints(t, *vdtk);
                 }
             });
-            pfor2d(&mut fu[s], &|(vy, vx, fu)| {
-                if errs[vy][vx] {
+            pfor2d(&mut fu[s], &|(Coord { x, y }, fu)| {
+                if errs[y][x] {
                     *fu = fun(
                         [&vs, &vdtk],
                         constraints,
                         transform,
                         boundary,
-                        [vx as i32, vy as i32],
+                        [x as i32, y as i32],
                         *dx,
                         [*ot, t],
                         [dt, cdt],
@@ -97,13 +100,13 @@ pub fn fixpoint<
             });
         }
 
-        pfor2d2(&mut errs, &mut nbiter, &|(vy, vx, errs, nbiter)| {
+        pfor2d2(&mut errs, &mut nbiter, &|(Coord { x, y }, errs, nbiter)| {
             if *errs {
                 *errs = false;
                 *nbiter += 1;
                 for s in 0..S {
                     for f in 0..F {
-                        let e = (fu[s][vy][vx][f] - k[s][vy][vx][f]).abs();
+                        let e = (fu[s][y][x][f] - k[s][y][x][f]).abs();
                         *errs |= e > *er;
                     }
                 }
@@ -117,11 +120,11 @@ pub fn fixpoint<
             .reduce(|| false, |acc, a| acc || a);
         *k = fu;
         let mut tmperrs = [[false; VX]; VY];
-        pfor2d(&mut tmperrs, &|(vy, vx, tmperrs)| {
+        pfor2d(&mut tmperrs, &|(Coord { x, y }, tmperrs)| {
             for dy in -sizey..=sizey {
                 for dx in -sizex..=sizex {
                     *tmperrs |=
-                        errs[boundary[1](vy as i32 + dy, VY)][boundary[0](vx as i32 + dx, VX)];
+                        errs[boundary[1](y as i32 + dy, VY)][boundary[0](x as i32 + dx, VX)];
                 }
             }
         });

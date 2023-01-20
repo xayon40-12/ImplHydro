@@ -1,4 +1,7 @@
-use crate::solver::{context::Context, pfor2d};
+use crate::solver::{
+    context::Context,
+    utils::{pfor2d, Coord},
+};
 
 use super::schemes::Scheme;
 
@@ -47,13 +50,13 @@ pub fn explicit<
                 vdtk[vy][vx] = constraints(t, vdtk[vy][vx]);
             }
         }
-        pfor2d(&mut fu, &|(vy, vx, fu)| {
+        pfor2d(&mut fu, &|(Coord { x, y }, fu)| {
             *fu = fun(
                 [&k[S - 1], &vdtk],
                 constraints,
                 transform,
                 boundary,
-                [vx as i32, vy as i32],
+                [x as i32, y as i32],
                 *dx,
                 [*ot, t],
                 [*dt, cdt],
@@ -62,11 +65,11 @@ pub fn explicit<
         });
         k[S - 1] = vdtk;
         k[s] = fu;
-        pfor2d(&mut vdtk, &|(vy, vx, vdtk)| {
+        pfor2d(&mut vdtk, &|(Coord { x, y }, vdtk)| {
             for f in 0..F {
-                vdtk[f] = vs[vy][vx][f];
+                vdtk[f] = vs[y][x][f];
                 for s1 in 0..S {
-                    vdtk[f] += *dt * a[s][s1] * k[s1][vy][vx][f];
+                    vdtk[f] += *dt * a[s][s1] * k[s1][y][x][f];
                 }
             }
         });

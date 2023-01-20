@@ -15,7 +15,7 @@ pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY:
         Transform<F, F>,
         Transform<F, C>,
         &[Boundary; 2],
-        [i32; 2], // position in index
+        [i32; 2], // position in index [x,y]
         f64,      // dx
         [f64; 2], // [old t, current t]
         [f64; 2], // [dt, current dt]
