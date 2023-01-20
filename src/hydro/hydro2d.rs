@@ -1,7 +1,7 @@
 use crate::solver::{
     context::{Boundary, Context, Integration},
     run,
-    space::{order, Dir, Order},
+    space::{order, Dir, Eigenvalues, Order},
     time::{newton::newton, schemes::Scheme},
     utils::ghost,
     Transform,
@@ -92,7 +92,7 @@ fn flux<const V: usize>(
     dx: f64,
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
-    (coord, ord): &(Coordinate, Order),
+    (coord, ord, [eigx, eigy]): &(Coordinate, Order, [Eigenvalues<6>; 2]),
 ) -> [f64; 3] {
     let theta = 1.1;
     // let theta = 2.0;
@@ -132,7 +132,7 @@ fn flux<const V: usize>(
         [&f01, &f11, &f12],
         constraints,
         transform,
-        &eigenvaluesx,
+        *eigx,
         pre,
         post,
         dx,
@@ -147,7 +147,7 @@ fn flux<const V: usize>(
         [&f02, &f21, &f22],
         constraints,
         transform,
-        &eigenvaluesy,
+        *eigy,
         pre,
         post,
         dx,
@@ -216,6 +216,13 @@ pub fn hydro2d<const V: usize, const S: usize>(
         Order::Order2 => None,
         Order::Order3(_) => Some(&post),
     };
+
+    let _eigx = Eigenvalues::Analytical(&eigenvaluesx);
+    let _eigy = Eigenvalues::Analytical(&eigenvaluesy);
+
+    let eigconstr = |_t: f64, [_, _, dpde, _, _, _]: [f64; 6], eig: f64| eig.max(dpde).min(1.0);
+    let eigx: Eigenvalues<6> = Eigenvalues::ApproxConstraint(&eigconstr);
+    let eigy = eigx;
     let context = Context {
         fun: &flux,
         constraints: &constraints,
@@ -233,7 +240,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
         t,
         t0: t,
         tend,
-        opt: (coord, space_order),
+        opt: (coord, space_order, [eigx, eigy]),
         p,
         dpde,
     };

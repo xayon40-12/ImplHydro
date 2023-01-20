@@ -241,9 +241,6 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64, ord: Order) 
     converge(er0, ermin, |er| {
         hydro2d::<V, 1, Ideal2D>(t0, tend, dx, sq2(er), er, r, None, ord)
     });
-    converge(er0, ermin, |er| {
-        hydro2d::<V, 1, Ideal2D>(t0, tend, dx, sq2(er), er, r, None, ord)
-    });
     for i in 0..TRENTO {
         let trento = Some((trentos[i], i));
         converge(er0, ermin, |er| {
@@ -261,17 +258,14 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64, ord: Order) 
     converge(er0, ermin, |er| {
         hydro2d::<V, 2, Ideal2D>(t0, tend, dx, sq2(er), er, r, None, ord)
     });
-    converge(er0, ermin, |er| {
-        hydro2d::<V, 2, Ideal2D>(t0, tend, dx, sq2(er), er, r, None, ord)
-    });
     for i in 0..TRENTO {
         let trento = Some((trentos[i], i));
         converge(er0, ermin, |er| {
             hydro2d::<V, 2, Ideal2D>(t0, tend, dx, sq2(er), er, r, trento, ord)
         });
-        converge(er0, ermin, |er| {
-            hydro2d::<V, 2, Ideal2D>(t0, tend, dx, sq2(er), er, r, trento, ord)
-        });
+        // converge(er0, ermin, |er| {
+        //     hydro2d::<V, 2, Ideal2D>(t0, tend, dx, sq2(er), er, r, trento, ord)
+        // });
     }
 }
 
@@ -279,8 +273,9 @@ fn big_stack() {
     let t0 = 1.0;
     let l = 10.0;
     let tend = 4.5;
-    let ord = Order2;
+    // let ord = Order2;
     // let ord = Order3(VOID);
+    let ord = Order3(1e-9);
 
     let ermin = 1e-5;
     run::<100>(t0, tend, 2.0 * l / 100.0, ermin, ord);

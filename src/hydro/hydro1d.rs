@@ -1,7 +1,7 @@
 use crate::solver::{
     context::{Boundary, Context, Integration},
     run,
-    space::{order, Dir, Order},
+    space::{order, Dir, Eigenvalues, Order},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zero},
     Transform,
@@ -90,7 +90,7 @@ fn flux<const V: usize>(
         [&f01, &f11],
         constraints,
         transform,
-        &eigenvalues,
+        Eigenvalues::Analytical(&eigenvalues),
         pre,
         post,
         dx,

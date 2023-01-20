@@ -1,7 +1,7 @@
 use crate::solver::{
     context::{Boundary, Context, Integration},
     run,
-    space::{id_flux_limiter, order, Dir, Order},
+    space::{id_flux_limiter, order, Dir, Eigenvalues, Order},
     time::{newton::newton, schemes::Scheme},
     utils::ghost,
     Transform,
@@ -112,6 +112,80 @@ fn f22(t: f64, [e, pe, _, _, _, uy, _, _, _, _, _, pi22]: [f64; 12]) -> f64 {
     t * ((e + pe) * uy * uy + pe + pi22)
 }
 
+fn u1pi00(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u1pi01(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u1pi02(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u1pi11(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u1pi12(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u1pi22(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+
+fn u2pi00(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u2pi01(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u2pi02(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u2pi11(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u2pi12(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+fn u2pi22(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    0.0
+}
+
 pub enum Coordinate {
     Cartesian,
     Milne,
@@ -158,10 +232,12 @@ fn flux<const V: usize>(
         pos,
         Dir::X,
         t,
-        [&f01, &f11, &f12],
+        [
+            &f01, &f11, &f12, &u1pi00, &u1pi01, &u1pi02, &u1pi11, &u1pi12, &u1pi22,
+        ],
         constraints,
         transform,
-        &eigenvaluesx,
+        Eigenvalues::Analytical(&eigenvaluesx),
         pre,
         post,
         dx,
@@ -173,10 +249,12 @@ fn flux<const V: usize>(
         pos,
         Dir::Y,
         t,
-        [&f02, &f12, &f22],
+        [
+            &f02, &f12, &f22, &u2pi00, &u2pi01, &u2pi02, &u2pi11, &u2pi12, &u2pi22,
+        ],
         constraints,
         transform,
-        &eigenvaluesy,
+        Eigenvalues::Analytical(&eigenvaluesy),
         pre,
         post,
         dx,
