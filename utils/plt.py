@@ -117,7 +117,6 @@ def convergence(a, ref=None):
         else:
             id = ID2De
         (maxerr, meanerr) = compare(id, ref, v)
-        # all += [(v, info, cost, maxerr, meanerr)]
         all += [(v, info, maxerr, meanerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
@@ -130,7 +129,9 @@ def info2name(info, scheme=True):
 
 def convall(l, ds):
     [dim,name,t0,tend,dx,nx,t] = l
-    for (dtcost, dci) in [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]:
+    # all = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
+    all = [("cost", 5), ("avdt", 6)]
+    for (dtcost, dci) in all:
         plt.rcParams["figure.figsize"] = [8, 5]
         plt.figure()
         plt.xlabel(dtcost)
@@ -138,18 +139,15 @@ def convall(l, ds):
         plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
         d = ds[list(ds)[0]]
         scs = sorted(list(d.keys()))
-        scs.reverse()
+        dts = sorted([dt for dt in d[scs[0]]])
+        mindt = dts[0]
+        scs.sort(key=lambda s: integrationPriority(d[s][mindt][0]["integration"]))
         if len(scs) <= 1:
             plt.close()
             return 
         for (s0,col) in zip(scs,plt_setting.clist):
             for case in ds: 
                 d = ds[case]
-                scs = sorted(list(d.keys()))
-                scs.reverse()
-                if len(scs) <= 1:
-                    plt.close()
-                    return 
                 any = d[scs[0]]
                 dtref = sorted(list(any.keys()))[0]
                 info = any[dtref][0]
@@ -169,75 +167,83 @@ def convall(l, ds):
         plt.savefig("figures/convergence_{}_{}.pdf".format(dtcost, info2name(info, False)))
         plt.close()
 
-def plot1d(datadts):
-    mindt = sorted([dt for dt in datadts])[0]
-    (_,ref) = datadts[mindt]
-    for dt in datadts:
+def integrationPriority(integration):
+    if integration == "Explicit":
+        return 1
+    else:
+        return 2
+
+def plot1d(l, datas):
+    [dim,name,t0,tend,dx,n,t,case] = l
+    schemes = sorted(list(datas.keys()))
+    dts = sorted([dt for dt in datas[schemes[0]]])
+    mindt = dts[0]
+    schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
+    (info,ref) = datas["Heun"][mindt]
+    
+    void = "Void" in name
+    e0 = 10
+    emin = 1
+    cs2 = 1/3
+    eps = 1e-10
+
+    e, v = riemann(e0,emin,cs2,eps,void)
+    def p(x):
+        return cs2*e(x)
+    def t00(x):
+        vx = v(x)
+        if vx == 1:
+            return 0
+        else:
+            ut2 = 1/(1-v(x)*v(x))
+            return (e(x)+p(x))*ut2-p(x)
+
+    x = ref[:,IDx]
+    nl = next(i for (i,v) in zip(range(n),x) if v >= -crop)
+    nr = n-1-nl
+    x = x[nl:nr]/(tend-t0)
+    ycontinuum = [e(x) for x in x]
+    yref = ref[:,ID1De]
+    yref = yref[nl:nr]
+
+    for dt in dts:
         timename = "dt{}".format(dt)
         if dt == mindt:
             timename = "best_"+timename
-        (info, data) = datadts[dt]
-        t0 = info["t0"]
-        tend = info["tend"]
-        n = info["nx"]
-    
-        name = info["name"]
-        void = "Void" in name
-        e0 = 10
-        emin = 1
-        cs2 = 1/3
-        eps = 1e-10
-
-        e, v = riemann(e0,emin,cs2,eps,void)
-        def p(x):
-            return cs2*e(x)
-        def t00(x):
-            vx = v(x)
-            if vx == 1:
-                return 0
-            else:
-                ut2 = 1/(1-v(x)*v(x))
-                return (e(x)+p(x))*ut2-p(x)
 
     
-        x = data[:,IDx]
-        iter = data[:,IDiter]
-        y = data[:,ID1De]
-        yut = data[:,ID1Dut]
-        yux = data[:,ID1Dux]
-        yvx = yux/yut
-        yref = ref[:,ID1De]
-        nl = next(i for (i,v) in zip(range(n),x) if v >= -crop)
-        nr = n-1-nl
-        x = x[nl:nr]/(tend-t0)
-        iter = iter[nl:nr]
-        y = y[nl:nr]
-        yref = yref[nl:nr]
-        yvx = yvx[nl:nr]
-        ycontinuum = [e(x) for x in x]
-        yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
-        
         plt.rcParams["figure.figsize"] = [8, 12]
         _,axs = plt.subplots(4, 1, sharex=True)
-        iterations ,= axs[0].plot(x,iter, 'o', color="gray", label="iterations")
-        axs[0].set_ylabel("iterations")
-        axs[0].legend()
         continuum ,= axs[1].plot(x,ycontinuum, color="black", label="continuum", linewidth=2)
         numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
-        numerics ,= axs[1].plot(x,y, label="numerics", linestyle="-.", linewidth=2 )
+
+        for scheme in schemes:
+            (sinfo, data) = datas[scheme][dt]
+            iter = data[:,IDiter][nl:nr]
+            y = data[:,ID1De][nl:nr]
+            yut = data[:,ID1Dut][nl:nr]
+            yux = data[:,ID1Dux][nl:nr]
+            yvx = yux/yut
+            yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
+        
+            iterations ,= axs[0].plot(x,iter, '.', label=scheme)
+            numerics ,= axs[1].plot(x,y, label=scheme, linestyle="-.", linewidth=2 )
+            errcontinuum ,= axs[2].plot(x,yerr, label=scheme+"err continuum", linestyle="-.", linewidth=2 )
+            numericsvx ,= axs[3].plot(x,yvx, label=scheme, linestyle="-.", linewidth=2 )
+
+        axs[0].set_ylabel("iterations")
+        axs[0].legend()
         axs[1].set_ylabel("e")
         axs[1].legend()
-        errcontinuum ,= axs[2].plot(x,yerr, label="err continuum", linestyle="-.", linewidth=2 )
         axs[2].set_ylabel("err")
         axs[2].legend()
-        numericsvx ,= axs[3].plot(x,yvx, label="numerics", linestyle="-.", linewidth=2 )
         axs[3].set_ylabel("vx")
         axs[3].set_xlabel("x/t")
         axs[3].legend()
-        plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info)))
+        plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info, False)))
         plt.close()
 
-def plot2d(datadts):
+def plot2d(l, datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, ref) = datadts[maxdts[0]]
     (_, data) = datadts[maxdts[fromref]]
@@ -295,11 +301,12 @@ def plot2d(datadts):
     plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
     plt.close()
 
-def plotall(l, d):
+def plotall1D(l, d):
     if l[0] == "1D":
-        plot1d(d)
-    else:
-        plot2d(d)
+        plot1d(l, d)
+def plotall2D(l, d):
+    if l[0] == "2D":
+        plot2d(l, d)
 
 def alldata(n, data, f):
     def _all(n, l, d):
@@ -316,4 +323,5 @@ except FileExistsError:
     None
     
 alldata(7, datas, convall)
-alldata(9, datas, plotall)
+alldata(8, datas, plotall1D)
+alldata(9, datas, plotall2D)
