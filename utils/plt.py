@@ -177,6 +177,7 @@ def plot1d(l, datas):
     [dim,name,t0,tend,dx,n,t,case] = l
     schemes = sorted(list(datas.keys()))
     dts = sorted([dt for dt in datas[schemes[0]]])
+    dts = [dts[0],dts[-1]] # only keep best and worst
     mindt = dts[0]
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
     (info,ref) = datas["Heun"][mindt]
@@ -215,7 +216,7 @@ def plot1d(l, datas):
         plt.rcParams["figure.figsize"] = [8, 12]
         _,axs = plt.subplots(4, 1, sharex=True)
         continuum ,= axs[1].plot(x,ycontinuum, color="black", label="continuum", linewidth=2)
-        numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
+        # numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
 
         for scheme in schemes:
             (sinfo, data) = datas[scheme][dt]
@@ -228,14 +229,14 @@ def plot1d(l, datas):
         
             iterations ,= axs[0].plot(x,iter, '.', label=scheme)
             numerics ,= axs[1].plot(x,y, label=scheme, linestyle="-.", linewidth=2 )
-            errcontinuum ,= axs[2].plot(x,yerr, label=scheme+"err continuum", linestyle="-.", linewidth=2 )
+            errcontinuum ,= axs[2].plot(x,yerr, label=scheme, linestyle="-.", linewidth=2 )
             numericsvx ,= axs[3].plot(x,yvx, label=scheme, linestyle="-.", linewidth=2 )
 
         axs[0].set_ylabel("iterations")
         axs[0].legend()
         axs[1].set_ylabel("e")
         axs[1].legend()
-        axs[2].set_ylabel("err")
+        axs[2].set_ylabel("continuum err")
         axs[2].legend()
         axs[3].set_ylabel("vx")
         axs[3].set_xlabel("x/t")
