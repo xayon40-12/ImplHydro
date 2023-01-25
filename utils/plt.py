@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import sys 
 import os
+import warnings
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import CenteredNorm
 from mpl_toolkits import mplot3d
@@ -14,6 +16,9 @@ from riemann import riemann
 from gubser import gubser
 from scipy import signal
 
+warnings.filterwarnings("ignore", category=matplotlib.MatplotlibDeprecationWarning) # disable matplotlib deprecation warning
+np.seterr(invalid='ignore') # disable invalid waring for numpy as NaN are used to discard data in the void
+np.seterr(divide='ignore') # disable divide by zero worining
 # plt.rcParams['axes.grid'] = False
 
 IDx = 0
@@ -30,6 +35,14 @@ ID2Duy = 11
 
 crop = 9
 fromref = 1
+
+e0 = 10
+emin = 1
+cs2 = 1/3
+eps = 1e-10
+
+riem_e, riem_v = riemann(e0,emin,cs2,eps,False)
+riem_void_e, riem_void_v = riemann(e0,emin,cs2,eps,True)
 
 def dd(n):
     if n == 1:
@@ -56,6 +69,7 @@ def extractCase(n):
     else:
         return (n,0)
 
+voidratio = 0
 dir = "results/"
 for d in os.listdir(dir):
     p = dir+d+"/"+os.listdir(dir+d)[0]
@@ -87,7 +101,7 @@ for d in os.listdir(dir):
 
     if "Trento" in name:
         fname = "e{}/{:0>2}.dat".format(nx, case)
-        init = np.sign(np.loadtxt(fname)) # use np.sign to set void at 0 and non void as 1
+        inite = np.sign(np.loadtxt(fname))
         # fill a circle of 1 for the cone of light
         for j in range(nx):
             y = (j-(nx-1)/2)*dx
@@ -96,26 +110,40 @@ for d in os.listdir(dir):
                 if x*x+y*y > ttot2:
                     coneoflight[j,i] = 0
 
+    elif name == "RiemannVoid": # only consider what expend from the central initial discontinuity
+        for i in range(nx):
+            x = (i-(nx-1)/2)*dx
+            if x*x > ttot2:
+                coneoflight[i] = 0
+
+    # data = np.loadtxt(p+"/data.txt")
+    data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
+
+    if name == "RiemannVoid": # only consider what expend from the central initial discontinuity
+        inite = np.vectorize(riem_void_e)(data[:,IDx])
+
+    if "Trento" in name or name == "RiemannVoid":
+        init = np.sign(inite) # use np.sign to set void at 0 and non void as 1
         # convolve the cone of light to the initial data and check what is greater that 1
         # to avoid numerical artifacts (as initially it was 0 or 1 and we convolve with ones).
         # Then convert to int to have 0 and 1 again.
-        coneoflight = signal.fftconvolve(init,coneoflight,mode='same')>=1
-    elif "Riemann" in name: # only consider what expend from the central initial discontinuity
-            for i in range(nx):
-                x = (i-(nx-1)/2)*dx
-                if x*x > ttot2:
-                    coneoflight[i] = 0
-    else:
-        continue
+        coneoflight = (signal.fftconvolve(init,coneoflight,mode='same')>=1).astype(int)
+        coneoflight = coneoflight.reshape(n)
 
-    info["coneoflight"] = coneoflight.reshape(n)
-    
-    # data = np.loadtxt(p+"/data.txt")
-    data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
-    
+        tote = inite.sum() # sum of initial energy density
+        invoid = (data[:,ID2De]*(1-coneoflight)).sum() # look at artifacts in the void
+        ratio = invoid/tote
+        voidratio = max(voidratio,ratio)
+    else:
+        coneoflight = coneoflight.reshape(n)
+
+    info["coneoflight"] = coneoflight
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
     datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data)
 
+print("voidratio: ", voidratio)
+with open("voidratio.txt", "w") as fv:
+    fv.write("{:e}".format(voidratio))
 print("finished loading")
 
 def compare(i, coneoflight, vss, wss):
@@ -162,9 +190,10 @@ def info2name(info, scheme=True):
 
 def convall(l, ds):
     [dim,name,t0,tend,dx,nx,t] = l
-    # all = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
-    allx = [("cost", 5), ("avdt", 6)]
-    ally = [("max", 2), ("mean", 3)]
+    # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
+    # ally = [("max", 2), ("mean", 3)]
+    allx = [("cost", 5)]
+    ally = [("max", 2)]
     for (dtcost, dci) in allx:
         for (meanmax, mmi) in ally:
             plt.rcParams["figure.figsize"] = [8, 5]
@@ -208,6 +237,9 @@ def integrationPriority(integration):
     else:
         return 2
 
+def mask(m,data):
+    return np.concatenate((data[:,:3], data[:,3:]/m[:,None]), axis=1)
+
 def plot1d(l, datas):
     [dim,name,t0,tend,dx,n,t,case] = l
     schemes = sorted(list(datas.keys()))
@@ -216,23 +248,14 @@ def plot1d(l, datas):
     mindt = dts[0]
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
     (info,ref) = datas["Heun"][mindt]
+    ref = mask(info["coneoflight"], ref)
     
-    void = "Void" in name
-    e0 = 10
-    emin = 1
-    cs2 = 1/3
-    eps = 1e-10
-
-    e, v = riemann(e0,emin,cs2,eps,void)
-    def p(x):
-        return cs2*e(x)
-    def t00(x):
-        vx = v(x)
-        if vx == 1:
-            return 0
-        else:
-            ut2 = 1/(1-v(x)*v(x))
-            return (e(x)+p(x))*ut2-p(x)
+    if "Void" in name:
+        e = riem_void_e
+        v = riem_void_v
+    else:
+        e = riem_e
+        v = riem_v
 
     x = ref[:,IDx]
     nl = next(i for (i,v) in zip(range(n),x) if v >= -crop)
@@ -250,11 +273,12 @@ def plot1d(l, datas):
     
         plt.rcParams["figure.figsize"] = [8, 12]
         _,axs = plt.subplots(4, 1, sharex=True)
-        continuum ,= axs[1].plot(x,ycontinuum, color="black", label="continuum", linewidth=2)
+        continuum ,= axs[1].plot(x,ycontinuum, color="grey", label="continuum", linewidth=2)
         # numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
 
         for scheme in schemes:
             (sinfo, data) = datas[scheme][dt]
+            data = mask(sinfo["coneoflight"], data)
             iter = data[:,IDiter][nl:nr]
             y = data[:,ID1De][nl:nr]
             yut = data[:,ID1Dut][nl:nr]
@@ -263,9 +287,9 @@ def plot1d(l, datas):
             yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
         
             iterations ,= axs[0].plot(x,iter, '.', label=scheme)
-            numerics ,= axs[1].plot(x,y, label=scheme, linestyle="-.", linewidth=2 )
-            errcontinuum ,= axs[2].plot(x,yerr, label=scheme, linestyle="-.", linewidth=2 )
-            numericsvx ,= axs[3].plot(x,yvx, label=scheme, linestyle="-.", linewidth=2 )
+            numerics ,= axs[1].plot(x,y, label=scheme, linestyle="-.", linewidth=3 )
+            errcontinuum ,= axs[2].plot(x,yerr, label=scheme, linestyle="-.", linewidth=3 )
+            numericsvx ,= axs[3].plot(x,yvx, label=scheme, linestyle="-.", linewidth=3 )
 
         axs[0].set_ylabel("iterations")
         axs[0].legend()
@@ -282,7 +306,9 @@ def plot1d(l, datas):
 def plot2d(l, datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, ref) = datadts[maxdts[0]]
+    ref = mask(info["coneoflight"], ref)
     (_, data) = datadts[maxdts[fromref]]
+    data = mask(info["coneoflight"], data)
 
     t = info["tend"]
     n = info["nx"]
@@ -320,7 +346,7 @@ def plot2d(l, datadts):
     plt.rcParams["figure.figsize"] = [2+nb*4, 5]
     fig, axs = plt.subplots(1,nb, sharey=True)
     for (i, (n, z)) in zip(range(nb),all):
-        im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", norm=CenteredNorm(0), cmap="terrain")
+        im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", norm=CenteredNorm(0)) # , cmap="terrain"
         axs[i].set_xlabel("x")
         axs[i].xaxis.tick_top()
         axs[i].xaxis.set_label_position('top') 
