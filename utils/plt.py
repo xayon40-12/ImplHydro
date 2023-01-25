@@ -12,6 +12,7 @@ from collections import defaultdict
 from math import sqrt
 from riemann import riemann
 from gubser import gubser
+from scipy import signal
 
 # plt.rcParams['axes.grid'] = False
 
@@ -71,27 +72,58 @@ for d in os.listdir(dir):
     if info["ny"] == 1:
         dim = "1D"
         n = nx
+        coneoflight = np.full((nx), 1)
     else:
         dim = "2D"
         n = nx*nx
+        coneoflight = np.full((nx,nx), 1)
     info["dim"] = dim
     name = info["name"]
     (name, case) = extractCase(name)
     info["name"] = name
     info["case"] = case
+    ttot = tend-t0
+    ttot2 = ttot*ttot
 
+    if "Trento" in name:
+        fname = "e{}/{:0>2}.dat".format(nx, case)
+        init = np.sign(np.loadtxt(fname)) # use np.sign to set void at 0 and non void as 1
+        # fill a circle of 1 for the cone of light
+        for j in range(nx):
+            y = (j-(nx-1)/2)*dx
+            for i in range(nx):
+                x = (i-(nx-1)/2)*dx
+                if x*x+y*y > ttot2:
+                    coneoflight[j,i] = 0
+
+        # convolve the cone of light to the initial data and check what is greater that 1
+        # to avoid numerical artifacts (as initially it was 0 or 1 and we convolve with ones).
+        # Then convert to int to have 0 and 1 again.
+        coneoflight = signal.fftconvolve(init,coneoflight,mode='same')>=1
+    elif "Riemann" in name: # only consider what expend from the central initial discontinuity
+            for i in range(nx):
+                x = (i-(nx-1)/2)*dx
+                if x*x > ttot2:
+                    coneoflight[i] = 0
+    else:
+        continue
+
+    info["coneoflight"] = coneoflight.reshape(n)
+    
     # data = np.loadtxt(p+"/data.txt")
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
     
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
     datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data)
 
-def compare(i, vss, wss):
+print("finished loading")
+
+def compare(i, coneoflight, vss, wss):
     maxerr = 0
     meanerr = 0
     count = 0
-    for (vs, ws) in zip(vss,wss):
-        if vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
+    for (inlight, vs, ws) in zip(coneoflight,vss,wss):
+        if inlight and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
             count += 1
             a = vs[i]
             b = ws[i]
@@ -105,6 +137,7 @@ def convergence(a, ref=None):
     maxdts = sorted([dt for dt in a])
     if ref is None:
         ref = a[maxdts[0]][1]
+    coneoflight = a[maxdts[0]][0]["coneoflight"]
     all = []
     for i in maxdts:
         (info, v) = a[i]
@@ -116,7 +149,7 @@ def convergence(a, ref=None):
             id = ID1De
         else:
             id = ID2De
-        (maxerr, meanerr) = compare(id, ref, v)
+        (maxerr, meanerr) = compare(id, coneoflight, ref, v)
         all += [(v, info, maxerr, meanerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
@@ -130,42 +163,44 @@ def info2name(info, scheme=True):
 def convall(l, ds):
     [dim,name,t0,tend,dx,nx,t] = l
     # all = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
-    all = [("cost", 5), ("avdt", 6)]
-    for (dtcost, dci) in all:
-        plt.rcParams["figure.figsize"] = [8, 5]
-        plt.figure()
-        plt.xlabel(dtcost)
-        plt.ylabel("relative error")
-        plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
-        d = ds[list(ds)[0]]
-        scs = sorted(list(d.keys()))
-        dts = sorted([dt for dt in d[scs[0]]])
-        mindt = dts[0]
-        scs.sort(key=lambda s: integrationPriority(d[s][mindt][0]["integration"]))
-        if len(scs) <= 1:
-            plt.close()
-            return 
-        for (s0,col) in zip(scs,plt_setting.clist):
-            for case in ds: 
-                d = ds[case]
-                any = d[scs[0]]
-                dtref = sorted(list(any.keys()))[0]
-                info = any[dtref][0]
-                refs = {s: d[s][sorted(list(d[s].keys()))[0]][1] for s in d}
+    allx = [("cost", 5), ("avdt", 6)]
+    ally = [("max", 2), ("mean", 3)]
+    for (dtcost, dci) in allx:
+        for (meanmax, mmi) in ally:
+            plt.rcParams["figure.figsize"] = [8, 5]
+            plt.figure()
+            plt.xlabel(dtcost)
+            plt.ylabel(meanmax+" error")
+            # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
+            d = ds[list(ds)[0]]
+            scs = sorted(list(d.keys()))
+            dts = sorted([dt for dt in d[scs[0]]])
+            mindt = dts[0]
+            scs.sort(key=lambda s: integrationPriority(d[s][mindt][0]["integration"]))
+            if len(scs) <= 1:
+                plt.close()
+                return 
+            for (s0,col) in zip(scs,plt_setting.clist):
+                for case in ds: 
+                    d = ds[case]
+                    any = d[scs[0]]
+                    dtref = sorted(list(any.keys()))[0]
+                    info = any[dtref][0]
+                    refs = {s: d[s][sorted(list(d[s].keys()))[0]][1] for s in d}
     
-                for s1 in [scs[0]]:
-                    c = convergence(d[s0],refs[s1])
-                    plt.loglog(c[fromref:,dci],c[fromref:,2], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1, alpha=0.5)
-        labels = []
-        for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
-            label = p.get_label()
-            if label in labels:    # check for Name already exists
-                p.set_label('_' + label)       # hide label in auto-legend
-            else:
-                labels += [label]
-        plt.legend()
-        plt.savefig("figures/convergence_{}_{}.pdf".format(dtcost, info2name(info, False)))
-        plt.close()
+                    for s1 in [scs[0]]:
+                        c = convergence(d[s0],refs[s1])
+                        plt.loglog(c[fromref:,dci],c[fromref:,mmi], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1, alpha=0.5)
+            labels = []
+            for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
+                label = p.get_label()
+                if label in labels:    # check for Name already exists
+                    p.set_label('_' + label)       # hide label in auto-legend
+                else:
+                    labels += [label]
+            plt.legend()
+            plt.savefig("figures/convergence_{}_{}_crop:{}_{}.pdf".format(dtcost, meanmax, crop, info2name(info, False)))
+            plt.close()
 
 def integrationPriority(integration):
     if integration == "Explicit":
@@ -279,7 +314,7 @@ def plot2d(l, datadts):
     all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
     if "Gubser" in info["name"] and not "Exponential" in info["name"]:
         all += [("err continuum", zerr)]
-    if not "Heun" in info["scheme"]:
+    if info["integration"] == "FixPoint":
         all += [("iter", ziter)]
     nb = len(all)
     plt.rcParams["figure.figsize"] = [2+nb*4, 5]
