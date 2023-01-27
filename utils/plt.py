@@ -70,6 +70,8 @@ def extractCase(n):
         return (n,0)
 
 voidratio = 0
+meanvoidratio = 0
+countvoidratio = 0
 dir = "results/"
 for d in os.listdir(dir):
     p = dir+d+"/"+os.listdir(dir+d)[0]
@@ -101,13 +103,13 @@ for d in os.listdir(dir):
 
     if "Trento" in name:
         fname = "e{}/{:0>2}.dat".format(nx, case)
-        inite = np.sign(np.loadtxt(fname))
+        inite = np.loadtxt(fname)
         # fill a circle of 1 for the cone of light
         for j in range(nx):
             y = (j-(nx-1)/2)*dx
             for i in range(nx):
                 x = (i-(nx-1)/2)*dx
-                if x*x+y*y > ttot2:
+                if x*x+y*y >= ttot2:
                     coneoflight[j,i] = 0
 
     elif name == "RiemannVoid": # only consider what expend from the central initial discontinuity
@@ -130,9 +132,11 @@ for d in os.listdir(dir):
         coneoflight = (signal.fftconvolve(init,coneoflight,mode='same')>=1).astype(int)
         coneoflight = coneoflight.reshape(n)
 
-        tote = inite.sum() # sum of initial energy density
+        tote = data[:,ID2De].sum() # sum of final energy density
         invoid = (data[:,ID2De]*(1-coneoflight)).sum() # look at artifacts in the void
         ratio = invoid/tote
+        meanvoidratio += ratio
+        countvoidratio += 1
         voidratio = max(voidratio,ratio)
     else:
         coneoflight = coneoflight.reshape(n)
@@ -141,10 +145,12 @@ for d in os.listdir(dir):
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
     datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data)
 
-print("voidratio: ", voidratio)
+meanvoidratio /= countvoidratio
+print("voidratio: ", voidratio, "meanvoidratio: ", meanvoidratio)
 with open("voidratio.txt", "w") as fv:
-    fv.write("{:e}".format(voidratio))
+    fv.write("max_void_ratio: {:e}\nmean_void_ratio: {:e}".format(voidratio, meanvoidratio))
 print("finished loading")
+# sys.exit(0)
 
 def compare(i, coneoflight, vss, wss):
     maxerr = 0
@@ -209,17 +215,20 @@ def convall(l, ds):
             if len(scs) <= 1:
                 plt.close()
                 return 
+            s1 = scs[0]
             for (s0,col) in zip(scs,plt_setting.clist):
                 for case in ds: 
                     d = ds[case]
-                    any = d[scs[0]]
-                    dtref = sorted(list(any.keys()))[0]
-                    info = any[dtref][0]
+                    ds0 = d[s0]
+                    dtref = sorted(list(ds0.keys()))[0]
+                    info = ds0[dtref][0]
                     refs = {s: d[s][sorted(list(d[s].keys()))[0]][1] for s in d}
-    
-                    for s1 in [scs[0]]:
-                        c = convergence(d[s0],refs[s1])
-                        plt.loglog(c[fromref:,dci],c[fromref:,mmi], 'o', label="{} r {}".format(s0, s1), color=col, linestyle="-.", linewidth=1, alpha=0.5)
+                    if info["integration"] == "FixPoint":
+                        schemetype = "Implicit"
+                    else:
+                        schemetype = "Explicit"
+                    c = convergence(d[s0],refs[s1])
+                    plt.loglog(c[fromref:,dci],c[fromref:,mmi], 'o', label=schemetype, color=col, linestyle="-.", linewidth=1, alpha=0.5)
             labels = []
             for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
                 label = p.get_label()
@@ -249,6 +258,9 @@ def plot1d(l, datas):
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
     (info,ref) = datas["Heun"][mindt]
     ref = mask(info["coneoflight"], ref)
+    nl = 2
+    # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
+    lstyles = [(3*i,(3,5,1,5)) for i in range(nl)]
     
     if "Void" in name:
         e = riem_void_e
@@ -271,12 +283,14 @@ def plot1d(l, datas):
             timename = "best_"+timename
 
     
-        plt.rcParams["figure.figsize"] = [8, 12]
-        _,axs = plt.subplots(4, 1, sharex=True)
+        # plt.rcParams["figure.figsize"] = [8, 12]
+        # _,axs = plt.subplots(4, 1, sharex=True)
+        plt.rcParams["figure.figsize"] = [8, 9]
+        _,axs = plt.subplots(3, 1, sharex=True)
         continuum ,= axs[1].plot(x,ycontinuum, color="grey", label="continuum", linewidth=2)
         # numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
 
-        for scheme in schemes:
+        for (scheme,linestyle) in zip(schemes, lstyles):
             (sinfo, data) = datas[scheme][dt]
             data = mask(sinfo["coneoflight"], data)
             iter = data[:,IDiter][nl:nr]
@@ -286,20 +300,25 @@ def plot1d(l, datas):
             yvx = yux/yut
             yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
         
-            iterations ,= axs[0].plot(x,iter, '.', label=scheme)
-            numerics ,= axs[1].plot(x,y, label=scheme, linestyle="-.", linewidth=3 )
-            errcontinuum ,= axs[2].plot(x,yerr, label=scheme, linestyle="-.", linewidth=3 )
-            numericsvx ,= axs[3].plot(x,yvx, label=scheme, linestyle="-.", linewidth=3 )
+            if sinfo["integration"] == "FixPoint":
+                schemetype = "Implicit"
+            else:
+                schemetype = "Explicit"
+            iterations ,= axs[0].plot(x,iter, '.', label=schemetype)
+            numerics ,= axs[1].plot(x,y, label=schemetype, linestyle=linestyle, linewidth=3 )
+            errcontinuum ,= axs[2].plot(x,yerr, label=schemetype, linestyle=linestyle, linewidth=3 )
+            # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
 
         axs[0].set_ylabel("iterations")
-        axs[0].legend()
+        # axs[0].legend()
         axs[1].set_ylabel("e")
         axs[1].legend()
         axs[2].set_ylabel("continuum err")
-        axs[2].legend()
-        axs[3].set_ylabel("vx")
-        axs[3].set_xlabel("x/t")
-        axs[3].legend()
+        axs[2].set_xlabel("x/t")
+        # axs[2].legend()
+        # axs[3].set_ylabel("vx")
+        # axs[3].set_xlabel("x/t")
+        # axs[3].legend()
         plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info, False)))
         plt.close()
 
@@ -337,7 +356,8 @@ def plot2d(l, datadts):
     r = x[0][-1]
     d = y[0][0]
     u = y[-1][0]
-    all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
+    # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
+    all = [("e", z)]
     if "Gubser" in info["name"] and not "Exponential" in info["name"]:
         all += [("err continuum", zerr)]
     if info["integration"] == "FixPoint":
@@ -345,6 +365,8 @@ def plot2d(l, datadts):
     nb = len(all)
     plt.rcParams["figure.figsize"] = [2+nb*4, 5]
     fig, axs = plt.subplots(1,nb, sharey=True)
+    if not hasattr(axs, "__len__"):
+        axs = [axs]
     for (i, (n, z)) in zip(range(nb),all):
         im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", norm=CenteredNorm(0)) # , cmap="terrain"
         axs[i].set_xlabel("x")
