@@ -130,22 +130,45 @@ pub fn run<
     use std::time::Instant;
     let now = Instant::now();
 
-    let next_save = context.tend;
+    let save_every = 0.1f64.max(context.maxdt);
+    let mut current_save = context.t;
+    let mut next_save = current_save + save_every;
     let mut ctx_dt = None;
     let mut nbiter = [[1usize; VX]; VY];
+    let save = |ctx: &Context<Opt, F, C, VX, VY, S>, cost, tsteps, nbiter| {
+        let elapsed = now.elapsed().as_secs_f64();
+        let err = save(
+            ctx,
+            names,
+            name,
+            schemename,
+            elapsed,
+            cost as usize,
+            tsteps,
+            nbiter,
+            integration,
+        );
+        match err {
+            Err(e) => eprintln!("{}", e),
+            Ok(()) => {}
+        }
+    };
     while context.t < context.tend {
         let d = next_save - context.t;
-        if d < 0.0 || d > 2.0 * context.dt {
+        if d <= 1e-14 {
+            save(&context, cost, tsteps, nbiter);
+            current_save = next_save;
+            next_save = current_save + save_every;
             if let Some(dt) = ctx_dt {
                 context.dt = dt;
                 ctx_dt = None;
             }
-        } else if d > context.dt {
-            ctx_dt = Some(context.dt);
-            context.dt = d / 2.0;
-        } else {
-            ctx_dt = Some(context.dt);
+        } else if d <= context.dt {
+            ctx_dt = ctx_dt.or_else(|| Some(context.dt));
             context.dt = d;
+        } else if d <= 2.0 * context.dt {
+            ctx_dt = ctx_dt.or_else(|| Some(context.dt));
+            context.dt = d / 2.0;
         }
         tsteps += 1;
         let res = match integration {
@@ -161,25 +184,11 @@ pub fn run<
             return None;
         }
     }
-    let cost = cost as usize;
+    let d = next_save - context.t;
+    if d < context.dt * 1e-14 {
+        save(&context, cost, tsteps, nbiter);
+    }
     let elapsed = now.elapsed().as_secs_f64();
     eprintln!("Elapsed: {:.4}", elapsed);
-    let err = save(
-        &context,
-        names,
-        name,
-        schemename,
-        elapsed,
-        cost,
-        tsteps,
-        nbiter,
-        integration,
-    );
-    let _elapsed = now.elapsed().as_secs_f64();
-    eprintln!("Elapsed with save: {:.4}", _elapsed);
-    match err {
-        Err(e) => eprintln!("{}", e),
-        Ok(()) => {}
-    }
-    Some((context.vs, context.t, cost, tsteps))
+    Some((context.vs, context.t, cost as usize, tsteps))
 }

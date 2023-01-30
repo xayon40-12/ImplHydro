@@ -69,12 +69,14 @@ def extractCase(n):
     else:
         return (n,0)
 
-voidratio = 0
+maxvoidratio = 0
 meanvoidratio = 0
 countvoidratio = 0
 dir = "results/"
 for d in os.listdir(dir):
-    p = dir+d+"/"+os.listdir(dir+d)[0]
+    dird = dir+d
+    dts = sorted(os.listdir(dird), key=float) 
+    p = dird+"/"+dts[-1]
     info = {k: convert(v.strip()) for [k, v] in np.loadtxt(p+"/info.txt", dtype=object, delimiter=":")}
 
     t0 = info["t0"]
@@ -137,7 +139,7 @@ for d in os.listdir(dir):
         ratio = invoid/tote
         meanvoidratio += ratio
         countvoidratio += 1
-        voidratio = max(voidratio,ratio)
+        maxvoidratio = max(maxvoidratio,ratio)
     else:
         coneoflight = coneoflight.reshape(n)
 
@@ -146,9 +148,9 @@ for d in os.listdir(dir):
     datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data)
 
 meanvoidratio /= countvoidratio
-print("voidratio: ", voidratio, "meanvoidratio: ", meanvoidratio)
+print("maxvoidratio: ", maxvoidratio, "meanvoidratio: ", meanvoidratio)
 with open("voidratio.txt", "w") as fv:
-    fv.write("max_void_ratio: {:e}\nmean_void_ratio: {:e}".format(voidratio, meanvoidratio))
+    fv.write("max_void_ratio: {:e}\nmean_void_ratio: {:e}".format(maxvoidratio, meanvoidratio))
 print("finished loading")
 # sys.exit(0)
 

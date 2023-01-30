@@ -263,9 +263,6 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64, ord: Order) 
         converge(er0, ermin, |er| {
             hydro2d::<V, 2, Ideal2D>(t0, tend, dx, sq2(er), er, r, trento, ord)
         });
-        // converge(er0, ermin, |er| {
-        //     hydro2d::<V, 2, Ideal2D>(t0, tend, dx, sq2(er), er, r, trento, ord)
-        // });
     }
 }
 
