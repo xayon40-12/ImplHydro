@@ -75,8 +75,8 @@ countvoidratio = 0
 dir = "results/"
 for d in os.listdir(dir):
     dird = dir+d
-    dts = sorted(os.listdir(dird), key=float) 
-    p = dird+"/"+dts[-1]
+    ts = sorted(os.listdir(dird), key=float) 
+    p = dird+"/"+ts[-1]
     info = {k: convert(v.strip()) for [k, v] in np.loadtxt(p+"/info.txt", dtype=object, delimiter=":")}
 
     t0 = info["t0"]
@@ -122,6 +122,9 @@ for d in os.listdir(dir):
 
     # data = np.loadtxt(p+"/data.txt")
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
+    if "Trento" in name and case == 0:
+        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1))) for t in ts]
+        info["datats"] = datats
 
     if name == "RiemannVoid": # only consider what expend from the central initial discontinuity
         inite = np.vectorize(riem_void_e)(data[:,IDx])
@@ -328,64 +331,81 @@ def plot2d(l, datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, ref) = datadts[maxdts[0]]
     ref = mask(info["coneoflight"], ref)
-    (_, data) = datadts[maxdts[fromref]]
-    data = mask(info["coneoflight"], data)
+    (einfo, data) = datadts[maxdts[fromref]]
 
     t = info["tend"]
-    n = info["nx"]
-    x = data[:,IDx]
-    y = data[:,IDy]
-    z = data[:,ID2De]
-    zref = ref[:,ID2De]
-    ziter = data[:,IDiter]
-    zut = data[:,ID2Dut]
-    zux = data[:,ID2Dux]
-    zvx = zux/zut
-    zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
-    zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
-    zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
-    nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
-    nr = n-1-nl
-    x = np.reshape(x, (n,n))[nl:nr,nl:nr]
-    y = np.reshape(y, (n,n))[nl:nr,nl:nr]
-    z = np.reshape(z, (n,n))[nl:nr,nl:nr]
-    ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
-    zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
-    zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
-    zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
-    zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
-    l = x[0][0]
-    r = x[0][-1]
-    d = y[0][0]
-    u = y[-1][0]
-    # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
-    all = [("e", z)]
-    if "Gubser" in info["name"] and not "Exponential" in info["name"]:
-        all += [("err continuum", zerr)]
-    if info["integration"] == "FixPoint":
-        all += [("iter", ziter)]
-    nb = len(all)
-    plt.rcParams["figure.figsize"] = [2+nb*4, 5]
-    fig, axs = plt.subplots(1,nb, sharey=True)
-    if not hasattr(axs, "__len__"):
-        axs = [axs]
-    for (i, (n, z)) in zip(range(nb),all):
-        im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", norm=CenteredNorm(0)) # , cmap="terrain"
-        axs[i].set_xlabel("x")
-        axs[i].xaxis.tick_top()
-        axs[i].xaxis.set_label_position('top') 
-        if i == 0:
-            axs[i].set_ylabel("y")
-        divider = make_axes_locatable(axs[i])
-        cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
-        fig.add_axes(cax)
-        cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
-        cbar.formatter.set_powerlimits((0, 0))
-        cbar.formatter.set_useMathText(True)
-        cbar.update_ticks()
-        cbar.set_label(n, labelpad=-60)
-    plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
-    plt.close()
+    name = info["name"]
+    case = info["case"]
+    if "Trento" in name and case == 0:
+        datats = einfo["datats"]
+    else:
+        datats = [(t,data)]
+
+    many = len(datats) > 1
+    for (id, (t,data)) in zip(range(100000), datats):
+        data = mask(info["coneoflight"], data)
+        n = info["nx"]
+        x = data[:,IDx]
+        y = data[:,IDy]
+        z = data[:,ID2De]
+        zref = ref[:,ID2De]
+        ziter = data[:,IDiter]
+        zut = data[:,ID2Dut]
+        zux = data[:,ID2Dux]
+        zvx = zux/zut
+        zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
+        zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
+        zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
+        nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
+        nr = n-1-nl
+        x = np.reshape(x, (n,n))[nl:nr,nl:nr]
+        y = np.reshape(y, (n,n))[nl:nr,nl:nr]
+        z = np.reshape(z, (n,n))[nl:nr,nl:nr]
+        ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
+        zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
+        zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
+        zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
+        zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
+        l = x[0][0]
+        r = x[0][-1]
+        d = y[0][0]
+        u = y[-1][0]
+        # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
+        all = [("e", z)]
+        if "Gubser" in info["name"] and not "Exponential" in info["name"]:
+            all += [("err continuum", zerr)]
+        if info["integration"] == "FixPoint":
+            all += [("iter", ziter)]
+        nb = len(all)
+        plt.rcParams["figure.figsize"] = [2+nb*4, 5]
+        fig, axs = plt.subplots(1,nb, sharey=True)
+        if not hasattr(axs, "__len__"):
+            axs = [axs]
+        for (i, (n, z)) in zip(range(nb),all):
+            im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", norm=CenteredNorm(0)) # , cmap="terrain"
+            axs[i].set_xlabel("x")
+            axs[i].xaxis.tick_top()
+            axs[i].xaxis.set_label_position('top') 
+            if i == 0:
+                axs[i].set_ylabel("y")
+            divider = make_axes_locatable(axs[i])
+            cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
+            fig.add_axes(cax)
+            cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+            cbar.formatter.set_powerlimits((0, 0))
+            cbar.formatter.set_useMathText(True)
+            cbar.update_ticks()
+            cbar.set_label(n, labelpad=-60)
+        if many:
+            figname = "figures/best_e_{}".format(info2name(info))
+            try:
+                os.mkdir(figname)
+            except FileExistsError:
+                None
+            plt.savefig("{}/{}.pdf".format(figname, id), dpi=100)
+        else:
+            plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
+        plt.close()
 
 def plotall1D(l, d):
     if l[0] == "1D":
