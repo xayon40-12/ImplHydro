@@ -347,15 +347,15 @@ def plot2d(l, datadts):
     many = len(datats) > 1
     nid = ceil(log(len(datats))/log(10))
     for (id, (t,data,diff)) in zip(range(100000), datats):
-        data = mask(info["coneoflight"], data)
+        mdata = mask(info["coneoflight"], data)
         n = info["nx"]
-        x = data[:,IDx]
-        y = data[:,IDy]
-        z = data[:,ID2De]
+        x = mdata[:,IDx]
+        y = mdata[:,IDy]
+        z = mdata[:,ID2De]
         zref = ref[:,ID2De]
-        ziter = data[:,IDiter]
-        zut = data[:,ID2Dut]
-        zux = data[:,ID2Dux]
+        ziter = mdata[:,IDiter]
+        zut = mdata[:,ID2Dut]
+        zux = mdata[:,ID2Dux]
         zvx = zux/zut
         zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
         zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
@@ -418,17 +418,21 @@ def plot2d(l, datadts):
         dt00 = np.reshape(diff[:,2], (n,n))
         dt01 = np.reshape(diff[:,3], (n,n))
         dt02 = np.reshape(diff[:,4], (n,n))
-        all = [("diff T00",dt00),("diff T01",dt01),("diff T02",dt02)]
+        totdt00 = dt00.sum()/abs(data[:,IDt00]).sum()
+        totdt01 = dt01.sum()/abs(data[:,IDt00+1]).sum()
+        totdt02 = dt02.sum()/abs(data[:,IDt00+2]).sum()
+        all = [("diff T00",dt00,totdt00),("diff T01",dt01,totdt01),("diff T02",dt02,totdt02)]
         nb = len(all)
         plt.rcParams["figure.figsize"] = [2+nb*4, 5]
         fig, axs = plt.subplots(1,nb, sharey=True)
         if not hasattr(axs, "__len__"):
             axs = [axs]
-        for (i, (n, z)) in zip(range(nb),all):
+        for (i, (n, z, tot)) in zip(range(nb),all):
             im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
             axs[i].set_xlabel("x")
             axs[i].xaxis.tick_top()
             axs[i].xaxis.set_label_position('top') 
+            axs[i].title.set_text("relative: {:.2e}".format(tot))
             if i == 0:
                 axs[i].set_ylabel("y")
             divider = make_axes_locatable(axs[i])
