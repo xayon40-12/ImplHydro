@@ -35,6 +35,7 @@ pub fn save<
     let dx = context.dx;
     let maxdt = context.maxdt;
     let v = context.vs;
+    let diffv = context.total_diff_vs;
     let dim = if VY == 1 { 1 } else { 2 };
     let foldername = &format!(
         "{}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
@@ -55,11 +56,14 @@ pub fn save<
 
     let fc3 = F + C + 3;
     let mut ligne = vec![0.0f64; VY * VX * fc3];
+    let f2 = F + 2;
+    let mut ligne_diff = vec![0.0f64; VY * VX * f2];
     for j in 0..VY {
         for i in 0..VX {
             let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
             let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
             let v = v[j][i];
+            let diffv = diffv[j][i];
             let vars = (context.transform)(t, (context.constraints)(t, v));
 
             if TXT {
@@ -77,8 +81,11 @@ pub fn save<
             ligne[0 + fc3 * (i + j * VX)] = x;
             ligne[1 + fc3 * (i + j * VX)] = y;
             ligne[2 + fc3 * (i + j * VX)] = nbiter[j][i] as f64;
+            ligne_diff[0 + f2 * (i + j * VX)] = x;
+            ligne_diff[1 + f2 * (i + j * VX)] = y;
             for f in 0..F {
                 ligne[3 + f + fc3 * (i + j * VX)] = v[f];
+                ligne_diff[2 + f + f2 * (i + j * VX)] = diffv[f];
             }
             for c in 0..C {
                 ligne[3 + F + c + fc3 * (i + j * VX)] = vars[c];
@@ -94,6 +101,13 @@ pub fn save<
     std::fs::write(
         &format!("{}/data.dat", dir),
         ligne
+            .into_iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect::<Vec<_>>(),
+    )?;
+    std::fs::write(
+        &format!("{}/diff.dat", dir),
+        ligne_diff
             .into_iter()
             .flat_map(|v| v.to_le_bytes())
             .collect::<Vec<_>>(),

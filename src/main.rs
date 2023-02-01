@@ -271,8 +271,9 @@ fn big_stack() {
     let l = 10.0;
     let tend = 4.5;
     // let ord = Order2;
-    // let ord = Order3(VOID);
-    let ord = Order3(1e-9);
+    let ord = Order2Cut(1e-9);
+    // let ord = Order3;
+    // let ord = Order3Cut(1e-9);
 
     let ermin = 1e-5;
     run::<100>(t0, tend, 2.0 * l / 100.0, ermin, ord);

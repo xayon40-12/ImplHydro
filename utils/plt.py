@@ -122,8 +122,10 @@ for d in os.listdir(dir):
 
     # data = np.loadtxt(p+"/data.txt")
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
+    diff = np.fromfile(p+"/diff.dat", dtype="float64").reshape((n,-1))
     if "Trento" in name and case == 0:
-        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1))) for t in ts]
+        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),
+                             np.fromfile(dird+"/"+t+"/diff.dat", dtype="float64").reshape((n,-1))) for t in ts]
         info["datats"] = datats
 
     if name == "RiemannVoid": # only consider what expend from the central initial discontinuity
@@ -148,7 +150,7 @@ for d in os.listdir(dir):
 
     info["coneoflight"] = coneoflight
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
-    datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data)
+    datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data, diff)
 
 meanvoidratio /= countvoidratio
 print("maxvoidratio: ", maxvoidratio, "meanvoidratio: ", meanvoidratio)
@@ -179,7 +181,7 @@ def convergence(a, ref=None):
     coneoflight = a[maxdts[0]][0]["coneoflight"]
     all = []
     for i in maxdts:
-        (info, v) = a[i]
+        (info, v, diff) = a[i]
         cost = info["cost"]
         dt = info["maxdt"]
         avdt = (info["tend"]-info["t0"])/info["tsteps"]
@@ -261,7 +263,7 @@ def plot1d(l, datas):
     dts = [dts[0],dts[-1]] # only keep best and worst
     mindt = dts[0]
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
-    (info,ref) = datas["Heun"][mindt]
+    (info,ref,diffref) = datas["Heun"][mindt]
     ref = mask(info["coneoflight"], ref)
     nl = 2
     # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
@@ -296,7 +298,7 @@ def plot1d(l, datas):
         # numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
 
         for (scheme,linestyle) in zip(schemes, lstyles):
-            (sinfo, data) = datas[scheme][dt]
+            (sinfo, data, diff) = datas[scheme][dt]
             data = mask(sinfo["coneoflight"], data)
             iter = data[:,IDiter][nl:nr]
             y = data[:,ID1De][nl:nr]
@@ -329,9 +331,9 @@ def plot1d(l, datas):
 
 def plot2d(l, datadts):
     maxdts = sorted([dt for dt in datadts])
-    (info, ref) = datadts[maxdts[0]]
+    (info, ref, diffref) = datadts[maxdts[0]]
     ref = mask(info["coneoflight"], ref)
-    (einfo, data) = datadts[maxdts[fromref]]
+    (einfo, data, diff) = datadts[maxdts[fromref]]
 
     t = info["tend"]
     name = info["name"]
@@ -339,10 +341,10 @@ def plot2d(l, datadts):
     if "Trento" in name and case == 0:
         datats = einfo["datats"]
     else:
-        datats = [(t,data)]
+        datats = [(t,data,diff)]
 
     many = len(datats) > 1
-    for (id, (t,data)) in zip(range(100000), datats):
+    for (id, (t,data,diff)) in zip(range(100000), datats):
         data = mask(info["coneoflight"], data)
         n = info["nx"]
         x = data[:,IDx]
@@ -382,7 +384,10 @@ def plot2d(l, datadts):
         if not hasattr(axs, "__len__"):
             axs = [axs]
         for (i, (n, z)) in zip(range(nb),all):
-            im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", norm=CenteredNorm(0)) # , cmap="terrain"
+            if n == "iter":
+                im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
+            else:
+                im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
             axs[i].set_xlabel("x")
             axs[i].xaxis.tick_top()
             axs[i].xaxis.set_label_position('top') 
@@ -405,6 +410,42 @@ def plot2d(l, datadts):
             plt.savefig("{}/{}.pdf".format(figname, id), dpi=100)
         else:
             plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
+        plt.close()
+
+        n = info["nx"]
+        dt00 = np.reshape(diff[:,2], (n,n))
+        dt01 = np.reshape(diff[:,3], (n,n))
+        dt02 = np.reshape(diff[:,4], (n,n))
+        all = [("diff T00",dt00),("diff T01",dt01),("diff T02",dt02)]
+        nb = len(all)
+        plt.rcParams["figure.figsize"] = [2+nb*4, 5]
+        fig, axs = plt.subplots(1,nb, sharey=True)
+        if not hasattr(axs, "__len__"):
+            axs = [axs]
+        for (i, (n, z)) in zip(range(nb),all):
+            im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
+            axs[i].set_xlabel("x")
+            axs[i].xaxis.tick_top()
+            axs[i].xaxis.set_label_position('top') 
+            if i == 0:
+                axs[i].set_ylabel("y")
+            divider = make_axes_locatable(axs[i])
+            cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
+            fig.add_axes(cax)
+            cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+            cbar.formatter.set_powerlimits((0, 0))
+            cbar.formatter.set_useMathText(True)
+            cbar.update_ticks()
+            cbar.set_label(n, labelpad=-60)
+        if many:
+            figname = "figures/best_diff_{}".format(info2name(info))
+            try:
+                os.mkdir(figname)
+            except FileExistsError:
+                None
+            plt.savefig("{}/{}.pdf".format(figname, id), dpi=100)
+        else:
+            plt.savefig("figures/best_diff_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
 
 def plotall1D(l, d):

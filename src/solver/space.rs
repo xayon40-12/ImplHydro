@@ -41,14 +41,16 @@ pub type SpaceDiff<'a, const F: usize, const VX: usize, const VY: usize, const C
 #[derive(Debug, Clone, Copy)]
 pub enum Order {
     Order2,
-    Order3(f64),
+    Order2Cut(f64),
+    Order3,
+    Order3Cut(f64),
 }
 
 pub fn order<'a, const F: usize, const VX: usize, const VY: usize, const C: usize>(
     o: Order,
 ) -> SpaceDiff<'a, F, VX, VY, C> {
     match o {
-        Order::Order2 => &kt,
-        Order::Order3(_) => &kl,
+        Order::Order2Cut(_) | Order::Order2 => &kt,
+        Order::Order3Cut(_) | Order::Order3 => &kl,
     }
 }

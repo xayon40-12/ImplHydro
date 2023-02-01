@@ -20,6 +20,7 @@ pub fn explicit<
         boundary,
         post_constraints,
         local_interaction: _,
+        total_diff_vs,
         vs,
         k, // k[S-1] is used as old vs
         r: Scheme { aij: a, .. },
@@ -85,7 +86,11 @@ pub fn explicit<
     if let Some(post) = post_constraints {
         for vy in 0..VY {
             for vx in 0..VX {
+                let tmp = vs[vy][vx];
                 vs[vy][vx] = post(*ot, vs[vy][vx]);
+                for f in 0..F {
+                    total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
+                }
             }
         }
     }

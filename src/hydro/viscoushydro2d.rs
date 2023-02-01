@@ -3,7 +3,7 @@ use crate::solver::{
     run,
     space::{id_flux_limiter, order, Dir, Eigenvalues, Order},
     time::{newton::newton, schemes::Scheme},
-    utils::ghost,
+    utils::{ghost, zeros},
     Transform,
 };
 
@@ -317,8 +317,8 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
     let t00cut: f64 = match space_order {
-        Order::Order2 => VOID,
-        Order::Order3(t00cut) => t00cut,
+        Order::Order3 | Order::Order2 => VOID,
+        Order::Order3Cut(t00cut) | Order::Order2Cut(t00cut) => t00cut,
     };
     let post = |_t: f64, vs: [f64; 9]| {
         if vs[0] < t00cut {
@@ -328,8 +328,8 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
         }
     };
     let post: Option<Transform<9, 9>> = match space_order {
-        Order::Order2 => None,
-        Order::Order3(_) => Some(&post),
+        Order::Order3 | Order::Order2 => None,
+        Order::Order3Cut(_) | Order::Order2Cut(_) => Some(&post),
     };
     let context = Context {
         fun: &flux,
@@ -339,6 +339,7 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
         post_constraints: post,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vs,
+        total_diff_vs: zeros(&vs),
         k,
         r,
         dt: 1e10,

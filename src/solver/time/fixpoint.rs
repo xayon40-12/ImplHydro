@@ -23,6 +23,7 @@ pub fn fixpoint<
         boundary,
         local_interaction,
         vs,
+        total_diff_vs,
         k,
         r: Scheme { aij: a, bj: b, .. },
         dt: dto,
@@ -150,7 +151,11 @@ pub fn fixpoint<
     if let Some(post) = post_constraints {
         for vy in 0..VY {
             for vx in 0..VX {
+                let tmp = vs[vy][vx];
                 vs[vy][vx] = post(*ot, vs[vy][vx]);
+                for f in 0..F {
+                    total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
+                }
             }
         }
     }

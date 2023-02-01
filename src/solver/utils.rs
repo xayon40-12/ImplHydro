@@ -4,6 +4,12 @@ pub fn zero(_j: i32, _n: usize) -> usize {
     0
 }
 
+pub fn zeros<const VY: usize, const VX: usize, const F: usize>(
+    _: &[[[f64; F]; VX]; VY],
+) -> [[[f64; F]; VX]; VY] {
+    [[[0.0; F]; VX]; VY]
+}
+
 pub fn periodic(j: i32, n: usize) -> usize {
     if j >= n as i32 {
         j as usize - n

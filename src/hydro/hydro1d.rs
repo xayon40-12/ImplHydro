@@ -3,7 +3,7 @@ use crate::solver::{
     run,
     space::{order, Dir, Eigenvalues, Order},
     time::{newton::newton, schemes::Scheme},
-    utils::{ghost, zero},
+    utils::{ghost, zero, zeros},
     Transform,
 };
 
@@ -129,8 +129,8 @@ pub fn hydro1d<const V: usize, const S: usize>(
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
     let t00cut: f64 = match space_order {
-        Order::Order2 => VOID,
-        Order::Order3(t00cut) => t00cut,
+        Order::Order3 | Order::Order2 => VOID,
+        Order::Order3Cut(t00cut) | Order::Order2Cut(t00cut) => t00cut,
     };
     let post = |_t: f64, [t00, t01]: [f64; 2]| {
         if t00 < t00cut {
@@ -140,8 +140,8 @@ pub fn hydro1d<const V: usize, const S: usize>(
         }
     };
     let post: Option<Transform<2, 2>> = match space_order {
-        Order::Order2 => None,
-        Order::Order3(_) => Some(&post),
+        Order::Order3 | Order::Order2 => None,
+        Order::Order3Cut(_) | Order::Order2Cut(_) => Some(&post),
     };
     let context = Context {
         fun: &flux,
@@ -151,6 +151,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
         post_constraints: post,
         local_interaction: [1, 0], // use a distance of 0 to emulate 1D
         vs,
+        total_diff_vs: zeros(&vs),
         k,
         r,
         dt: 1e10,

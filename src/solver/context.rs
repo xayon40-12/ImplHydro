@@ -39,6 +39,7 @@ pub struct Context<
     pub post_constraints: Option<Transform<'a, F, F>>,
     pub local_interaction: [i32; 2],
     pub vs: [[[f64; F]; VX]; VY],
+    pub total_diff_vs: [[[f64; F]; VX]; VY],
     pub k: [[[[f64; F]; VX]; VY]; S],
     pub r: Scheme<S>,
     pub dt: f64,
