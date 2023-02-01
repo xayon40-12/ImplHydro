@@ -15,6 +15,7 @@ from math import sqrt
 from riemann import riemann
 from gubser import gubser
 from scipy import signal
+from math import ceil,log
 
 warnings.filterwarnings("ignore", category=matplotlib.MatplotlibDeprecationWarning) # disable matplotlib deprecation warning
 np.seterr(invalid='ignore') # disable invalid waring for numpy as NaN are used to discard data in the void
@@ -344,6 +345,7 @@ def plot2d(l, datadts):
         datats = [(t,data,diff)]
 
     many = len(datats) > 1
+    nid = ceil(log(len(datats))/log(10))
     for (id, (t,data,diff)) in zip(range(100000), datats):
         data = mask(info["coneoflight"], data)
         n = info["nx"]
@@ -407,7 +409,7 @@ def plot2d(l, datadts):
                 os.mkdir(figname)
             except FileExistsError:
                 None
-            plt.savefig("{}/{}.pdf".format(figname, id), dpi=100)
+            plt.savefig(("{}/{:0>"+str(nid)+"}.pdf").format(figname, id), dpi=100)
         else:
             plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
@@ -443,7 +445,7 @@ def plot2d(l, datadts):
                 os.mkdir(figname)
             except FileExistsError:
                 None
-            plt.savefig("{}/{}.pdf".format(figname, id), dpi=100)
+            plt.savefig(("{}/{:0>"+str(nid)+"}.pdf").format(figname, id), dpi=100)
         else:
             plt.savefig("figures/best_diff_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
