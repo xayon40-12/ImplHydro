@@ -165,5 +165,5 @@ pub fn hydro1d<const V: usize, const S: usize>(
         p,
         dpde,
     };
-    run(context, name, &schemename, integration, &names)
+    run(context, name, &schemename, integration, &names, &[])
 }

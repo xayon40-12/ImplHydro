@@ -10,6 +10,10 @@ use {
 
 pub type Transform<'a, const F: usize, const C: usize> =
     &'a (dyn Fn(f64, [f64; F]) -> [f64; C] + Sync);
+pub type Observable<'a, const F: usize, const C: usize, const VX: usize, const VY: usize> = (
+    &'a str,
+    &'a (dyn Fn(f64, &[[[f64; F]; VX]; VY], &[[[f64; C]; VX]; VY]) -> Vec<f64> + Sync),
+);
 
 pub fn save<
     Opt: Sync,
@@ -28,6 +32,7 @@ pub fn save<
     tsteps: usize,
     nbiter: [[usize; VX]; VY],
     integration: Integration,
+    observables: &[Observable<F, C, VX, VY>],
 ) -> std::io::Result<()> {
     let t0 = context.t0;
     let tend = context.tend;
@@ -35,6 +40,7 @@ pub fn save<
     let dx = context.dx;
     let maxdt = context.maxdt;
     let v = context.vs;
+    let mut trans = [[[0.0f64; C]; VX]; VY];
     let diffv = context.total_diff_vs;
     let dim = if VY == 1 { 1 } else { 2 };
     let foldername = &format!(
@@ -64,7 +70,8 @@ pub fn save<
             let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
             let v = v[j][i];
             let diffv = diffv[j][i];
-            let vars = (context.transform)(t, (context.constraints)(t, v));
+            trans[j][i] = (context.transform)(t, (context.constraints)(t, v));
+            let vars = trans[j][i];
 
             if TXT {
                 let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
@@ -112,6 +119,16 @@ pub fn save<
             .flat_map(|v| v.to_le_bytes())
             .collect::<Vec<_>>(),
     )?;
+    for (name, obs) in observables {
+        let ligne = obs(t, &v, &trans);
+        std::fs::write(
+            &format!("{}/{}.dat", dir, name),
+            ligne
+                .into_iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<_>>(),
+        )?;
+    }
     if TXT {
         std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     }
@@ -137,6 +154,7 @@ pub fn run<
     schemename: &str,
     integration: Integration,
     names: &([&str; F], [&str; C]),
+    observables: &[Observable<F, C, VX, VY>],
 ) -> Option<([[[f64; F]; VX]; VY], f64, usize, usize)> {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
@@ -161,6 +179,7 @@ pub fn run<
             tsteps,
             nbiter,
             integration,
+            observables,
         );
         match err {
             Err(e) => eprintln!("{}", e),

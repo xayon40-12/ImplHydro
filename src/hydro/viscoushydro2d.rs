@@ -4,10 +4,10 @@ use crate::solver::{
     space::{id_flux_limiter, order, Dir, Eigenvalues, Order},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zeros},
-    Transform,
+    Observable, Transform,
 };
 
-use super::{Init2D, Pressure, VOID};
+use super::{hydro2d::momentum_anysotropy, Init2D, Pressure, VOID};
 
 fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let tt00 = vs[0];
@@ -353,5 +353,16 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
         p,
         dpde,
     };
-    run(context, name, &schemename, integration, &names)
+
+    let observables: [Observable<9, 12, V, V>; 1] =
+        [("momentum_anysotropy", &momentum_anysotropy::<9, 12, V, V>)];
+
+    run(
+        context,
+        name,
+        &schemename,
+        integration,
+        &names,
+        &observables,
+    )
 }

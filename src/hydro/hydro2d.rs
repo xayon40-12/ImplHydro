@@ -4,7 +4,7 @@ use crate::solver::{
     space::{order, Dir, Eigenvalues, Order},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zeros},
-    Transform,
+    Observable, Transform,
 };
 
 use super::{solve_v, Init2D, Pressure, VOID};
@@ -169,6 +169,21 @@ fn flux<const V: usize>(
     ]
 }
 
+pub fn momentum_anysotropy<const F: usize, const C: usize, const VX: usize, const VY: usize>(
+    _t: f64,
+    vs: &[[[f64; F]; VX]; VY],
+    _trs: &[[[f64; C]; VX]; VY],
+) -> Vec<f64> {
+    let mt01 = vs
+        .iter()
+        .fold(0.0, |a, v| a + v.iter().fold(0.0, |a, v| a + v[1]));
+    let mt02 = vs
+        .iter()
+        .fold(0.0, |a, v| a + v.iter().fold(0.0, |a, v| a + v[2]));
+    let anysotropy = (mt01 - mt02) / (mt01 + mt02);
+    vec![anysotropy]
+}
+
 pub fn hydro2d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
@@ -245,5 +260,16 @@ pub fn hydro2d<const V: usize, const S: usize>(
         p,
         dpde,
     };
-    run(context, name, &schemename, integration, &names)
+
+    let observables: [Observable<3, 6, V, V>; 1] =
+        [("momentum_anysotropy", &momentum_anysotropy::<3, 6, V, V>)];
+
+    run(
+        context,
+        name,
+        &schemename,
+        integration,
+        &names,
+        &observables,
+    )
 }
