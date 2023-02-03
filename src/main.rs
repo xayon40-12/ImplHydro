@@ -211,13 +211,7 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize>(
     Some(())
 }
 
-pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64, ord: Order) {
-    let gl1 = gauss_legendre_1();
-    // let gl2 = gauss_legendre_2();
-    let heun = heun();
-    // let cn = crank_nicolson();
-
-    const TRENTO: usize = 1;
+pub fn prepare_trento<const V: usize, const TRENTO: usize>() -> [[[f64; V]; V]; TRENTO] {
     let mut trentos = [[[0.0f64; V]; V]; TRENTO];
     for i in 0..TRENTO {
         trentos[i] = load_matrix(&format!("e{}/{:0>2}.dat", V, i)).expect(&format!(
@@ -225,6 +219,22 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64, ord: Order) 
             V, i
         ));
     }
+    trentos
+}
+
+pub fn run<const V: usize, const TRENTO: usize>(
+    t0: f64,
+    tend: f64,
+    dx: f64,
+    ermin: f64,
+    ord: Order,
+) {
+    let gl1 = gauss_legendre_1();
+    // let gl2 = gauss_legendre_2();
+    let heun = heun();
+    // let cn = crank_nicolson();
+
+    let trentos = prepare_trento::<V, TRENTO>();
 
     let er0 = (dx / 2.0).powf(2.0); // er0 is so that dt0 = sq2(er0) = dx/2
     let sq2 = |v: f64| v.powf(0.5);
@@ -267,18 +277,30 @@ pub fn run<const V: usize>(t0: f64, tend: f64, dx: f64, ermin: f64, ord: Order) 
 }
 
 fn big_stack() {
+    const TRENTO: usize = 100;
     let t0 = 1.0;
     let l = 10.0;
-    let tend = 4.5;
+    let tend = t0 + 5.0;
     // let ord = Order2;
     let ord = Order2Cut(1e-9);
     // let ord = Order3;
     // let ord = Order3Cut(1e-9);
 
-    let ermin = 1e-5;
-    run::<100>(t0, tend, 2.0 * l / 100.0, ermin, ord);
-    // run::<200>(t0, tend, 2.0 * l / 200.0, ermin, ord);
-    // run::<300>(t0, tend, 2.0 * l / 300.0, ermin, ord);
+    // let ermin = 1e-5;
+    // run::<100, TRENTO>(t0, tend, 2.0 * l / 100.0, ermin, ord);
+    // run::<200, TRENTO>(t0, tend, 2.0 * l / 200.0, ermin, ord);
+    // run::<300, TRENTO>(t0, tend, 2.0 * l / 300.0, ermin, ord);
+
+    const N: usize = 100;
+    let trentos = prepare_trento::<N, TRENTO>();
+    let gl1 = gauss_legendre_1();
+    let dx = 2.0 * l / N as f64;
+    let er = 1e-3;
+    let sq2 = |v: f64| v.powf(0.5);
+    for i in 0..TRENTO {
+        let trento = Some((trentos[i], i));
+        hydro2d::<N, 1, Ideal2D>(t0, tend, dx, sq2(er), er, gl1, trento, ord);
+    }
 }
 
 fn main() {

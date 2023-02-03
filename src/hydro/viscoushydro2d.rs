@@ -7,7 +7,7 @@ use crate::solver::{
     Observable, Transform,
 };
 
-use super::{hydro2d::momentum_anysotropy, Init2D, Pressure, VOID};
+use super::{Init2D, Pressure, VOID};
 
 fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let tt00 = vs[0];
@@ -277,6 +277,23 @@ fn flux<const V: usize>(
     ]
 }
 
+pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
+    t: f64,
+    _vs: &[[[f64; 9]; VX]; VY],
+    tran: &[[[f64; 12]; VX]; VY],
+) -> Vec<f64> {
+    let mut mt11 = 0.0;
+    let mut mt22 = 0.0;
+    for j in 0..VY {
+        for i in 0..VX {
+            mt11 += f11(t, tran[j][i]);
+            mt22 += f22(t, tran[j][i]);
+        }
+    }
+    let anysotropy = (mt11 - mt22) / (mt11 + mt22);
+    vec![anysotropy]
+}
+
 // viscous hydro is in Milne coordinates
 pub fn viscoushydro2d<const V: usize, const S: usize>(
     name: &str,
@@ -355,7 +372,7 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     };
 
     let observables: [Observable<9, 12, V, V>; 1] =
-        [("momentum_anysotropy", &momentum_anysotropy::<9, 12, V, V>)];
+        [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
 
     run(
         context,

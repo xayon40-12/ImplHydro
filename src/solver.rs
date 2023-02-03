@@ -186,6 +186,7 @@ pub fn run<
             Ok(()) => {}
         }
     };
+    save(&context, cost, tsteps, nbiter);
     while context.t < context.tend {
         let d = next_save - context.t;
         if d <= 1e-14 {

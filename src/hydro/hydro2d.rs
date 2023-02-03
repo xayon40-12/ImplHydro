@@ -169,18 +169,20 @@ fn flux<const V: usize>(
     ]
 }
 
-pub fn momentum_anysotropy<const F: usize, const C: usize, const VX: usize, const VY: usize>(
-    _t: f64,
-    vs: &[[[f64; F]; VX]; VY],
-    _trs: &[[[f64; C]; VX]; VY],
+pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
+    t: f64,
+    _vs: &[[[f64; 3]; VX]; VY],
+    tran: &[[[f64; 6]; VX]; VY],
 ) -> Vec<f64> {
-    let mt01 = vs
-        .iter()
-        .fold(0.0, |a, v| a + v.iter().fold(0.0, |a, v| a + v[1]));
-    let mt02 = vs
-        .iter()
-        .fold(0.0, |a, v| a + v.iter().fold(0.0, |a, v| a + v[2]));
-    let anysotropy = (mt01 - mt02) / (mt01 + mt02);
+    let mut mt11 = 0.0;
+    let mut mt22 = 0.0;
+    for j in 0..VY {
+        for i in 0..VX {
+            mt11 += f11(t, tran[j][i]);
+            mt22 += f22(t, tran[j][i]);
+        }
+    }
+    let anysotropy = (mt11 - mt22) / (mt11 + mt22);
     vec![anysotropy]
 }
 
@@ -262,7 +264,7 @@ pub fn hydro2d<const V: usize, const S: usize>(
     };
 
     let observables: [Observable<3, 6, V, V>; 1] =
-        [("momentum_anysotropy", &momentum_anysotropy::<3, 6, V, V>)];
+        [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
 
     run(
         context,
