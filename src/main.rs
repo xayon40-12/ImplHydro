@@ -282,8 +282,8 @@ fn big_stack() {
     let l = 10.0;
     let tend = t0 + 5.0;
     // let ord = Order2;
-    let ord = Order2Cut(1e-9);
-    // let ord = Order3;
+    // let ord = Order2Cut(1e-9);
+    let ord = Order3;
     // let ord = Order3Cut(1e-9);
 
     // let ermin = 1e-5;

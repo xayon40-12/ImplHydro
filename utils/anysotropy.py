@@ -5,8 +5,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-nl = 3
-lstyles = [(3*i,(3,5,1,5)) for i in range(nl)]
+a = 3
+nl = 4
+b = a*nl
+lstyles = [(a*i,(a,b,1,b)) for i in range(nl)]
 
 for (n,linestyle) in zip([d for d in os.listdir('.') if os.path.isdir(d)],lstyles):
     anys = []
