@@ -10,7 +10,7 @@ nl = 4
 b = a*nl
 lstyles = [(a*i,(a,b,1,b)) for i in range(nl)]
 
-for (n,linestyle) in zip([d for d in os.listdir('.') if os.path.isdir(d)],lstyles):
+for (i, (n,linestyle)) in zip(range(100000),zip([d for d in os.listdir('.') if os.path.isdir(d)],lstyles)):
     anys = []
     anys2 = []
     count = 0
@@ -30,7 +30,7 @@ for (n,linestyle) in zip([d for d in os.listdir('.') if os.path.isdir(d)],lstyle
     sig = np.sqrt(anys2-anys*anys)
     err = sig/np.sqrt(count)
 
-    plt.errorbar(ts, anys, err, label=n, linestyle=linestyle)
+    plt.errorbar(ts, anys, err, label=n, linestyle=linestyle, elinewidth=1, errorevery=(i,nl))
 plt.xlabel("t-t0")
 plt.ylabel(r"$\frac{<T^{11}-T^{22}>}{<T^{11}+T^{22}>}$")
 plt.legend()
