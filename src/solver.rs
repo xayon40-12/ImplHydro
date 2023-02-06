@@ -189,7 +189,7 @@ pub fn run<
     save(&context, cost, tsteps, nbiter);
     while context.t < context.tend {
         let d = next_save - context.t;
-        if d <= 1e-14 {
+        if d <= context.t * 1e-14 {
             save(&context, cost, tsteps, nbiter);
             current_save = next_save;
             next_save = current_save + save_every;
@@ -219,7 +219,7 @@ pub fn run<
         }
     }
     let d = next_save - context.t;
-    if d < context.dt * 1e-14 {
+    if d < context.t * 1e-14 && context.t <= context.tend * (1.0 + 1e-14) {
         save(&context, cost, tsteps, nbiter);
     }
     let elapsed = now.elapsed().as_secs_f64();
