@@ -34,6 +34,8 @@ ID2Dut = 9
 ID2Dux = 10
 ID2Duy = 11
 
+CUT = 1e-5
+
 crop = 9
 fromref = 1
 
@@ -91,35 +93,14 @@ for d in os.listdir(dir):
     if info["ny"] == 1:
         dim = "1D"
         n = nx
-        coneoflight = np.full((nx), 1)
     else:
         dim = "2D"
         n = nx*nx
-        coneoflight = np.full((nx,nx), 1)
     info["dim"] = dim
     name = info["name"]
     (name, case) = extractCase(name)
     info["name"] = name
     info["case"] = case
-    ttot = tend-t0
-    ttot2 = ttot*ttot
-
-    if "Trento" in name:
-        fname = "e{}/{:0>2}.dat".format(nx, case)
-        inite = np.loadtxt(fname)
-        # fill a circle of 1 for the cone of light
-        for j in range(nx):
-            y = (j-(nx-1)/2)*dx
-            for i in range(nx):
-                x = (i-(nx-1)/2)*dx
-                if x*x+y*y >= ttot2:
-                    coneoflight[j,i] = 0
-
-    elif name == "RiemannVoid": # only consider what expend from the central initial discontinuity
-        for i in range(nx):
-            x = (i-(nx-1)/2)*dx
-            if x*x > ttot2:
-                coneoflight[i] = 0
 
     # data = np.loadtxt(p+"/data.txt")
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
@@ -129,27 +110,13 @@ for d in os.listdir(dir):
                              np.fromfile(dird+"/"+t+"/diff.dat", dtype="float64").reshape((n,-1))) for t in ts]
         info["datats"] = datats
 
-    if name == "RiemannVoid": # only consider what expend from the central initial discontinuity
-        inite = np.vectorize(riem_void_e)(data[:,IDx])
+    t00 = data[:,IDt00]
+    m = t00>CUT
+    err = abs(t00.sum()-t00[m].sum())/t00.sum()
+    meanvoidratio += err
+    maxvoidratio = max(maxvoidratio, err)
+    countvoidratio += 1
 
-    if "Trento" in name or name == "RiemannVoid":
-        init = np.sign(inite) # use np.sign to set void at 0 and non void as 1
-        # convolve the cone of light to the initial data and check what is greater that 1
-        # to avoid numerical artifacts (as initially it was 0 or 1 and we convolve with ones).
-        # Then convert to int to have 0 and 1 again.
-        coneoflight = (signal.fftconvolve(init,coneoflight,mode='same')>=1).astype(int)
-        coneoflight = coneoflight.reshape(n)
-
-        tote = data[:,ID2De].sum() # sum of final energy density
-        invoid = (data[:,ID2De]*(1-coneoflight)).sum() # look at artifacts in the void
-        ratio = invoid/tote
-        meanvoidratio += ratio
-        countvoidratio += 1
-        maxvoidratio = max(maxvoidratio,ratio)
-    else:
-        coneoflight = coneoflight.reshape(n)
-
-    info["coneoflight"] = coneoflight
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
     datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data, diff)
 
@@ -160,12 +127,12 @@ with open("voidratio.txt", "w") as fv:
 print("finished loading")
 # sys.exit(0)
 
-def compare(i, coneoflight, vss, wss):
+def compare(i, vss, wss):
     maxerr = 0
     meanerr = 0
     count = 0
-    for (inlight, vs, ws) in zip(coneoflight,vss,wss):
-        if inlight and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
+    for (vs, ws) in zip(vss,wss):
+        if  vs[IDt00] > CUT and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
             count += 1
             a = vs[i]
             b = ws[i]
@@ -179,7 +146,6 @@ def convergence(a, ref=None):
     maxdts = sorted([dt for dt in a])
     if ref is None:
         ref = a[maxdts[0]][1]
-    coneoflight = a[maxdts[0]][0]["coneoflight"]
     all = []
     for i in maxdts:
         (info, v, diff) = a[i]
@@ -191,7 +157,7 @@ def convergence(a, ref=None):
             id = ID1De
         else:
             id = ID2De
-        (maxerr, meanerr) = compare(id, coneoflight, ref, v)
+        (maxerr, meanerr) = compare(id, ref, v)
         all += [(v, info, maxerr, meanerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
@@ -254,7 +220,10 @@ def integrationPriority(integration):
     else:
         return 2
 
-def mask(m,data):
+# def mask(m,data):
+#     return np.concatenate((data[:,:3], data[:,3:]/m[:,None]), axis=1)
+def mask(data):
+    m = (data[:,IDt00]>CUT).astype(int)
     return np.concatenate((data[:,:3], data[:,3:]/m[:,None]), axis=1)
 
 def plot1d(l, datas):
@@ -265,7 +234,7 @@ def plot1d(l, datas):
     mindt = dts[0]
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
     (info,ref,diffref) = datas["Heun"][mindt]
-    ref = mask(info["coneoflight"], ref)
+    ref = mask(ref)
     nl = 2
     # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
     lstyles = [(3*i,(3,5,1,5)) for i in range(nl)]
@@ -280,7 +249,7 @@ def plot1d(l, datas):
     x = ref[:,IDx]
     nl = next(i for (i,v) in zip(range(n),x) if v >= -crop)
     nr = n-1-nl
-    x = x[nl:nr]/(tend-t0)
+    x = x[nl:nr]/(t-t0)
     ycontinuum = [e(x) for x in x]
     yref = ref[:,ID1De]
     yref = yref[nl:nr]
@@ -300,7 +269,7 @@ def plot1d(l, datas):
 
         for (scheme,linestyle) in zip(schemes, lstyles):
             (sinfo, data, diff) = datas[scheme][dt]
-            data = mask(sinfo["coneoflight"], data)
+            data = mask(data)
             iter = data[:,IDiter][nl:nr]
             y = data[:,ID1De][nl:nr]
             yut = data[:,ID1Dut][nl:nr]
@@ -331,12 +300,12 @@ def plot1d(l, datas):
         plt.close()
 
 def plot2d(l, datadts):
+    [dim,name,t0,tend,dx,n,t,case,scheme] = l
     maxdts = sorted([dt for dt in datadts])
     (info, ref, diffref) = datadts[maxdts[0]]
-    ref = mask(info["coneoflight"], ref)
+    ref = mask(ref)
     (einfo, data, diff) = datadts[maxdts[fromref]]
 
-    t = info["tend"]
     name = info["name"]
     case = info["case"]
     if "Trento" in name and case == 0:
@@ -347,7 +316,7 @@ def plot2d(l, datadts):
     many = len(datats) > 1
     nid = ceil(log(len(datats))/log(10))
     for (id, (t,data,diff)) in zip(range(100000), datats):
-        mdata = mask(info["coneoflight"], data)
+        mdata = mask(data)
         n = info["nx"]
         x = mdata[:,IDx]
         y = mdata[:,IDy]
@@ -375,7 +344,8 @@ def plot2d(l, datadts):
         d = y[0][0]
         u = y[-1][0]
         # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
-        all = [("e", z)]
+        # all = [("e", z)]
+        all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
         if "Gubser" in info["name"] and not "Exponential" in info["name"]:
             all += [("err continuum", zerr)]
         if info["integration"] == "FixPoint":
