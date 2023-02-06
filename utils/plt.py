@@ -104,10 +104,14 @@ for d in os.listdir(dir):
 
     # data = np.loadtxt(p+"/data.txt")
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
-    diff = np.fromfile(p+"/diff.dat", dtype="float64").reshape((n,-1))
+    def find_diff(dir):
+        try:
+            return np.fromfile(dir+"/diff.dat", dtype="float64").reshape((n,-1))
+        except FileNotFoundError:
+            return None
+    diff = find_diff(p)
     if "Trento" in name and case == 0:
-        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),
-                             np.fromfile(dird+"/"+t+"/diff.dat", dtype="float64").reshape((n,-1))) for t in ts]
+        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),find_diff(dird+"/"+t)) for t in ts]
         info["datats"] = datats
 
     t00 = data[:,IDt00]
@@ -344,8 +348,8 @@ def plot2d(l, datadts):
         d = y[0][0]
         u = y[-1][0]
         # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
-        # all = [("e", z)]
-        all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
+        all = [("e", z)]
+        # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
         if "Gubser" in info["name"] and not "Exponential" in info["name"]:
             all += [("err continuum", zerr)]
         if info["integration"] == "FixPoint":
@@ -384,45 +388,46 @@ def plot2d(l, datadts):
             plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
 
-        n = info["nx"]
-        dt00 = np.reshape(diff[:,2], (n,n))
-        dt01 = np.reshape(diff[:,3], (n,n))
-        dt02 = np.reshape(diff[:,4], (n,n))
-        totdt00 = dt00.sum()/abs(data[:,IDt00]).sum()
-        totdt01 = dt01.sum()/abs(data[:,IDt00+1]).sum()
-        totdt02 = dt02.sum()/abs(data[:,IDt00+2]).sum()
-        all = [("diff T00",dt00,totdt00),("diff T01",dt01,totdt01),("diff T02",dt02,totdt02)]
-        nb = len(all)
-        plt.rcParams["figure.figsize"] = [2+nb*4, 5]
-        fig, axs = plt.subplots(1,nb, sharey=True)
-        if not hasattr(axs, "__len__"):
-            axs = [axs]
-        for (i, (n, z, tot)) in zip(range(nb),all):
-            im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
-            axs[i].set_xlabel("x")
-            axs[i].xaxis.tick_top()
-            axs[i].xaxis.set_label_position('top') 
-            axs[i].title.set_text("relative: {:.2e}".format(tot))
-            if i == 0:
-                axs[i].set_ylabel("y")
-            divider = make_axes_locatable(axs[i])
-            cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
-            fig.add_axes(cax)
-            cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
-            cbar.formatter.set_powerlimits((0, 0))
-            cbar.formatter.set_useMathText(True)
-            cbar.update_ticks()
-            cbar.set_label(n, labelpad=-60)
-        if many:
-            figname = "figures/best_diff_{}".format(info2name(info))
-            try:
-                os.mkdir(figname)
-            except FileExistsError:
-                None
-            plt.savefig(("{}/{:0>"+str(nid)+"}.pdf").format(figname, id), dpi=100)
-        else:
-            plt.savefig("figures/best_diff_{}.pdf".format(info2name(info)), dpi=100)
-        plt.close()
+        if not diff is None:
+            n = info["nx"]
+            dt00 = np.reshape(diff[:,2], (n,n))
+            dt01 = np.reshape(diff[:,3], (n,n))
+            dt02 = np.reshape(diff[:,4], (n,n))
+            totdt00 = dt00.sum()/abs(data[:,IDt00]).sum()
+            totdt01 = dt01.sum()/abs(data[:,IDt00+1]).sum()
+            totdt02 = dt02.sum()/abs(data[:,IDt00+2]).sum()
+            all = [("diff T00",dt00,totdt00),("diff T01",dt01,totdt01),("diff T02",dt02,totdt02)]
+            nb = len(all)
+            plt.rcParams["figure.figsize"] = [2+nb*4, 5]
+            fig, axs = plt.subplots(1,nb, sharey=True)
+            if not hasattr(axs, "__len__"):
+                axs = [axs]
+            for (i, (n, z, tot)) in zip(range(nb),all):
+                im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
+                axs[i].set_xlabel("x")
+                axs[i].xaxis.tick_top()
+                axs[i].xaxis.set_label_position('top') 
+                axs[i].title.set_text("relative: {:.2e}".format(tot))
+                if i == 0:
+                    axs[i].set_ylabel("y")
+                divider = make_axes_locatable(axs[i])
+                cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
+                fig.add_axes(cax)
+                cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+                cbar.formatter.set_powerlimits((0, 0))
+                cbar.formatter.set_useMathText(True)
+                cbar.update_ticks()
+                cbar.set_label(n, labelpad=-60)
+            if many:
+                figname = "figures/best_diff_{}".format(info2name(info))
+                try:
+                    os.mkdir(figname)
+                except FileExistsError:
+                    None
+                plt.savefig(("{}/{:0>"+str(nid)+"}.pdf").format(figname, id), dpi=100)
+            else:
+                plt.savefig("figures/best_diff_{}.pdf".format(info2name(info)), dpi=100)
+            plt.close()
 
 def plotall1D(l, d):
     if l[0] == "1D":
