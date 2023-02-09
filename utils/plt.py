@@ -175,9 +175,9 @@ def info2name(info, scheme=True):
 def convall(l, ds):
     [dim,name,t0,tend,dx,nx,t] = l
     # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
-    # ally = [("max", 2), ("mean", 3)]
+    ally = [("max", 2), ("mean", 3)]
     allx = [("cost", 5)]
-    ally = [("max", 2)]
+    # ally = [("max", 2)]
     for (dtcost, dci) in allx:
         for (meanmax, mmi) in ally:
             plt.rcParams["figure.figsize"] = [8, 5]
@@ -313,12 +313,84 @@ def plot2d(l, datadts):
     name = info["name"]
     case = info["case"]
     if "Trento" in name and case == 0:
-        datats = einfo["datats"]
+        datats = np.array(einfo["datats"], dtype=object)
     else:
         datats = [(t,data,diff)]
 
-    many = len(datats) > 1
-    nid = ceil(log(len(datats))/log(10))
+    ld = len(datats)
+    many = ld > 1
+    nid = ceil(log(ld)/log(10))
+
+    if many:
+        num = 5
+        nums = np.array([i for i in range(ld) if i%(ld/(num-1)) == 0]+[ld-1])
+        nb = 1
+        if "Gubser" in info["name"]:
+            nb += 1
+        if info["integration"] == "FixPoint":
+            nb += 1
+        plt.rcParams["figure.figsize"] = [2+num*4, nb*5]
+        fig, axs = plt.subplots(nb,num, sharey=True) #, sharex=True)
+        if not hasattr(axs[0], "__len__"):
+            axs = [axs]
+        for (id, (t,data,diff)) in zip(range(num),datats[nums]):
+            mdata = mask(data)
+            n = info["nx"]
+            x = mdata[:,IDx]
+            y = mdata[:,IDy]
+            z = mdata[:,ID2De]
+            zref = ref[:,ID2De]
+            ziter = mdata[:,IDiter]
+            zut = mdata[:,ID2Dut]
+            zux = mdata[:,ID2Dux]
+            zvx = zux/zut
+            zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
+            zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
+            zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
+            nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
+            nr = n-1-nl
+            x = np.reshape(x, (n,n))[nl:nr,nl:nr]
+            y = np.reshape(y, (n,n))[nl:nr,nl:nr]
+            z = np.reshape(z, (n,n))[nl:nr,nl:nr]
+            ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
+            zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
+            zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
+            zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
+            zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
+            l = x[0][0]
+            r = x[0][-1]
+            d = y[0][0]
+            u = y[-1][0]
+            all = [("e", z)]
+            if "Gubser" in info["name"]:
+                all += [("err continuum", zerr)]
+            if info["integration"] == "FixPoint":
+                all += [("iter", ziter)]
+            for (i, (n, z)) in zip(range(nb),all):
+                if n == "iter":
+                    im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
+                else:
+                    im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
+                axs[i][id].xaxis.tick_top()
+                axs[i][id].xaxis.set_label_position('top') 
+                if i == 0:
+                    axs[i][id].set_xlabel("x")
+                if i>0:
+                    axs[i][id].tick_params(axis='x', which='both', labelbottom=False, labeltop=False)
+                if id == 0:
+                    axs[i][id].set_ylabel("y")
+                divider = make_axes_locatable(axs[i][id])
+                cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
+                fig.add_axes(cax)
+                cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+                cbar.formatter.set_powerlimits((0, 0))
+                cbar.formatter.set_useMathText(True)
+                cbar.update_ticks()
+                cbar.set_label(n, labelpad=-60)
+
+        plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
+        plt.close()
+    
     for (id, (t,data,diff)) in zip(range(100000), datats):
         mdata = mask(data)
         n = info["nx"]
