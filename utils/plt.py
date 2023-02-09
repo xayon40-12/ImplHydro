@@ -386,7 +386,7 @@ def plot2d(l, datadts):
                 cbar.formatter.set_powerlimits((0, 0))
                 cbar.formatter.set_useMathText(True)
                 cbar.update_ticks()
-                cbar.set_label(n, labelpad=-60)
+                cbar.set_label("{} (t = {:.2} fm)".format(n, t), labelpad=-60)
 
         plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
