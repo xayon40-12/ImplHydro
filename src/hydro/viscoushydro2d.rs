@@ -114,76 +114,76 @@ fn f22(t: f64, [e, pe, _, _, _, uy, _, _, _, _, _, pi22]: [f64; 12]) -> f64 {
 
 fn u1pi00(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    ux * pi00
 }
 fn u1pi01(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    ux * pi01
 }
 fn u1pi02(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    ux * pi02
 }
 fn u1pi11(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    ux * pi11
 }
 fn u1pi12(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    ux * pi12
 }
 fn u1pi22(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    ux * pi22
 }
 
 fn u2pi00(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    uy * pi00
 }
 fn u2pi01(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    uy * pi01
 }
 fn u2pi02(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    uy * pi02
 }
 fn u2pi11(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    uy * pi11
 }
 fn u2pi12(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    uy * pi12
 }
 fn u2pi22(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22]: [f64; 12],
 ) -> f64 {
-    0.0
+    uy * pi22
 }
 
 pub enum Coordinate {
@@ -263,17 +263,26 @@ fn flux<const V: usize>(
 
     let [_e, pe, _dpde, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22] =
         transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+
+    let mut spi = [0.0f64; 6];
+
+    for j in 0..3 {
+        for i in j..3 {
+            spi[i + 3 * j] = 0.0; // TODO expression of rhs viscosity equation
+        }
+    }
+
     let s = pe;
     [
         -divf1[0] - divf2[0] - s,
         -divf1[1] - divf2[1],
         -divf1[2] - divf2[2],
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
+        -divf1[3] - divf2[3] - spi[1],
+        -divf1[4] - divf2[4] - spi[2],
+        -divf1[5] - divf2[5] - spi[3],
+        -divf1[6] - divf2[6] - spi[4],
+        -divf1[7] - divf2[7] - spi[5],
+        -divf1[8] - divf2[8] - spi[6],
     ]
 }
 
