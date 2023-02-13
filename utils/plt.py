@@ -34,7 +34,7 @@ ID2Dut = 9
 ID2Dux = 10
 ID2Duy = 11
 
-CUT = 1e-5
+CUT = 1e-100
 
 animate = False
 animate_arg = "-animate="
@@ -340,7 +340,7 @@ def plot2d(l, datadts):
 
     name = info["name"]
     case = info["case"]
-    if ("Trento" in name and case == 0) or "Gubser" in name:
+    if (("Trento" in name and case == 0) or "Gubser" in name) and animate:
         datats = np.array(einfo["datats"], dtype=object)
     else:
         datats = [(t,data,diff)]
@@ -419,55 +419,95 @@ def plot2d(l, datadts):
         plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
     
-    if animate:
-        for (id, (t,data,diff)) in zip(range(100000), datats):
-            mdata = mask(data)
+    for (id, (t,data,diff)) in zip(range(100000), datats):
+        mdata = mask(data)
+        n = info["nx"]
+        x = mdata[:,IDx]
+        y = mdata[:,IDy]
+        z = mdata[:,ID2De]
+        zref = ref[:,ID2De]
+        ziter = mdata[:,IDiter]
+        zut = mdata[:,ID2Dut]
+        zux = mdata[:,ID2Dux]
+        zvx = zux/zut
+        zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
+        zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
+        zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
+        nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
+        nr = n-1-nl
+        x = np.reshape(x, (n,n))[nl:nr,nl:nr]
+        y = np.reshape(y, (n,n))[nl:nr,nl:nr]
+        z = np.reshape(z, (n,n))[nl:nr,nl:nr]
+        ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
+        zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
+        zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
+        zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
+        zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
+        l = x[0][0]
+        r = x[0][-1]
+        d = y[0][0]
+        u = y[-1][0]
+        # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
+        all = [("e", z)]
+        # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
+        if "Gubser" in info["name"] and not "Exponential" in info["name"]:
+            all += [("err", zerr)]
+        if info["integration"] == "FixPoint":
+            all += [("iter", ziter)]
+        nb = len(all)
+        plt.rcParams["figure.figsize"] = [2+nb*4, 5]
+        fig, axs = plt.subplots(1,nb, sharey=True)
+        if not hasattr(axs, "__len__"):
+            axs = [axs]
+        for (i, (n, z)) in zip(range(nb),all):
+            if n == "iter":
+                im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
+            else:
+                im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
+            axs[i].set_xlabel("x")
+            axs[i].xaxis.tick_top()
+            axs[i].xaxis.set_label_position('top') 
+            if i == 0:
+                axs[i].set_ylabel("y")
+            divider = make_axes_locatable(axs[i])
+            cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
+            fig.add_axes(cax)
+            cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+            cbar.formatter.set_powerlimits((0, 0))
+            cbar.formatter.set_useMathText(True)
+            cbar.update_ticks()
+            cbar.set_label(n, labelpad=-60)
+        if many:
+            figname = "figures/best_e_{}".format(info2name(info))
+            try:
+                os.mkdir(figname)
+            except FileExistsError:
+                None
+            plt.savefig(("{}/{:0>"+str(nid)+"}.pdf").format(figname, id), dpi=100)
+        else:
+            plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
+        plt.close()
+
+        if not diff is None:
             n = info["nx"]
-            x = mdata[:,IDx]
-            y = mdata[:,IDy]
-            z = mdata[:,ID2De]
-            zref = ref[:,ID2De]
-            ziter = mdata[:,IDiter]
-            zut = mdata[:,ID2Dut]
-            zux = mdata[:,ID2Dux]
-            zvx = zux/zut
-            zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
-            zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
-            zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
-            nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
-            nr = n-1-nl
-            x = np.reshape(x, (n,n))[nl:nr,nl:nr]
-            y = np.reshape(y, (n,n))[nl:nr,nl:nr]
-            z = np.reshape(z, (n,n))[nl:nr,nl:nr]
-            ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
-            zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
-            zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
-            zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
-            zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
-            l = x[0][0]
-            r = x[0][-1]
-            d = y[0][0]
-            u = y[-1][0]
-            # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
-            all = [("e", z)]
-            # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
-            if "Gubser" in info["name"] and not "Exponential" in info["name"]:
-                all += [("err", zerr)]
-            if info["integration"] == "FixPoint":
-                all += [("iter", ziter)]
+            dt00 = np.reshape(diff[:,2], (n,n))
+            dt01 = np.reshape(diff[:,3], (n,n))
+            dt02 = np.reshape(diff[:,4], (n,n))
+            totdt00 = dt00.sum()/abs(data[:,IDt00]).sum()
+            totdt01 = dt01.sum()/abs(data[:,IDt00+1]).sum()
+            totdt02 = dt02.sum()/abs(data[:,IDt00+2]).sum()
+            all = [("diff T00",dt00,totdt00),("diff T01",dt01,totdt01),("diff T02",dt02,totdt02)]
             nb = len(all)
             plt.rcParams["figure.figsize"] = [2+nb*4, 5]
             fig, axs = plt.subplots(1,nb, sharey=True)
             if not hasattr(axs, "__len__"):
                 axs = [axs]
-            for (i, (n, z)) in zip(range(nb),all):
-                if n == "iter":
-                    im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
-                else:
-                    im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
+            for (i, (n, z, tot)) in zip(range(nb),all):
+                im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
                 axs[i].set_xlabel("x")
                 axs[i].xaxis.tick_top()
                 axs[i].xaxis.set_label_position('top') 
+                axs[i].title.set_text("relative: {:.2e}".format(tot))
                 if i == 0:
                     axs[i].set_ylabel("y")
                 divider = make_axes_locatable(axs[i])
@@ -479,56 +519,15 @@ def plot2d(l, datadts):
                 cbar.update_ticks()
                 cbar.set_label(n, labelpad=-60)
             if many:
-                figname = "figures/best_e_{}".format(info2name(info))
+                figname = "figures/best_diff_{}".format(info2name(info))
                 try:
                     os.mkdir(figname)
                 except FileExistsError:
                     None
                 plt.savefig(("{}/{:0>"+str(nid)+"}.pdf").format(figname, id), dpi=100)
             else:
-                plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
+                plt.savefig("figures/best_diff_{}.pdf".format(info2name(info)), dpi=100)
             plt.close()
-
-            if not diff is None:
-                n = info["nx"]
-                dt00 = np.reshape(diff[:,2], (n,n))
-                dt01 = np.reshape(diff[:,3], (n,n))
-                dt02 = np.reshape(diff[:,4], (n,n))
-                totdt00 = dt00.sum()/abs(data[:,IDt00]).sum()
-                totdt01 = dt01.sum()/abs(data[:,IDt00+1]).sum()
-                totdt02 = dt02.sum()/abs(data[:,IDt00+2]).sum()
-                all = [("diff T00",dt00,totdt00),("diff T01",dt01,totdt01),("diff T02",dt02,totdt02)]
-                nb = len(all)
-                plt.rcParams["figure.figsize"] = [2+nb*4, 5]
-                fig, axs = plt.subplots(1,nb, sharey=True)
-                if not hasattr(axs, "__len__"):
-                    axs = [axs]
-                for (i, (n, z, tot)) in zip(range(nb),all):
-                    im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
-                    axs[i].set_xlabel("x")
-                    axs[i].xaxis.tick_top()
-                    axs[i].xaxis.set_label_position('top') 
-                    axs[i].title.set_text("relative: {:.2e}".format(tot))
-                    if i == 0:
-                        axs[i].set_ylabel("y")
-                    divider = make_axes_locatable(axs[i])
-                    cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
-                    fig.add_axes(cax)
-                    cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
-                    cbar.formatter.set_powerlimits((0, 0))
-                    cbar.formatter.set_useMathText(True)
-                    cbar.update_ticks()
-                    cbar.set_label(n, labelpad=-60)
-                if many:
-                    figname = "figures/best_diff_{}".format(info2name(info))
-                    try:
-                        os.mkdir(figname)
-                    except FileExistsError:
-                        None
-                    plt.savefig(("{}/{:0>"+str(nid)+"}.pdf").format(figname, id), dpi=100)
-                else:
-                    plt.savefig("figures/best_diff_{}.pdf".format(info2name(info)), dpi=100)
-                plt.close()
 
 def plotall1D(l, d):
     if l[0] == "1D" or "Gubser" in l[1]:
