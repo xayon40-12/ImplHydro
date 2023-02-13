@@ -1,7 +1,7 @@
 use crate::solver::{
     context::{Boundary, Context, Integration},
     run,
-    space::{id_flux_limiter, order, Dir, Eigenvalues, Order},
+    space::{id_flux_limiter, kt::kt, Dir, Eigenvalues},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zeros},
     Observable, Transform,
@@ -200,7 +200,7 @@ fn flux<const V: usize>(
     dx: f64,
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
-    ord: &Order,
+    _ord: &(),
 ) -> [f64; 9] {
     let theta = 1.1;
     // let theta = 2.0;
@@ -225,7 +225,7 @@ fn flux<const V: usize>(
     let pre = &id_flux_limiter;
     let post = &id_flux_limiter;
 
-    let diff = order(*ord);
+    let diff = kt;
     let divf1 = diff(
         vs,
         bound,
@@ -306,7 +306,6 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     p: Pressure,
     dpde: Pressure,
     init: Init2D<9>,
-    space_order: Order,
 ) -> Option<([[[f64; 9]; V]; V], f64, usize, usize)> {
     let schemename = r.name;
     let mut vs = [[[0.0; 9]; V]; V];
@@ -333,27 +332,12 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     }
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
-    let t00cut: f64 = match space_order {
-        Order::Order3 | Order::Order2 => VOID,
-        Order::Order3Cut(t00cut) | Order::Order2Cut(t00cut) => t00cut,
-    };
-    let post = |_t: f64, vs: [f64; 9]| {
-        if vs[0] < t00cut {
-            [VOID, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        } else {
-            vs
-        }
-    };
-    let post: Option<Transform<9, 9>> = match space_order {
-        Order::Order3 | Order::Order2 => None,
-        Order::Order3Cut(_) | Order::Order2Cut(_) => Some(&post),
-    };
     let context = Context {
         fun: &flux,
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
-        post_constraints: post,
+        post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vs,
         total_diff_vs: zeros(&vs),
@@ -366,7 +350,7 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
         t,
         t0: t,
         tend,
-        opt: space_order,
+        opt: (),
         p,
         dpde,
     };

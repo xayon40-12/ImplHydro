@@ -49,6 +49,8 @@ pub fn save<
     );
 
     const TXT: bool = false;
+    const DIFF: bool = false;
+
     let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
     if TXT {
         for f in 0..F {
@@ -88,11 +90,15 @@ pub fn save<
             ligne[0 + fc3 * (i + j * VX)] = x;
             ligne[1 + fc3 * (i + j * VX)] = y;
             ligne[2 + fc3 * (i + j * VX)] = nbiter[j][i] as f64;
-            ligne_diff[0 + f2 * (i + j * VX)] = x;
-            ligne_diff[1 + f2 * (i + j * VX)] = y;
+            if DIFF {
+                ligne_diff[0 + f2 * (i + j * VX)] = x;
+                ligne_diff[1 + f2 * (i + j * VX)] = y;
+            }
             for f in 0..F {
                 ligne[3 + f + fc3 * (i + j * VX)] = v[f];
-                ligne_diff[2 + f + f2 * (i + j * VX)] = diffv[f];
+                if DIFF {
+                    ligne_diff[2 + f + f2 * (i + j * VX)] = diffv[f];
+                }
             }
             for c in 0..C {
                 ligne[3 + F + c + fc3 * (i + j * VX)] = vars[c];
@@ -112,13 +118,15 @@ pub fn save<
             .flat_map(|v| v.to_le_bytes())
             .collect::<Vec<_>>(),
     )?;
-    std::fs::write(
-        &format!("{}/diff.dat", dir),
-        ligne_diff
-            .into_iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect::<Vec<_>>(),
-    )?;
+    if DIFF {
+        std::fs::write(
+            &format!("{}/diff.dat", dir),
+            ligne_diff
+                .into_iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<_>>(),
+        )?;
+    }
     for (name, obs) in observables {
         let ligne = obs(t, &v, &trans);
         std::fs::write(

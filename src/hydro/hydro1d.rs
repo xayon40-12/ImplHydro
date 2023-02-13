@@ -1,7 +1,7 @@
 use crate::solver::{
     context::{Boundary, Context, Integration},
     run,
-    space::{order, Dir, Eigenvalues, Order},
+    space::{kt::kt, Dir, Eigenvalues},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zero, zeros},
     Transform,
@@ -59,7 +59,7 @@ fn flux<const V: usize>(
     dx: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
-    ord: &Order,
+    _opt: &(),
 ) -> [f64; 2] {
     let theta = 1.1;
     // let theta = 2.0;
@@ -79,7 +79,7 @@ fn flux<const V: usize>(
         [t00, t01]
     };
 
-    let diff = order(*ord);
+    let diff = kt;
 
     let divf0 = diff(
         vs,
@@ -111,7 +111,6 @@ pub fn hydro1d<const V: usize, const S: usize>(
     p: Pressure,
     dpde: Pressure,
     init: Init1D<2>,
-    space_order: Order,
 ) -> Option<([[[f64; 2]; V]; 1], f64, usize, usize)> {
     let schemename = r.name;
     let mut vs = [[[0.0; 2]; V]];
@@ -128,27 +127,12 @@ pub fn hydro1d<const V: usize, const S: usize>(
     }
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
-    let t00cut: f64 = match space_order {
-        Order::Order3 | Order::Order2 => VOID,
-        Order::Order3Cut(t00cut) | Order::Order2Cut(t00cut) => t00cut,
-    };
-    let post = |_t: f64, [t00, t01]: [f64; 2]| {
-        if t00 < t00cut {
-            [VOID, 0.0]
-        } else {
-            [t00, t01]
-        }
-    };
-    let post: Option<Transform<2, 2>> = match space_order {
-        Order::Order3 | Order::Order2 => None,
-        Order::Order3Cut(_) | Order::Order2Cut(_) => Some(&post),
-    };
     let context = Context {
         fun: &flux,
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &zero], // use noboundary to emulate 1D
-        post_constraints: post,
+        post_constraints: None,
         local_interaction: [1, 0], // use a distance of 0 to emulate 1D
         vs,
         total_diff_vs: zeros(&vs),
@@ -161,7 +145,7 @@ pub fn hydro1d<const V: usize, const S: usize>(
         t,
         t0: t,
         tend,
-        opt: space_order,
+        opt: (),
         p,
         dpde,
     };
