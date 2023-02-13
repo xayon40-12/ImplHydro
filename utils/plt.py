@@ -34,7 +34,7 @@ ID2Dut = 9
 ID2Dux = 10
 ID2Duy = 11
 
-CUT = 1e-100
+CUT = 1e-5
 
 animate = False
 animate_arg = "-animate="
