@@ -340,7 +340,7 @@ def plot2d(l, datadts):
 
     name = info["name"]
     case = info["case"]
-    if (("Trento" in name and case == 0) or "Gubser" in name) and animate:
+    if (("Trento" in name and case == 0) or "Gubser" in name):
         datats = np.array(einfo["datats"], dtype=object)
     else:
         datats = [(t,data,diff)]
@@ -416,10 +416,13 @@ def plot2d(l, datadts):
                 cbar.update_ticks()
                 cbar.set_label("{} (t = {:.2} fm)".format(n, t), labelpad=-60)
 
-        plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
+        plt.savefig("figures/many_best_e_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
     
-    for (id, (t,data,diff)) in zip(range(100000), datats):
+    if not animate:
+        datats = [datats[-1]]
+
+    for (id, (t,data,diff)) in zip(range(1000000), datats):
         mdata = mask(data)
         n = info["nx"]
         x = mdata[:,IDx]
@@ -477,7 +480,7 @@ def plot2d(l, datadts):
             cbar.formatter.set_useMathText(True)
             cbar.update_ticks()
             cbar.set_label(n, labelpad=-60)
-        if many:
+        if many and animate:
             figname = "figures/best_e_{}".format(info2name(info))
             try:
                 os.mkdir(figname)
@@ -518,7 +521,7 @@ def plot2d(l, datadts):
                 cbar.formatter.set_useMathText(True)
                 cbar.update_ticks()
                 cbar.set_label(n, labelpad=-60)
-            if many:
+            if many and animate:
                 figname = "figures/best_diff_{}".format(info2name(info))
                 try:
                     os.mkdir(figname)
