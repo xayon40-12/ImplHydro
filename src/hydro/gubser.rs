@@ -1,6 +1,6 @@
 use crate::hydro::hydro2d::{f00, f01, f02};
 
-use super::Pressure;
+use super::Eos;
 
 pub fn gubser(x: f64, y: f64, t: f64) -> [f64; 4] {
     let r = (x * x + y * y).sqrt();
@@ -20,7 +20,7 @@ pub fn gubser(x: f64, y: f64, t: f64) -> [f64; 4] {
     }
     [e, ut, ux, uy]
 }
-pub fn gubser_err<const V: usize>(v: [[[f64; 4]; V]; V], t: f64, dx: f64, p: Pressure) -> [f64; 2] {
+pub fn gubser_err<const V: usize>(v: [[[f64; 4]; V]; V], t: f64, dx: f64, p: Eos) -> [f64; 2] {
     let v2 = ((V - 1) as f64) / 2.0;
     let mut maxerrt00 = 0.0f64;
     let mut meanerrt00 = 0.0f64;
@@ -43,8 +43,8 @@ pub fn gubser_err<const V: usize>(v: [[[f64; 4]; V]; V], t: f64, dx: f64, p: Pre
 
 pub fn init_gubser<'a>(
     t0: f64,
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
+    p: Eos<'a>,
+    dpde: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; 3] + 'a> {
     Box::new(move |_, (x, y)| {
         let [e, ut, ux, uy] = gubser(x, y, t0);

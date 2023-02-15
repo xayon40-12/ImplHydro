@@ -7,7 +7,7 @@ use implhydro::{
         gubser::init_gubser,
         hydro1d, hydro2d, ideal_gas,
         riemann::init_riemann,
-        HydroOutput, Pressure, F_IDEAL_1D, F_IDEAL_2D,
+        Eos, HydroOutput, F_IDEAL_1D, F_IDEAL_2D,
     },
     solver::time::schemes::*,
 };
@@ -41,7 +41,7 @@ impl<const V: usize, const S: usize> DoHydro<V, S, Option<([[f64; V]; V], usize)
         } else {
             format!("Gubser")
         };
-        let (p, dpde): (Pressure, Pressure) = if init_e.is_some() {
+        let (p, dpde): (Eos, Eos) = if init_e.is_some() {
             (&wb::p, &wb::dpde)
         } else {
             (&ideal_gas::p, &ideal_gas::dpde)
@@ -73,18 +73,8 @@ impl<const V: usize, const S: usize> DoHydro<V, S, bool> for Ideal1D<V> {
         let p = &ideal_gas::p;
         let dpde = &ideal_gas::dpde;
         let name = format!("Riemann{}", void);
-        hydro1d::hydro1d::<V, S>(
-            &name,
-            maxdt,
-            er,
-            t0,
-            tend,
-            dx,
-            r,
-            p,
-            dpde,
-            &init_riemann(1.0, p, dpde, use_void),
-        )
+        let init = &init_riemann(1.0, p, dpde, use_void);
+        hydro1d::hydro1d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::hydro::Pressure;
+use crate::hydro::Eos;
 
 use super::{time::schemes::Scheme, Transform};
 
@@ -50,6 +50,6 @@ pub struct Context<
     pub t0: f64,
     pub tend: f64,
     pub opt: Opt,
-    pub p: Pressure<'a>,
-    pub dpde: Pressure<'a>,
+    pub p: Eos<'a>,
+    pub dpde: Eos<'a>,
 }

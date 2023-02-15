@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read};
 
-use super::{hydro1d, hydro2d, Pressure, VOID};
+use super::{hydro1d, hydro2d, Eos, VOID};
 
 pub fn load_matrix<const VX: usize, const VY: usize>(
     filename: &str,
@@ -44,8 +44,8 @@ pub fn load_matrix<const VX: usize, const VY: usize>(
 pub fn init_from_energy_1d<'a, const VX: usize>(
     t0: f64,
     es: [f64; VX],
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
+    p: Eos<'a>,
+    dpde: Eos<'a>,
 ) -> Box<dyn Fn(usize, f64) -> [f64; 2] + 'a> {
     Box::new(move |i, _| {
         let e = es[i].max(VOID);
@@ -57,8 +57,8 @@ pub fn init_from_energy_1d<'a, const VX: usize>(
 pub fn init_from_energy_2d<'a, const VX: usize, const VY: usize>(
     t0: f64,
     es: [[f64; VX]; VY],
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
+    p: Eos<'a>,
+    dpde: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; 3] + 'a> {
     Box::new(move |(i, j), _| {
         let e = es[j][i].max(VOID);

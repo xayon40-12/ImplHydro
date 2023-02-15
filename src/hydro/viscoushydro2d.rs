@@ -7,7 +7,7 @@ use crate::solver::{
     Observable, Transform,
 };
 
-use super::{Init2D, Pressure, VOID};
+use super::{Eos, Init2D, VOID};
 
 fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let tt00 = vs[0];
@@ -22,8 +22,8 @@ fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
 
 fn gen_transform<'a>(
     er: f64,
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
+    p: Eos<'a>,
+    dpde: Eos<'a>,
 ) -> Box<dyn Fn(f64, [f64; 9]) -> [f64; 12] + 'a + Sync> {
     Box::new(
         move |t, [tt00, tt01, tt02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22]| {
@@ -186,24 +186,42 @@ fn u2pi22(
     uy * pi22
 }
 
+fn u0(
+    _t: f64,
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    ut
+}
+fn u1(
+    _t: f64,
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    ux
+}
+fn u2(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    uy
+}
+
 pub enum Coordinate {
     Cartesian,
     Milne,
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[f64; 9]; V]; V]; 2],
+    [ov, vs]: [&[[[f64; 9]; V]; V]; 2],
     constraints: Transform<9, 9>,
     transform: Transform<9, 12>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
     [_ot, t]: [f64; 2],
-    [_dt, _cdt]: [f64; 2],
-    _ord: &(),
+    [_dt, cdt]: [f64; 2],
+    (etaovers, temperature): &(f64, Eos),
 ) -> [f64; 9] {
     let theta = 1.1;
-    // let theta = 2.0;
 
     // let pre = &|_t: f64, vs: [f64; 9]| {
     //     let t00 = vs[0];
@@ -226,7 +244,7 @@ fn flux<const V: usize>(
     let post = &id_flux_limiter;
 
     let diff = kt;
-    let divf1 = diff(
+    let (dxf, dxu) = diff(
         vs,
         bound,
         pos,
@@ -235,6 +253,7 @@ fn flux<const V: usize>(
         [
             &f01, &f11, &f12, &u1pi00, &u1pi01, &u1pi02, &u1pi11, &u1pi12, &u1pi22,
         ],
+        ([&u0, &u1, &u2], [0, 1, 2]),
         constraints,
         transform,
         Eigenvalues::Analytical(&eigenvaluesx),
@@ -243,7 +262,7 @@ fn flux<const V: usize>(
         dx,
         theta,
     );
-    let divf2 = diff(
+    let (dyf, dyu) = diff(
         vs,
         bound,
         pos,
@@ -252,6 +271,7 @@ fn flux<const V: usize>(
         [
             &f02, &f12, &f22, &u2pi00, &u2pi01, &u2pi02, &u2pi11, &u2pi12, &u2pi22,
         ],
+        ([&u0, &u1, &u2], [0, 1, 2]),
         constraints,
         transform,
         Eigenvalues::Analytical(&eigenvaluesy),
@@ -261,28 +281,66 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let [_e, pe, _dpde, _ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22] =
+    let [_e, _pe, _dpde, out, oux, ouy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22] =
+        transform(t, ov[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22] =
         transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+    let u = [ut, ux, uy];
+    let pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
+    let g = [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]];
+    let mut delta = [[0.0f64; 3]; 3];
+    for j in 0..3 {
+        for i in 0..3 {
+            delta[j][i] = g[j][i] - u[i] * u[j];
+        }
+    }
+
+    let dtu = [(ut - out) / cdt, (ux - oux) / cdt, (uy - ouy) / cdt];
+    let du = [dtu, dxu, dyu];
+    let mut ddu = [0.0f64; 3];
+    let mut dcuc = 0.0;
+    for j in 0..3 {
+        dcuc += du[j][j];
+        for i in 0..3 {
+            ddu[j] += u[i] * du[i][j];
+        }
+    }
 
     let mut spi = [0.0f64; 6];
 
-    for j in 0..3 {
-        for i in j..3 {
-            spi[i + 3 * j] = 0.0; // TODO expression of rhs viscosity equation
+    let temp = temperature(e);
+    let taupi = 3.0 * etaovers / temp;
+    let s = (e + pe) / temp;
+    let eta = etaovers * s;
+
+    let pirhs = |a: usize, b: usize| {
+        let mut spi = 0.5 * t * u[0] * pi[a][b] - 0.5 * pi[a][b] / taupi - pi[a][b] * dcuc / 6.0;
+        for i in 0..3 {
+            spi += -g[i][i] * pi[i][b] * u[a] * ddu[i];
+            spi += eta / taupi * (g[a][i] * du[i][b]);
+        }
+        spi += eta / taupi * (u[a] * ddu[b] - delta[a][b] * dcuc / 3.0);
+
+        spi
+    };
+
+    for a in 0..3 {
+        for b in 0..=a {
+            spi[b + 3 * a] = pirhs(a, b) + pirhs(b, a);
         }
     }
 
     let s = pe;
     [
-        -divf1[0] - divf2[0] - s,
-        -divf1[1] - divf2[1],
-        -divf1[2] - divf2[2],
-        -divf1[3] - divf2[3] - spi[1],
-        -divf1[4] - divf2[4] - spi[2],
-        -divf1[5] - divf2[5] - spi[3],
-        -divf1[6] - divf2[6] - spi[4],
-        -divf1[7] - divf2[7] - spi[5],
-        -divf1[8] - divf2[8] - spi[6],
+        -dxf[0] - dyf[0] - s,
+        -dxf[1] - dyf[1],
+        -dxf[2] - dyf[2],
+        -dxf[3] - dyf[3] - spi[0],
+        -dxf[4] - dyf[4] - spi[1],
+        -dxf[5] - dyf[5] - spi[2],
+        -dxf[6] - dyf[6] - spi[3],
+        -dxf[7] - dyf[7] - spi[4],
+        -dxf[8] - dyf[8] - spi[5],
     ]
 }
 
@@ -312,10 +370,13 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     tend: f64,
     dx: f64,
     r: Scheme<S>,
-    p: Pressure,
-    dpde: Pressure,
+    p: Eos,
+    dpde: Eos,
+    temperature: Eos,
     init: Init2D<9>,
 ) -> Option<([[[f64; 9]; V]; V], f64, usize, usize)> {
+    let etaovers: f64 = 0.0;
+
     let schemename = r.name;
     let mut vs = [[[0.0; 9]; V]; V];
     let names = (
@@ -359,7 +420,7 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
         t,
         t0: t,
         tend,
-        opt: (),
+        opt: (etaovers, temperature),
         p,
         dpde,
     };

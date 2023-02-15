@@ -1,11 +1,11 @@
 use crate::hydro::hydro1d::{f00, f01};
 
-use super::{Pressure, VOID};
+use super::{Eos, VOID};
 
 pub fn init_riemann<'a>(
     t0: f64,
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
+    p: Eos<'a>,
+    dpde: Eos<'a>,
     use_void: bool,
 ) -> Box<dyn Fn(usize, f64) -> [f64; 2] + 'a> {
     let el = 10.0;

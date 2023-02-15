@@ -7,7 +7,7 @@ use crate::solver::{
     Observable, Transform,
 };
 
-use super::{solve_v, Init2D, Pressure, VOID};
+use super::{solve_v, Eos, Init2D, VOID};
 
 fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
     let m = (t01 * t01 + t02 * t02).sqrt();
@@ -17,8 +17,8 @@ fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
 
 fn gen_transform<'a>(
     er: f64,
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
+    p: Eos<'a>,
+    dpde: Eos<'a>,
     coord: &Coordinate,
 ) -> Box<dyn Fn(f64, [f64; 3]) -> [f64; 6] + 'a + Sync> {
     let st = match coord {
@@ -123,13 +123,14 @@ fn flux<const V: usize>(
     // let post = &id_flux_limiter;
 
     let diff = kt;
-    let divf1 = diff(
+    let (divf1, _) = diff(
         vs,
         bound,
         pos,
         Dir::X,
         t,
         [&f01, &f11, &f12],
+        ([], []),
         constraints,
         transform,
         *eigx,
@@ -138,13 +139,14 @@ fn flux<const V: usize>(
         dx,
         theta,
     );
-    let divf2 = diff(
+    let (divf2, _) = diff(
         vs,
         bound,
         pos,
         Dir::Y,
         t,
         [&f02, &f21, &f22],
+        ([], []),
         constraints,
         transform,
         *eigy,
@@ -194,8 +196,8 @@ pub fn hydro2d<const V: usize, const S: usize>(
     tend: f64,
     dx: f64,
     r: Scheme<S>,
-    p: Pressure,
-    dpde: Pressure,
+    p: Eos,
+    dpde: Eos,
     init: Init2D<3>,
 ) -> Option<([[[f64; 3]; V]; V], f64, usize, usize)> {
     let coord = Coordinate::Milne;

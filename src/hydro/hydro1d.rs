@@ -7,7 +7,7 @@ use crate::solver::{
     Transform,
 };
 
-use super::{solve_v, Init1D, Pressure, VOID};
+use super::{solve_v, Eos, Init1D, VOID};
 
 fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
     let m = t01.abs();
@@ -16,8 +16,8 @@ fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
 }
 fn gen_transform<'a>(
     er: f64,
-    p: Pressure<'a>,
-    dpde: Pressure<'a>,
+    p: Eos<'a>,
+    dpde: Eos<'a>,
 ) -> Box<dyn Fn(f64, [f64; 2]) -> [f64; 5] + 'a + Sync> {
     Box::new(move |_t, [t00, t01]| {
         let m = t01.abs();
@@ -81,13 +81,14 @@ fn flux<const V: usize>(
 
     let diff = kt;
 
-    let divf0 = diff(
+    let (divf0, _) = diff(
         vs,
         bound,
         pos,
         Dir::X,
         1.0,
         [&f01, &f11],
+        ([], []),
         constraints,
         transform,
         Eigenvalues::Analytical(&eigenvalues),
@@ -108,8 +109,8 @@ pub fn hydro1d<const V: usize, const S: usize>(
     tend: f64,
     dx: f64,
     r: Scheme<S>,
-    p: Pressure,
-    dpde: Pressure,
+    p: Eos,
+    dpde: Eos,
     init: Init1D<2>,
 ) -> Option<([[[f64; 2]; V]; 1], f64, usize, usize)> {
     let schemename = r.name;

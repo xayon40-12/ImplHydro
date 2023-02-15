@@ -6,7 +6,7 @@ pub mod hydro2d;
 pub mod riemann;
 pub mod viscoushydro2d;
 
-pub type Pressure<'a> = &'a (dyn Fn(f64) -> f64 + Sync);
+pub type Eos<'a> = &'a (dyn Fn(f64) -> f64 + Sync);
 
 pub type Init1D<'a, const F: usize> = &'a dyn Fn(usize, f64) -> [f64; F];
 pub type Init2D<'a, const F: usize> = &'a dyn Fn((usize, usize), (f64, f64)) -> [f64; F];
@@ -72,7 +72,7 @@ pub mod ideal_gas {
     }
 }
 
-pub fn solve_v<'a>(t00: f64, m: f64, p: Pressure<'a>) -> Box<dyn Fn(f64) -> f64 + 'a> {
+pub fn solve_v<'a>(t00: f64, m: f64, p: Eos<'a>) -> Box<dyn Fn(f64) -> f64 + 'a> {
     Box::new(move |v| {
         let e = (t00 - m * v).max(VOID);
         let v = m / (t00 + p(e));

@@ -2,13 +2,14 @@ use crate::solver::{context::Boundary, utils::flux_limiter, Transform};
 
 use super::{Dir, Eigenvalues, Flux};
 
-pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize>(
+pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, const SD: usize>(
     vars: &[[[f64; F]; VX]; VY],
     [boundx, boundy]: &[Boundary; 2],
     [x, y]: [i32; 2],
     dir: Dir,
     t: f64,
     flux: [Flux<C>; F],
+    (secondary, sidx): ([Flux<C>; SD], [usize; SD]),
     constraints: Transform<F, F>,
     transform: Transform<F, C>,
     eigenvalues: Eigenvalues<C>,
@@ -16,7 +17,7 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize>(
     post_flux_limiter: Transform<F, F>,
     dx: f64,
     theta: f64,
-) -> [f64; F] {
+) -> ([f64; F], [f64; SD]) {
     let mut vals: [[f64; F]; 5] = [[0.0; F]; 5];
     let mut tvals: [[f64; C]; 5] = [[0.0; C]; 5];
     for l in 0..5 {
@@ -50,10 +51,14 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize>(
         }
     }
     let mut fpm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
-    for n in 0..F {
-        for jpm in 0..2 {
-            for pm in 0..2 {
+    let mut sdpm: [[[f64; SD]; 2]; 2] = [[[0.0; SD]; 2]; 2];
+    for jpm in 0..2 {
+        for pm in 0..2 {
+            for n in 0..F {
                 fpm[jpm][pm][n] = flux[n](t, tupm[jpm][pm]);
+            }
+            for n in 0..SD {
+                sdpm[jpm][pm][n] = secondary[n](t, tupm[jpm][pm]);
             }
         }
     }
@@ -85,16 +90,25 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize>(
         }
     }
     let mut h: [[f64; F]; 2] = [[0.0; F]; 2];
+    let mut sdh: [[f64; F]; 2] = [[0.0; F]; 2];
     for jpm in 0..2 {
         for n in 0..F {
             h[jpm][n] =
                 fpm[jpm][1][n] + fpm[jpm][0][n] - a[jpm] * (upm[jpm][1][n] - upm[jpm][0][n]);
         }
+        for n in 0..SD {
+            sdh[jpm][n] = sdpm[jpm][1][n] + sdpm[jpm][0][n]
+                - a[jpm] * (upm[jpm][1][sidx[n]] - upm[jpm][0][sidx[n]]);
+        }
     }
     let mut res: [f64; F] = [0.0; F];
+    let mut sdres: [f64; SD] = [0.0; SD];
     for n in 0..F {
         res[n] = (h[1][n] - h[0][n]) / (2.0 * dx);
     }
+    for n in 0..SD {
+        sdres[n] = (sdh[1][n] - sdh[0][n]) / (2.0 * dx);
+    }
 
-    res
+    (res, sdres)
 }
