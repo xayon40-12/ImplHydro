@@ -1,6 +1,9 @@
 use std::{fs::File, io::Read};
 
-use super::{hydro1d, hydro2d, Eos, VOID};
+use crate::hydro::{
+    ideal::{ideal1d, ideal2d},
+    Eos, VOID,
+};
 
 pub fn load_matrix<const VX: usize, const VY: usize>(
     filename: &str,
@@ -50,7 +53,7 @@ pub fn init_from_energy_1d<'a, const VX: usize>(
     Box::new(move |i, _| {
         let e = es[i].max(VOID);
         let vars = [e, p(e), dpde(e), 1.0, 0.0];
-        [hydro1d::f00(t0, vars), hydro1d::f01(t0, vars)]
+        [ideal1d::f00(t0, vars), ideal1d::f01(t0, vars)]
     })
 }
 
@@ -64,9 +67,9 @@ pub fn init_from_energy_2d<'a, const VX: usize, const VY: usize>(
         let e = es[j][i].max(VOID);
         let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0];
         [
-            hydro2d::f00(t0, vars),
-            hydro2d::f01(t0, vars),
-            hydro2d::f02(t0, vars),
+            ideal2d::f00(t0, vars),
+            ideal2d::f01(t0, vars),
+            ideal2d::f02(t0, vars),
         ]
     })
 }

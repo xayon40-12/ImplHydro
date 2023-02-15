@@ -7,7 +7,7 @@ use crate::solver::{
     Observable, Transform,
 };
 
-use super::{solve_v, Eos, Init2D, VOID};
+use crate::hydro::{solve_v, Eos, Init2D, VOID};
 
 fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
     let m = (t01 * t01 + t02 * t02).sqrt();
@@ -188,7 +188,7 @@ pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
     vec![anysotropy]
 }
 
-pub fn hydro2d<const V: usize, const S: usize>(
+pub fn ideal2d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
     er: f64,

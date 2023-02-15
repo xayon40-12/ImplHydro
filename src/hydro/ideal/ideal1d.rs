@@ -7,7 +7,7 @@ use crate::solver::{
     Transform,
 };
 
-use super::{solve_v, Eos, Init1D, VOID};
+use crate::hydro::{solve_v, Eos, Init1D, VOID};
 
 fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
     let m = t01.abs();
@@ -101,7 +101,7 @@ fn flux<const V: usize>(
     [-divf0[0], -divf0[1]]
 }
 
-pub fn hydro1d<const V: usize, const S: usize>(
+pub fn ideal1d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
     er: f64,

@@ -7,7 +7,7 @@ use crate::solver::{
     Observable, Transform,
 };
 
-use super::{Eos, Init2D, VOID};
+use crate::hydro::{Eos, Init2D, VOID};
 
 fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let tt00 = vs[0];

@@ -1,6 +1,6 @@
-use crate::hydro::hydro1d::{f00, f01};
+use crate::hydro::ideal::ideal1d::{f00, f01};
 
-use super::{Eos, VOID};
+use crate::hydro::{Eos, VOID};
 
 pub fn init_riemann<'a>(
     t0: f64,

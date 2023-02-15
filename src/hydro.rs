@@ -1,10 +1,7 @@
 pub mod eos;
-pub mod from_file;
-pub mod gubser;
-pub mod hydro1d;
-pub mod hydro2d;
-pub mod riemann;
-pub mod viscoushydro2d;
+pub mod ideal;
+pub mod solutions;
+pub mod viscous;
 
 pub type Eos<'a> = &'a (dyn Fn(f64) -> f64 + Sync);
 

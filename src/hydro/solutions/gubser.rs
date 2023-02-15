@@ -1,6 +1,6 @@
-use crate::hydro::hydro2d::{f00, f01, f02};
+use crate::hydro::ideal::ideal2d::{f00, f01, f02};
 
-use super::Eos;
+use crate::hydro::Eos;
 
 pub fn gubser(x: f64, y: f64, t: f64) -> [f64; 4] {
     let r = (x * x + y * y).sqrt();

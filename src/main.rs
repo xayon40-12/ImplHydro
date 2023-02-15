@@ -3,10 +3,10 @@ use std::thread;
 use implhydro::{
     hydro::{
         eos::wb,
-        from_file::{init_from_energy_2d, load_matrix},
-        gubser::init_gubser,
-        hydro1d, hydro2d, ideal_gas,
-        riemann::init_riemann,
+        ideal::from_file::{init_from_energy_2d, load_matrix},
+        ideal::{ideal1d, ideal2d},
+        ideal_gas,
+        solutions::{gubser::init_gubser, riemann::init_riemann},
         Eos, HydroOutput, F_IDEAL_1D, F_IDEAL_2D,
     },
     solver::time::schemes::*,
@@ -52,7 +52,7 @@ impl<const V: usize, const S: usize> DoHydro<V, S, Option<([[f64; V]; V], usize)
         } else {
             init_gubser(t0, p, dpde)
         };
-        hydro2d::hydro2d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
+        ideal2d::ideal2d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
     }
 }
 
@@ -74,7 +74,7 @@ impl<const V: usize, const S: usize> DoHydro<V, S, bool> for Ideal1D<V> {
         let dpde = &ideal_gas::dpde;
         let name = format!("Riemann{}", void);
         let init = &init_riemann(1.0, p, dpde, use_void);
-        hydro1d::hydro1d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
+        ideal1d::ideal1d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
     }
 }
 
