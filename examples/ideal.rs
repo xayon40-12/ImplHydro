@@ -12,70 +12,50 @@ use implhydro::{
     solver::time::schemes::*,
 };
 
-pub trait DoHydro<const V: usize, const S: usize, I> {
-    type Output;
-    fn dohydro(
-        maxdt: f64,
-        er: f64,
-        t: f64,
-        tend: f64,
-        dx: f64,
-        r: Scheme<S>,
-        init: I,
-    ) -> Self::Output;
-}
-pub struct Ideal2D<const V: usize>;
-impl<const V: usize, const S: usize> DoHydro<V, S, Option<([[f64; V]; V], usize)>> for Ideal2D<V> {
-    type Output = HydroOutput<V, V, F_IDEAL_2D>;
-    fn dohydro(
-        maxdt: f64,
-        er: f64,
-        t0: f64,
-        tend: f64,
-        dx: f64,
-        r: Scheme<S>,
-        init_e: Option<([[f64; V]; V], usize)>,
-    ) -> Self::Output {
-        let name = if let Some((_, i)) = init_e {
-            format!("InitTrento{}", i)
-        } else {
-            format!("Gubser")
-        };
-        let (p, dpde): (Eos, Eos) = if init_e.is_some() {
-            (&wb::p, &wb::dpde)
-        } else {
-            (&ideal_gas::p, &ideal_gas::dpde)
-        };
-        println!("{}", name);
-        let init = if let Some((es, _)) = init_e {
-            init_from_energy_2d(t0, es, p, dpde)
-        } else {
-            init_gubser(t0, p, dpde)
-        };
-        ideal2d::ideal2d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
-    }
+fn hydro2d<const V: usize, const S: usize>(
+    t0: f64,
+    tend: f64,
+    dx: f64,
+    maxdt: f64,
+    er: f64,
+    r: Scheme<S>,
+    init_e: Option<([[f64; V]; V], usize)>,
+) -> HydroOutput<V, V, F_IDEAL_2D> {
+    let name = if let Some((_, i)) = init_e {
+        format!("InitTrento{}", i)
+    } else {
+        format!("Gubser")
+    };
+    let (p, dpde): (Eos, Eos) = if init_e.is_some() {
+        (&wb::p, &wb::dpde)
+    } else {
+        (&ideal_gas::p, &ideal_gas::dpde)
+    };
+    println!("{}", name);
+    let init = if let Some((es, _)) = init_e {
+        init_from_energy_2d(t0, es, p, dpde)
+    } else {
+        init_gubser(t0, p, dpde)
+    };
+    ideal2d::ideal2d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
 }
 
-pub struct Ideal1D<const V: usize>;
-impl<const V: usize, const S: usize> DoHydro<V, S, bool> for Ideal1D<V> {
-    type Output = HydroOutput<V, 1, F_IDEAL_1D>;
-    fn dohydro(
-        maxdt: f64,
-        er: f64,
-        t0: f64,
-        tend: f64,
-        dx: f64,
-        r: Scheme<S>,
-        use_void: bool,
-    ) -> Self::Output {
-        let void = if use_void { "Void" } else { "" };
-        println!("Rieman{}", void);
-        let p = &ideal_gas::p;
-        let dpde = &ideal_gas::dpde;
-        let name = format!("Riemann{}", void);
-        let init = &init_riemann(1.0, p, dpde, use_void);
-        ideal1d::ideal1d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
-    }
+fn hydro1d<const V: usize, const S: usize>(
+    t0: f64,
+    tend: f64,
+    dx: f64,
+    maxdt: f64,
+    er: f64,
+    r: Scheme<S>,
+    use_void: bool,
+) -> HydroOutput<V, 1, F_IDEAL_1D> {
+    let void = if use_void { "Void" } else { "" };
+    println!("Rieman{}", void);
+    let p = &ideal_gas::p;
+    let dpde = &ideal_gas::dpde;
+    let name = format!("Riemann{}", void);
+    let init = &init_riemann(1.0, p, dpde, use_void);
+    ideal1d::ideal1d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
 }
 
 pub fn compare<const VX: usize, const VY: usize, const F: usize>(
@@ -147,18 +127,18 @@ pub fn run_convergence<const V: usize, const S: usize, const TRENTO: usize>(
     let sq2 = |v: f64| v.powf(0.5);
     println!("{}", r.name);
     converge(er0, ermin, |er| {
-        Ideal1D::<V>::dohydro(t0, tend, dx, sq2(er), er, r, true)
+        hydro1d::<V, S>(t0, tend, dx, sq2(er), er, r, true)
     });
     converge(er0, ermin, |er| {
-        Ideal1D::<V>::dohydro(t0, tend, dx, sq2(er), er, r, false)
+        hydro1d::<V, S>(t0, tend, dx, sq2(er), er, r, false)
     });
     converge(er0, ermin, |er| {
-        Ideal2D::<V>::dohydro(t0, tend, dx, sq2(er), er, r, None)
+        hydro2d::<V, S>(t0, tend, dx, sq2(er), er, r, None)
     });
     for i in 0..TRENTO {
         let trento = Some((trentos[i], i));
         converge(er0, ermin, |er| {
-            Ideal2D::<V>::dohydro(t0, tend, dx, sq2(er), er, r, trento)
+            hydro2d::<V, S>(t0, tend, dx, sq2(er), er, r, trento)
         });
     }
 }
@@ -166,14 +146,15 @@ pub fn run<const V: usize, const TRENTO: usize>(t0: f64, tend: f64, l: f64, ermi
     run_convergence::<V, 1, TRENTO>(t0, tend, l, ermin, gauss_legendre_1());
     run_convergence::<V, 2, TRENTO>(t0, tend, l, ermin, heun());
 }
-pub fn run_trento<const V: usize, const TRENTO: usize>(t0: f64, tend: f64, l: f64, er: f64) {
+pub fn run_trento<const V: usize, const TRENTO: usize>(t0: f64, tend: f64, l: f64) {
     let trentos = prepare_trento::<V, TRENTO>();
     let gl1 = gauss_legendre_1();
     let dx = 2.0 * l / V as f64;
-    let sq2 = |v: f64| v.powf(0.5);
+    let dt = dx * 0.1;
+    let er = dt * dt;
     for i in 0..TRENTO {
         let trento = Some((trentos[i], i));
-        Ideal2D::dohydro(t0, tend, dx, sq2(er), er, gl1, trento);
+        hydro2d::<V, 1>(t0, tend, dx, dt, er, gl1, trento);
     }
 }
 
@@ -182,13 +163,12 @@ fn big_stack() {
     let tend = t0 + 3.5;
     let l = 10.0;
 
-    let ermin = 1e-7;
+    let ermin = 1e-4;
     run::<100, 2>(t0, tend, l, ermin);
     run::<200, 2>(t0, tend, l, ermin);
 
-    let er = 1e-3;
-    run_trento::<100, 100>(t0, tend, l, er);
-    run_trento::<200, 100>(t0, tend, l, er);
+    run_trento::<100, 100>(t0, tend, l);
+    run_trento::<200, 100>(t0, tend, l);
 }
 
 fn main() {
