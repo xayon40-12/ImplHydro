@@ -1,6 +1,7 @@
 pub mod eos;
 pub mod ideal;
 pub mod solutions;
+pub mod utils;
 pub mod viscous;
 
 pub type Eos<'a> = &'a (dyn Fn(f64) -> f64 + Sync);

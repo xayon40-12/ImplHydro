@@ -49,7 +49,7 @@ pub fn fixpoint<
     let mut dt = *dto;
     let mut iter = 0;
     let mut failed = 0;
-    let maxiter = 50;
+    let maxiter = 30;
     let maxfailed = 10;
     let muldt: f64 = 1.01;
     let divdt: f64 = 0.5;

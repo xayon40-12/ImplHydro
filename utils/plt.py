@@ -22,6 +22,17 @@ np.seterr(invalid='ignore') # disable invalid waring for numpy as NaN are used t
 np.seterr(divide='ignore') # disable divide by zero worining
 # plt.rcParams['axes.grid'] = False
 
+
+animate = False
+animate_arg = "-animate="
+viscous = False
+viscous_arg = "-viscous="
+for arg in sys.argv:
+    if animate_arg in arg:
+        animate = bool(arg[len(animate_arg):])
+    if viscous_arg in arg:
+        viscous = bool(arg[len(viscous_arg):])
+
 IDx = 0
 IDy = 1
 IDiter = 2
@@ -33,14 +44,13 @@ ID2De = 6
 ID2Dut = 9
 ID2Dux = 10
 ID2Duy = 11
+if viscous:
+    ID2De  += 6
+    ID2Dut += 6 
+    ID2Dux += 6 
+    ID2Duy += 6 
 
-CUT = 1e-5
-
-animate = False
-animate_arg = "-animate="
-for arg in sys.argv:
-    if animate_arg in arg:
-        animate = bool(arg[len(animate_arg):])
+CUT = 1e-9
 
 crop = 9
 fromref = 1
@@ -149,7 +159,8 @@ def compare(i, vss, wss):
             err = abs(a-b)/max(abs(a),abs(b))
             maxerr = max(err,maxerr)
             meanerr += err
-    meanerr /= count
+    if count>0:
+        meanerr /= count
     return (maxerr, meanerr)
 
 def convergence(a, ref=None):

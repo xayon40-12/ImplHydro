@@ -15,8 +15,13 @@ fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let tt02 = vs[2];
     let tm = (tt01 * tt01 + tt02 * tt02).sqrt();
     let tt00 = tt00.max(tm * (1.0 + 1e-15));
-    // TODO: add constraints on shear viscosity
     vs[0] = tt00;
+
+    // let utpi00 = vs[3];
+    let utpi11 = vs[6];
+    let utpi22 = vs[8];
+    vs[3] = utpi11 + utpi22; // \Delta_{\mu\nu}pi^{\mu\nu} = 0
+
     vs
 }
 
@@ -31,9 +36,10 @@ fn gen_transform<'a>(
             let t01 = tt01 / t;
             let t02 = tt02 / t;
             // the 'i' in it00 stends for 'ideal'
+
             let sv = |v: f64| {
-                let g = (1.0 - v * v).sqrt(); // inverse of ut
-                let it00 = t00 - g * utpi00;
+                let g = (1.0 - v * v).max(0.0).sqrt(); // inverse of ut
+                let it00 = (t00 - g * utpi00).max(0.0);
                 let it01 = t01 - g * utpi01;
                 let it02 = t02 - g * utpi02;
                 let m = (it01 * it01 + it02 * it02).sqrt();
@@ -43,7 +49,7 @@ fn gen_transform<'a>(
                 v
             };
             let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
-            let g = (1.0 - v * v).sqrt();
+            let g = (1.0 - v * v).max(0.0).sqrt();
 
             let it00 = t00 - g * utpi00;
             let it01 = t01 - g * utpi01;
@@ -110,6 +116,43 @@ fn f12(t: f64, [e, pe, _, _, ux, uy, _, _, _, _, pi12, _]: [f64; 12]) -> f64 {
 
 fn f22(t: f64, [e, pe, _, _, _, uy, _, _, _, _, _, pi22]: [f64; 12]) -> f64 {
     t * ((e + pe) * uy * uy + pe + pi22)
+}
+
+pub fn u0pi00(
+    _t: f64,
+    [_e, _pe, _, ut, _ux, _uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    ut * pi00
+}
+pub fn u0pi01(
+    _t: f64,
+    [_e, _pe, _, ut, _ux, _uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    ut * pi01
+}
+pub fn u0pi02(
+    _t: f64,
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    ut * pi02
+}
+pub fn u0pi11(
+    _t: f64,
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22]: [f64; 12],
+) -> f64 {
+    ut * pi11
+}
+pub fn u0pi12(
+    _t: f64,
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22]: [f64; 12],
+) -> f64 {
+    ut * pi12
+}
+pub fn u0pi22(
+    _t: f64,
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22]: [f64; 12],
+) -> f64 {
+    ut * pi22
 }
 
 fn u1pi00(
@@ -283,15 +326,15 @@ fn flux<const V: usize>(
 
     let [_e, _pe, _dpde, out, oux, ouy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22] =
         transform(t, ov[bound[1](pos[1], V)][bound[0](pos[0], V)]);
-    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22] =
+    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22] =
         transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
     let u = [ut, ux, uy];
     let pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
     let g = [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]];
     let mut delta = [[0.0f64; 3]; 3];
-    for j in 0..3 {
-        for i in 0..3 {
-            delta[j][i] = g[j][i] - u[i] * u[j];
+    for a in 0..3 {
+        for b in 0..3 {
+            delta[a][b] = g[a][b] - u[b] * u[a];
         }
     }
 
@@ -309,24 +352,29 @@ fn flux<const V: usize>(
     let mut spi = [0.0f64; 6];
 
     let temp = temperature(e);
-    let taupi = 3.0 * etaovers / temp;
+    let cs2 = dpde;
     let s = (e + pe) / temp;
     let eta = etaovers * s;
+    let taupi = 2.0 * eta / (e + pe) * 4.0 / 3.0 / (1.0 - cs2) + 1e-100;
+    // let taupi = 3.0 * etaovers / temp + 1e-100;
+    let ivt = 1.0 / t;
 
     let pirhs = |a: usize, b: usize| {
-        let mut spi = 0.5 * t * u[0] * pi[a][b] - 0.5 * pi[a][b] / taupi - pi[a][b] * dcuc / 6.0;
+        let mut spi = -0.5 * ivt * u[0] * pi[a][b] - 0.5 * pi[a][b] / taupi - pi[a][b] * dcuc / 6.0;
         for i in 0..3 {
             spi += -g[i][i] * pi[i][b] * u[a] * ddu[i];
             spi += eta / taupi * (g[a][i] * du[i][b]);
         }
-        spi += eta / taupi * (u[a] * ddu[b] - delta[a][b] * dcuc / 3.0);
+        spi += eta / taupi * (-u[a] * ddu[b] - delta[a][b] * dcuc / 3.0);
 
         spi
     };
 
+    let mut i = 0;
     for a in 0..3 {
-        for b in 0..=a {
-            spi[b + 3 * a] = pirhs(a, b) + pirhs(b, a);
+        for b in a..3 {
+            spi[i] = pirhs(a, b) + pirhs(b, a);
+            i += 1;
         }
     }
 
@@ -335,12 +383,12 @@ fn flux<const V: usize>(
         -dxf[0] - dyf[0] - s,
         -dxf[1] - dyf[1],
         -dxf[2] - dyf[2],
-        -dxf[3] - dyf[3] - spi[0],
-        -dxf[4] - dyf[4] - spi[1],
-        -dxf[5] - dyf[5] - spi[2],
-        -dxf[6] - dyf[6] - spi[3],
-        -dxf[7] - dyf[7] - spi[4],
-        -dxf[8] - dyf[8] - spi[5],
+        -dxf[3] - dyf[3] + spi[0],
+        -dxf[4] - dyf[4] + spi[1],
+        -dxf[5] - dyf[5] + spi[2],
+        -dxf[6] - dyf[6] + spi[3],
+        -dxf[7] - dyf[7] + spi[4],
+        -dxf[8] - dyf[8] + spi[5],
     ]
 }
 
@@ -362,7 +410,7 @@ pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
 }
 
 // viscous hydro is in Milne coordinates
-pub fn viscoushydro2d<const V: usize, const S: usize>(
+pub fn shear2d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
     er: f64,
@@ -374,9 +422,8 @@ pub fn viscoushydro2d<const V: usize, const S: usize>(
     dpde: Eos,
     temperature: Eos,
     init: Init2D<9>,
+    etaovers: f64,
 ) -> Option<([[[f64; 9]; V]; V], f64, usize, usize)> {
-    let etaovers: f64 = 0.0;
-
     let schemename = r.name;
     let mut vs = [[[0.0; 9]; V]; V];
     let names = (
