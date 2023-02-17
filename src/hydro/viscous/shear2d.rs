@@ -309,27 +309,27 @@ fn flux<const V: usize>(
 ) -> [f64; 9] {
     let theta = 1.1;
 
-    // let pre = &|_t: f64, mut vs: [f64; 9]| {
-    //     let t00 = vs[0];
-    //     let t01 = vs[1];
-    //     let t02 = vs[2];
-    //     let k = t01 * t01 + t02 * t02;
-    //     let m = (t00 * t00 - k).sqrt();
-    //     vs[0] = m;
-    //     vs
-    // };
-    // let post = &|_t: f64, mut vs: [f64; 9]| {
-    //     let m = vs[0];
-    //     let t01 = vs[1];
-    //     let t02 = vs[2];
-    //     let k = t01 * t01 + t02 * t02;
-    //     let t00 = (m * m + k).sqrt();
-    //     vs[0] = t00;
-    //     vs
-    // };
+    let pre = &|_t: f64, mut vs: [f64; 9]| {
+        let t00 = vs[0];
+        let t01 = vs[1];
+        let t02 = vs[2];
+        let k = t01 * t01 + t02 * t02;
+        let m = (t00 * t00 - k).sqrt();
+        vs[0] = m;
+        vs
+    };
+    let post = &|_t: f64, mut vs: [f64; 9]| {
+        let m = vs[0];
+        let t01 = vs[1];
+        let t02 = vs[2];
+        let k = t01 * t01 + t02 * t02;
+        let t00 = (m * m + k).sqrt();
+        vs[0] = t00;
+        vs
+    };
 
-    let pre = &id_flux_limiter;
-    let post = &id_flux_limiter;
+    // let pre = &id_flux_limiter;
+    // let post = &id_flux_limiter;
 
     let diff = kt;
     let (dxf, dxu) = diff(
@@ -421,7 +421,7 @@ fn flux<const V: usize>(
     };
 
     let mut spi = [0.0f64; 6];
-    if e > 1e-6 {
+    if e > 1e-4 {
         let mut i = 0;
         for a in 0..3 {
             for b in a..3 {

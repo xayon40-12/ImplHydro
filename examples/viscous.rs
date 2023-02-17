@@ -83,7 +83,7 @@ fn big_stack() {
     // run::<100, 1>(t0, tend, l, ermin, etaovers);
     // run::<200, 2>(t0, tend, l, ermin, etaovers);
 
-    run_trento::<100, 10>(t0, tend, l, etaovers);
+    run_trento::<100, 100>(t0, tend, l, etaovers);
     // run_trento::<200, 100>(t0, tend, l, etaovers);
 }
 
