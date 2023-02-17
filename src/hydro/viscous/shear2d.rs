@@ -17,11 +17,6 @@ fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let tt00 = tt00.max(tm * (1.0 + 1e-15));
     vs[0] = tt00;
 
-    // let utpi00 = vs[3];
-    let utpi11 = vs[6];
-    let utpi22 = vs[8];
-    vs[3] = utpi11 + utpi22; // \Delta_{\mu\nu}pi^{\mu\nu} = 0
-
     vs
 }
 
@@ -35,32 +30,22 @@ fn gen_transform<'a>(
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
-            // the 'i' in it00 stends for 'ideal'
 
             let sv = |v: f64| {
-                let g = (1.0 - v * v).max(0.0).sqrt(); // inverse of ut
-                let it00 = (t00 - g * utpi00).max(0.0);
-                let it01 = t01 - g * utpi01;
-                let it02 = t02 - g * utpi02;
-                let m = (it01 * it01 + it02 * it02).sqrt();
-                let e = (it00 - m * v).max(VOID);
-                let v = m / (it00 + p(e));
+                let m = (t01 * t01 + t02 * t02).sqrt();
+                let e = (t00 - m * v).max(VOID);
+                let v = m / (t00 + p(e));
 
                 v
             };
             let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
-            let g = (1.0 - v * v).max(0.0).sqrt();
+            let m = (t01 * t01 + t02 * t02).sqrt();
 
-            let it00 = t00 - g * utpi00;
-            let it01 = t01 - g * utpi01;
-            let it02 = t02 - g * utpi02;
-            let m = (it01 * it01 + it02 * it02).sqrt();
-
-            let e = (it00 - m * v).max(VOID);
+            let e = (t00 - m * v).max(VOID);
             let pe = p(e);
-            let ut = ((it00 + pe) / (e + pe)).sqrt().max(1.0);
-            let ux = it01 / ((e + pe) * ut);
-            let uy = it02 / ((e + pe) * ut);
+            let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
+            let ux = t01 / ((e + pe) * ut);
+            let uy = t02 / ((e + pe) * ut);
             let ut = (1.0 + ux * ux + uy * uy).sqrt();
             [
                 e,
@@ -69,12 +54,12 @@ fn gen_transform<'a>(
                 ut,
                 ux,
                 uy,
-                g * utpi00,
-                g * utpi01,
-                g * utpi02,
-                g * utpi11,
-                g * utpi12,
-                g * utpi22,
+                utpi00 / ut,
+                utpi01 / ut,
+                utpi02 / ut,
+                utpi11 / ut,
+                utpi12 / ut,
+                utpi22 / ut,
             ]
         },
     )
@@ -97,13 +82,20 @@ fn eigenvaluesy(
     )
 }
 
-pub fn f00(t: f64, [e, pe, _, ut, _, _, pi00, _, _, _, _, _]: [f64; 12]) -> f64 {
-    t * ((e + pe) * ut * ut - pe + pi00)
+pub fn fi00(t: f64, [e, pe, _, ut, _, _, _, _, _, _, _, _]: [f64; 12]) -> f64 {
+    t * ((e + pe) * ut * ut - pe)
 }
-pub fn f01(t: f64, [e, pe, _, ut, ux, _, _, pi01, _, _, _, _]: [f64; 12]) -> f64 {
+pub fn fi01(t: f64, [e, pe, _, ut, ux, _, _, _, _, _, _, _]: [f64; 12]) -> f64 {
+    t * ((e + pe) * ut * ux)
+}
+pub fn fi02(t: f64, [e, pe, _, ut, _, uy, _, _, _, _, _, _]: [f64; 12]) -> f64 {
+    t * ((e + pe) * uy * ut)
+}
+
+fn f01(t: f64, [e, pe, _, ut, ux, _, _, pi01, _, _, _, _]: [f64; 12]) -> f64 {
     t * ((e + pe) * ut * ux + pi01)
 }
-pub fn f02(t: f64, [e, pe, _, ut, _, uy, _, _, pi02, _, _, _]: [f64; 12]) -> f64 {
+fn f02(t: f64, [e, pe, _, ut, _, uy, _, _, pi02, _, _, _]: [f64; 12]) -> f64 {
     t * ((e + pe) * uy * ut + pi02)
 }
 
@@ -260,27 +252,29 @@ fn flux<const V: usize>(
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
-    [_ot, t]: [f64; 2],
+    [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
     (etaovers, temperature): &(f64, Eos),
 ) -> [f64; 9] {
     let theta = 1.1;
 
-    // let pre = &|_t: f64, vs: [f64; 9]| {
+    // let pre = &|_t: f64, mut vs: [f64; 9]| {
     //     let t00 = vs[0];
     //     let t01 = vs[1];
     //     let t02 = vs[2];
     //     let k = t01 * t01 + t02 * t02;
     //     let m = (t00 * t00 - k).sqrt();
-    //     [m, t01, t02]
+    //     vs[0] = m;
+    //     vs
     // };
-    // let post = &|_t: f64, vs: [f64; 9]| {
+    // let post = &|_t: f64, mut vs: [f64; 9]| {
     //     let m = vs[0];
     //     let t01 = vs[1];
     //     let t02 = vs[2];
     //     let k = t01 * t01 + t02 * t02;
     //     let t00 = (m * m + k).sqrt();
-    //     [t00, t01, t02]
+    //     vs[0] = t00;
+    //     vs
     // };
 
     let pre = &id_flux_limiter;
@@ -324,9 +318,9 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let [_e, _pe, _dpde, out, oux, ouy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22] =
+    let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _pi11, _pi12, _pi22] =
         transform(t, ov[bound[1](pos[1], V)][bound[0](pos[0], V)]);
-    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22] =
+    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22] =
         transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
     let u = [ut, ux, uy];
     let pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
@@ -334,11 +328,16 @@ fn flux<const V: usize>(
     let mut delta = [[0.0f64; 3]; 3];
     for a in 0..3 {
         for b in 0..3 {
-            delta[a][b] = g[a][b] - u[b] * u[a];
+            delta[a][b] = g[a][b] - u[a] * u[b];
         }
     }
 
     let dtu = [(ut - out) / cdt, (ux - oux) / cdt, (uy - ouy) / cdt];
+    let dtpi = [
+        (t * pi00 - ot * opi00) / cdt,
+        (t * pi01 - ot * opi01) / cdt,
+        (t * pi02 - ot * opi02) / cdt,
+    ];
     let du = [dtu, dxu, dyu];
     let mut ddu = [0.0f64; 3];
     let mut dcuc = 0.0;
@@ -349,14 +348,10 @@ fn flux<const V: usize>(
         }
     }
 
-    let mut spi = [0.0f64; 6];
-
     let temp = temperature(e);
-    let cs2 = dpde;
     let s = (e + pe) / temp;
     let eta = etaovers * s;
-    let taupi = 2.0 * eta / (e + pe) * 4.0 / 3.0 / (1.0 - cs2) + 1e-100;
-    // let taupi = 3.0 * etaovers / temp + 1e-100;
+    let taupi = 3.0 * etaovers / temp + 1e-100; // the 1e-100 is in case etaovers=0
     let ivt = 1.0 / t;
 
     let pirhs = |a: usize, b: usize| {
@@ -370,19 +365,22 @@ fn flux<const V: usize>(
         spi
     };
 
-    let mut i = 0;
-    for a in 0..3 {
-        for b in a..3 {
-            spi[i] = pirhs(a, b) + pirhs(b, a);
-            i += 1;
+    let mut spi = [0.0f64; 6];
+    if e > 1e-8 {
+        let mut i = 0;
+        for a in 0..3 {
+            for b in a..3 {
+                spi[i] = pirhs(a, b) + pirhs(b, a);
+                i += 1;
+            }
         }
     }
 
     let s = pe;
     [
-        -dxf[0] - dyf[0] - s,
-        -dxf[1] - dyf[1],
-        -dxf[2] - dyf[2],
+        -dxf[0] - dyf[0] - dtpi[0] - s,
+        -dxf[1] - dyf[1] - dtpi[1],
+        -dxf[2] - dyf[2] - dtpi[2],
         -dxf[3] - dyf[3] + spi[0],
         -dxf[4] - dyf[4] + spi[1],
         -dxf[5] - dyf[5] + spi[2],
@@ -445,7 +443,7 @@ pub fn shear2d<const V: usize, const S: usize>(
     }
     match r.integration {
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
-        Integration::FixPoint => {}
+        Integration::FixPoint(_) => {}
     }
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;

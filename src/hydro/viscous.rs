@@ -27,9 +27,9 @@ pub fn init_from_energy_2d<'a, const VX: usize, const VY: usize>(
             0.0,
         ];
         [
-            shear2d::f00(t0, vars),
-            shear2d::f01(t0, vars),
-            shear2d::f02(t0, vars),
+            shear2d::fi00(t0, vars),
+            shear2d::fi01(t0, vars),
+            shear2d::fi02(t0, vars),
             shear2d::u0pi00(t0, vars),
             shear2d::u0pi01(t0, vars),
             shear2d::u0pi02(t0, vars),

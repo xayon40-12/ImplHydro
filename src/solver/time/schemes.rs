@@ -16,12 +16,12 @@ pub fn euler() -> Scheme<1> {
         integration: Explicit,
     }
 }
-pub fn implicit_euler() -> Scheme<1> {
+pub fn implicit_euler(err_ref: Option<usize>) -> Scheme<1> {
     Scheme {
         aij: [[1.0]],
         bj: None,
         name: "Euler",
-        integration: FixPoint,
+        integration: FixPoint(err_ref),
     }
 }
 pub fn heun() -> Scheme<2> {
@@ -32,31 +32,31 @@ pub fn heun() -> Scheme<2> {
         integration: Explicit,
     }
 }
-pub fn crank_nicolson() -> Scheme<2> {
+pub fn crank_nicolson(err_ref: Option<usize>) -> Scheme<2> {
     Scheme {
         aij: [[0.0, 0.0], [0.5, 0.5]],
         bj: None,
         name: "CrankNicolson",
-        integration: FixPoint,
+        integration: FixPoint(err_ref),
     }
 }
-pub fn radauiia2() -> Scheme<2> {
+pub fn radauiia2(err_ref: Option<usize>) -> Scheme<2> {
     Scheme {
         aij: [[5.0 / 12.0, -1.0 / 12.0], [3.0 / 4.0, 1.0 / 4.0]],
         bj: None,
         name: "RadauIIA2",
-        integration: FixPoint,
+        integration: FixPoint(err_ref),
     }
 }
-pub fn gauss_legendre_1() -> Scheme<1> {
+pub fn gauss_legendre_1(err_ref: Option<usize>) -> Scheme<1> {
     Scheme {
         aij: [[0.5]],
         bj: Some([1.0]),
         name: "GL1",
-        integration: FixPoint,
+        integration: FixPoint(err_ref),
     }
 }
-pub fn gauss_legendre_2() -> Scheme<2> {
+pub fn gauss_legendre_2(err_ref: Option<usize>) -> Scheme<2> {
     let sq3 = 3.0f64.sqrt();
     Scheme {
         aij: [
@@ -65,11 +65,11 @@ pub fn gauss_legendre_2() -> Scheme<2> {
         ],
         bj: Some([1.0 / 2.0, 1.0 / 2.0]),
         name: "GL2",
-        integration: FixPoint,
+        integration: FixPoint(err_ref),
     }
 }
 
-pub fn gauss_legendre_3() -> Scheme<3> {
+pub fn gauss_legendre_3(err_ref: Option<usize>) -> Scheme<3> {
     let sq15 = 15.0f64.sqrt();
     Scheme {
         aij: [
@@ -91,6 +91,6 @@ pub fn gauss_legendre_3() -> Scheme<3> {
         ],
         bj: Some([5.0 / 18.0, 4.0 / 9.0, 5.0 / 18.0]),
         name: "GL3",
-        integration: FixPoint,
+        integration: FixPoint(err_ref),
     }
 }

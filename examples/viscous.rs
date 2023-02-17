@@ -58,12 +58,12 @@ pub fn run<const V: usize, const TRENTO: usize>(
     ermin: f64,
     etaovers: f64,
 ) {
-    run_convergence::<V, 1, TRENTO>(t0, tend, l, ermin, etaovers, gauss_legendre_1());
+    run_convergence::<V, 1, TRENTO>(t0, tend, l, ermin, etaovers, gauss_legendre_1(Some(0)));
     run_convergence::<V, 2, TRENTO>(t0, tend, l, ermin, etaovers, heun());
 }
 pub fn run_trento<const V: usize, const TRENTO: usize>(t0: f64, tend: f64, l: f64, etaovers: f64) {
     let trentos = prepare_trento::<V, TRENTO>();
-    let gl1 = gauss_legendre_1();
+    let gl1 = gauss_legendre_1(Some(0));
     let dx = 2.0 * l / V as f64;
     let dt = dx * 0.1;
     let er = dt * dt;
@@ -80,7 +80,7 @@ fn big_stack() {
     let etaovers = 0.08;
 
     let ermin = 1e-5;
-    run::<100, 2>(t0, tend, l, ermin, etaovers);
+    run::<100, 1>(t0, tend, l, ermin, etaovers);
     // run::<200, 2>(t0, tend, l, ermin, etaovers);
 
     // run_trento::<100, 100>(t0, tend, l, etaovers);

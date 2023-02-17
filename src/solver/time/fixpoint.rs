@@ -37,6 +37,7 @@ pub fn fixpoint<
         p: _,
         dpde: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
+    err_ref: Option<usize>,
 ) -> Option<(f64, [[usize; VX]; VY])> {
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
@@ -101,6 +102,12 @@ pub fn fixpoint<
             });
         }
 
+        let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some(f) = err_ref {
+            Box::new(move |x, y| vdtk[y][x][f])
+        } else {
+            Box::new(|_, _| 1.0)
+        };
+
         pfor2d2(&mut errs, &mut nbiter, &|(Coord { x, y }, errs, nbiter)| {
             if *errs {
                 *errs = false;
@@ -108,7 +115,7 @@ pub fn fixpoint<
                 for s in 0..S {
                     for f in 0..F {
                         let e = (fu[s][y][x][f] - k[s][y][x][f]).abs();
-                        *errs |= e > *er;
+                        *errs |= e * err_ref(x, y) > *er;
                     }
                 }
             }

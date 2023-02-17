@@ -5,7 +5,7 @@ use super::{time::schemes::Scheme, Transform};
 #[derive(Debug, Clone, Copy)]
 pub enum Integration {
     Explicit,
-    FixPoint,
+    FixPoint(Option<usize>), // takes a possible index in the dynamical variables to use a reference for the computation of the error
 }
 
 pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);

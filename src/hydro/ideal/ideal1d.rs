@@ -124,7 +124,7 @@ pub fn ideal1d<const V: usize, const S: usize>(
     }
     match r.integration {
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
-        Integration::FixPoint => {}
+        Integration::FixPoint(_) => {}
     }
     let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
