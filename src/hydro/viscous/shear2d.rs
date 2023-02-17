@@ -1,24 +1,70 @@
-use crate::solver::{
-    context::{Boundary, Context, Integration},
-    run,
-    space::{id_flux_limiter, kt::kt, Dir, Eigenvalues},
-    time::{newton::newton, schemes::Scheme},
-    utils::{ghost, zeros},
-    Observable, Transform,
+use crate::{
+    hydro::eos::wb,
+    solver::{
+        context::{Boundary, Context, Integration},
+        run,
+        space::{id_flux_limiter, kt::kt, Dir, Eigenvalues},
+        time::{newton::newton, schemes::Scheme},
+        utils::{ghost, zeros},
+        Observable, Transform,
+    },
 };
 
 use crate::hydro::{Eos, Init2D, VOID};
 
-fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
+fn constraints(t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let tt00 = vs[0];
     let tt01 = vs[1];
     let tt02 = vs[2];
     let tm = (tt01 * tt01 + tt02 * tt02).sqrt();
     let tt00 = tt00.max(tm * (1.0 + 1e-15));
     vs[0] = tt00;
+    let utpi01 = vs[4];
+    let utpi02 = vs[5];
     let utpi11 = vs[6];
+    let utpi12 = vs[7];
     let utpi22 = vs[8];
     vs[3] = utpi11 + utpi22; // traceless
+
+    const ORTH: bool = false;
+    if ORTH {
+        let t00 = tt00 / t;
+        let t01 = tt01 / t;
+        let t02 = tt02 / t;
+
+        let sv = |v: f64| {
+            let m = (t01 * t01 + t02 * t02).sqrt();
+            let e = (t00 - m * v).max(VOID);
+            let v = m / (t00 + wb::p(e));
+
+            v
+        };
+        let v = newton(1e-5, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+        let m = (t01 * t01 + t02 * t02).sqrt();
+
+        let e = (t00 - m * v).max(VOID);
+        let pe = wb::p(e);
+        let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
+        let ux = t01 / ((e + pe) * ut);
+        let uy = t02 / ((e + pe) * ut);
+        let ut = (1.0 + ux * ux + uy * uy).sqrt();
+
+        let pi01 = utpi01 / ut;
+        let pi02 = utpi02 / ut;
+        let pi11 = utpi11 / ut;
+        let pi12 = utpi12 / ut;
+        let pi22 = utpi22 / ut;
+
+        let utpi00 = ux * pi01 + uy * pi02;
+        let utpi01 = ux * pi11 + uy * pi12;
+        let utpi02 = ux * pi12 + uy * pi22;
+        if (vs[3] - utpi00).abs() > 1e-6 {
+            panic!("\nutpi00\n{:e} {:e}", vs[3], utpi00);
+        }
+        // vs[3] = utpi00;
+        vs[4] = utpi01;
+        vs[5] = utpi02;
+    }
 
     vs
 }
