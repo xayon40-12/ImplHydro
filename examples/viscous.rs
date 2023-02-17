@@ -79,11 +79,11 @@ fn big_stack() {
     let l = 10.0;
     let etaovers = 0.08;
 
-    let ermin = 1e-5;
-    run::<100, 1>(t0, tend, l, ermin, etaovers);
+    // let ermin = 1e-5;
+    // run::<100, 1>(t0, tend, l, ermin, etaovers);
     // run::<200, 2>(t0, tend, l, ermin, etaovers);
 
-    // run_trento::<100, 100>(t0, tend, l, etaovers);
+    run_trento::<100, 10>(t0, tend, l, etaovers);
     // run_trento::<200, 100>(t0, tend, l, etaovers);
 }
 

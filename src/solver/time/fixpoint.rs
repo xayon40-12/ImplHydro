@@ -103,7 +103,11 @@ pub fn fixpoint<
         }
 
         let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some(f) = err_ref {
-            Box::new(move |x, y| vdtk[y][x][f])
+            let vs = &vs;
+            let m = vs.iter().fold(0.0, |acc: f64, v| {
+                acc.max(v.iter().fold(0.0, |acc, v| acc.max(v[f])))
+            });
+            Box::new(move |x, y| (vs[y][x][f] / m)) // due to '/m', the reference is in <=1
         } else {
             Box::new(|_, _| 1.0)
         };
@@ -115,7 +119,7 @@ pub fn fixpoint<
                 for s in 0..S {
                     for f in 0..F {
                         let e = (fu[s][y][x][f] - k[s][y][x][f]).abs();
-                        *errs |= e * err_ref(x, y) > *er;
+                        *errs |= e * err_ref(x, y) > *er || e.is_nan();
                     }
                 }
             }

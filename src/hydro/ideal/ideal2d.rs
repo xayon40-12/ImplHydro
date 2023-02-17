@@ -159,8 +159,10 @@ fn flux<const V: usize>(
     let s: f64 = match coord {
         Coordinate::Cartesian => 0.0,
         Coordinate::Milne => {
-            let [_e, pe, _dpde, _ut, _ux, _uy] =
-                transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+            let [_e, pe, _dpde, _ut, _ux, _uy] = transform(
+                t,
+                constraints(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]),
+            );
             pe
         }
     };
@@ -220,12 +222,12 @@ pub fn ideal2d<const V: usize, const S: usize>(
     let transform = gen_transform(er, &p, &dpde, &coord);
     let integration = r.integration;
 
-    let _eigx = Eigenvalues::Analytical(&eigenvaluesx);
-    let _eigy = Eigenvalues::Analytical(&eigenvaluesy);
+    let eigx = Eigenvalues::Analytical(&eigenvaluesx);
+    let eigy = Eigenvalues::Analytical(&eigenvaluesy);
 
-    let eigconstr = |_t: f64, [_, _, dpde, _, _, _]: [f64; 6], eig: f64| eig.max(dpde).min(1.0);
-    let eigx: Eigenvalues<6> = Eigenvalues::ApproxConstraint(&eigconstr);
-    let eigy = eigx;
+    // let eigconstr = |_t: f64, [_, _, dpde, _, _, _]: [f64; 6], eig: f64| eig.max(dpde).min(1.0);
+    // let eigx: Eigenvalues<6> = Eigenvalues::ApproxConstraint(&eigconstr);
+    // let eigy = eigx;
     let context = Context {
         fun: &flux,
         constraints: &constraints,

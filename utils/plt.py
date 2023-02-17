@@ -347,6 +347,8 @@ def plot2d(l, datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, ref, diffref) = datadts[maxdts[0]]
     ref = mask(ref)
+    if len(maxdts) == 1:
+        fromref = 0
     (einfo, data, diff) = datadts[maxdts[fromref]]
 
     name = info["name"]

@@ -16,6 +16,9 @@ fn constraints(_t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let tm = (tt01 * tt01 + tt02 * tt02).sqrt();
     let tt00 = tt00.max(tm * (1.0 + 1e-15));
     vs[0] = tt00;
+    let utpi11 = vs[6];
+    let utpi22 = vs[8];
+    vs[3] = utpi11 + utpi22; // traceless
 
     vs
 }
@@ -47,10 +50,11 @@ fn gen_transform<'a>(
             let ux = t01 / ((e + pe) * ut);
             let uy = t02 / ((e + pe) * ut);
             let ut = (1.0 + ux * ux + uy * uy).sqrt();
+            let vs2 = dpde(e);
             [
                 e,
                 pe,
-                dpde(e),
+                vs2,
                 ut,
                 ux,
                 uy,
@@ -70,7 +74,8 @@ fn eigenvaluesx(_t: f64, [_, _, dpde, ut, ux, _, _, _, _, _, _, _]: [f64; 12]) -
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
-    (a.abs() + b.sqrt()) / d
+    let eig = (a.abs() + b.sqrt()) / d;
+    eig
 }
 fn eigenvaluesy(
     t: f64,
@@ -318,10 +323,14 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _pi11, _pi12, _pi22] =
-        transform(t, ov[bound[1](pos[1], V)][bound[0](pos[0], V)]);
-    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22] =
-        transform(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]);
+    let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _pi11, _pi12, _pi22] = transform(
+        t,
+        constraints(t, ov[bound[1](pos[1], V)][bound[0](pos[0], V)]),
+    );
+    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22] = transform(
+        t,
+        constraints(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]),
+    );
     let u = [ut, ux, uy];
     let pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
     let g = [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]];
@@ -351,7 +360,7 @@ fn flux<const V: usize>(
     let temp = temperature(e);
     let s = (e + pe) / temp;
     let eta = etaovers * s;
-    let taupi = 3.0 * etaovers / temp + 1e-100; // the 1e-100 is in case etaovers=0
+    let taupi = 3.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
     let ivt = 1.0 / t;
 
     let pirhs = |a: usize, b: usize| {
@@ -366,7 +375,7 @@ fn flux<const V: usize>(
     };
 
     let mut spi = [0.0f64; 6];
-    if e > 1e-8 {
+    if e > 1e-6 {
         let mut i = 0;
         for a in 0..3 {
             for b in a..3 {
