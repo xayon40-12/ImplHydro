@@ -38,7 +38,7 @@ impl Viscosity {
     pub const fn nb_fields(&self, dim: usize) -> usize {
         let d = dim + 1;
         let bulk = 1;
-        let shear = d * (d + 1) / 2;
+        let shear = d * (d + 1) / 2 + 1; // +1 for pi33
         match self {
             Viscosity::Ideal => d,
             Viscosity::Bulk => d + bulk,

@@ -3,7 +3,7 @@ use crate::{
     solver::{
         context::{Boundary, Context, Integration},
         run,
-        space::{id_flux_limiter, kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Observable, Transform,
@@ -12,7 +12,7 @@ use crate::{
 
 use crate::hydro::{Eos, Init2D, VOID};
 
-fn constraints(t: f64, mut vs: [f64; 9]) -> [f64; 9] {
+fn constraints(t: f64, mut vs: [f64; 10]) -> [f64; 10] {
     let tt00 = vs[0];
     let tt01 = vs[1];
     let tt02 = vs[2];
@@ -24,7 +24,8 @@ fn constraints(t: f64, mut vs: [f64; 9]) -> [f64; 9] {
     let utpi11 = vs[6];
     let utpi12 = vs[7];
     let utpi22 = vs[8];
-    vs[3] = utpi11 + utpi22; // traceless
+    let utpi33 = vs[9];
+    vs[3] = utpi11 + utpi22 + t * t * utpi33; // traceless
 
     const ORTH: bool = false;
     if ORTH {
@@ -73,9 +74,9 @@ fn gen_transform<'a>(
     er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
-) -> Box<dyn Fn(f64, [f64; 9]) -> [f64; 12] + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; 10]) -> [f64; 13] + 'a + Sync> {
     Box::new(
-        move |t, [tt00, tt01, tt02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22]| {
+        move |t, [tt00, tt01, tt02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22, utpi33]| {
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
@@ -110,12 +111,13 @@ fn gen_transform<'a>(
                 utpi11 / ut,
                 utpi12 / ut,
                 utpi22 / ut,
+                utpi33 / ut,
             ]
         },
     )
 }
 
-fn eigenvaluesx(_t: f64, [_, _, dpde, ut, ux, _, _, _, _, _, _, _]: [f64; 12]) -> f64 {
+fn eigenvaluesx(_t: f64, [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _]: [f64; 13]) -> f64 {
     let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
@@ -125,168 +127,188 @@ fn eigenvaluesx(_t: f64, [_, _, dpde, ut, ux, _, _, _, _, _, _, _]: [f64; 12]) -
 }
 fn eigenvaluesy(
     t: f64,
-    [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22]: [f64; 12],
+    [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33]: [f64; 13],
 ) -> f64 {
     eigenvaluesx(
         t,
-        [e, pe, dpde, ut, uy, ux, pi00, pi01, pi02, pi11, pi12, pi22],
+        [
+            e, pe, dpde, ut, uy, ux, pi00, pi01, pi02, pi11, pi12, pi22, pi33,
+        ],
     )
 }
 
-pub fn fi00(t: f64, [e, pe, _, ut, _, _, _, _, _, _, _, _]: [f64; 12]) -> f64 {
+pub fn fi00(t: f64, [e, pe, _, ut, _, _, _, _, _, _, _, _, _]: [f64; 13]) -> f64 {
     t * ((e + pe) * ut * ut - pe)
 }
-pub fn fi01(t: f64, [e, pe, _, ut, ux, _, _, _, _, _, _, _]: [f64; 12]) -> f64 {
+pub fn fi01(t: f64, [e, pe, _, ut, ux, _, _, _, _, _, _, _, _]: [f64; 13]) -> f64 {
     t * ((e + pe) * ut * ux)
 }
-pub fn fi02(t: f64, [e, pe, _, ut, _, uy, _, _, _, _, _, _]: [f64; 12]) -> f64 {
+pub fn fi02(t: f64, [e, pe, _, ut, _, uy, _, _, _, _, _, _, _]: [f64; 13]) -> f64 {
     t * ((e + pe) * uy * ut)
 }
 
-fn f01(t: f64, [e, pe, _, ut, ux, _, _, pi01, _, _, _, _]: [f64; 12]) -> f64 {
+fn f01(t: f64, [e, pe, _, ut, ux, _, _, pi01, _, _, _, _, _]: [f64; 13]) -> f64 {
     t * ((e + pe) * ut * ux + pi01)
 }
-fn f02(t: f64, [e, pe, _, ut, _, uy, _, _, pi02, _, _, _]: [f64; 12]) -> f64 {
+fn f02(t: f64, [e, pe, _, ut, _, uy, _, _, pi02, _, _, _, _]: [f64; 13]) -> f64 {
     t * ((e + pe) * uy * ut + pi02)
 }
 
-fn f11(t: f64, [e, pe, _, _, ux, _, _, _, _, pi11, _, _]: [f64; 12]) -> f64 {
+fn f11(t: f64, [e, pe, _, _, ux, _, _, _, _, pi11, _, _, _]: [f64; 13]) -> f64 {
     t * ((e + pe) * ux * ux + pe + pi11)
 }
-fn f12(t: f64, [e, pe, _, _, ux, uy, _, _, _, _, pi12, _]: [f64; 12]) -> f64 {
+fn f12(t: f64, [e, pe, _, _, ux, uy, _, _, _, _, pi12, _, _]: [f64; 13]) -> f64 {
     t * ((e + pe) * ux * uy + pi12)
 }
 
-fn f22(t: f64, [e, pe, _, _, _, uy, _, _, _, _, _, pi22]: [f64; 12]) -> f64 {
+fn f22(t: f64, [e, pe, _, _, _, uy, _, _, _, _, _, pi22, _]: [f64; 13]) -> f64 {
     t * ((e + pe) * uy * uy + pe + pi22)
 }
 
 pub fn u0pi00(
     _t: f64,
-    [_e, _pe, _, ut, _ux, _uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, ut, _ux, _uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ut * pi00
 }
 pub fn u0pi01(
     _t: f64,
-    [_e, _pe, _, ut, _ux, _uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, ut, _ux, _uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ut * pi01
 }
 pub fn u0pi02(
     _t: f64,
-    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ut * pi02
 }
 pub fn u0pi11(
     _t: f64,
-    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ut * pi11
 }
 pub fn u0pi12(
     _t: f64,
-    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ut * pi12
 }
 pub fn u0pi22(
     _t: f64,
-    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22]: [f64; 12],
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ut * pi22
+}
+pub fn u0pi33(
+    _t: f64,
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, pi33]: [f64; 13],
+) -> f64 {
+    ut * pi33
 }
 
 fn u1pi00(
     _t: f64,
-    [_e, _pe, _, _ut, ux, _uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ux * pi00
 }
 fn u1pi01(
     _t: f64,
-    [_e, _pe, _, _ut, ux, _uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ux * pi01
 }
 fn u1pi02(
     _t: f64,
-    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ux * pi02
 }
 fn u1pi11(
     _t: f64,
-    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ux * pi11
 }
 fn u1pi12(
     _t: f64,
-    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ux * pi12
 }
 fn u1pi22(
     _t: f64,
-    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ux * pi22
+}
+fn u1pi33(
+    _t: f64,
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, pi33]: [f64; 13],
+) -> f64 {
+    ux * pi33
 }
 
 fn u2pi00(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     uy * pi00
 }
 fn u2pi01(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     uy * pi01
 }
 fn u2pi02(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     uy * pi02
 }
 fn u2pi11(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     uy * pi11
 }
 fn u2pi12(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     uy * pi12
 }
 fn u2pi22(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, pi22, _pi33]: [f64; 13],
 ) -> f64 {
     uy * pi22
+}
+fn u2pi33(
+    _t: f64,
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, pi33]: [f64; 13],
+) -> f64 {
+    uy * pi33
 }
 
 fn u0(
     _t: f64,
-    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, ut, _ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ut
 }
 fn u1(
     _t: f64,
-    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, ux, _uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     ux
 }
 fn u2(
     _t: f64,
-    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22]: [f64; 12],
+    [_e, _pe, _, _ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33]: [f64; 13],
 ) -> f64 {
     uy
 }
@@ -297,19 +319,19 @@ pub enum Coordinate {
 }
 
 fn flux<const V: usize>(
-    [ov, vs]: [&[[[f64; 9]; V]; V]; 2],
-    constraints: Transform<9, 9>,
-    transform: Transform<9, 12>,
+    [ov, vs]: [&[[[f64; 10]; V]; V]; 2],
+    constraints: Transform<10, 10>,
+    transform: Transform<10, 13>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
     [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
     (etaovers, temperature): &(f64, Eos),
-) -> [f64; 9] {
+) -> [f64; 10] {
     let theta = 1.1;
 
-    let pre = &|_t: f64, mut vs: [f64; 9]| {
+    let pre = &|_t: f64, mut vs: [f64; 10]| {
         let t00 = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -318,7 +340,7 @@ fn flux<const V: usize>(
         vs[0] = m;
         vs
     };
-    let post = &|_t: f64, mut vs: [f64; 9]| {
+    let post = &|_t: f64, mut vs: [f64; 10]| {
         let m = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -339,7 +361,7 @@ fn flux<const V: usize>(
         Dir::X,
         t,
         [
-            &f01, &f11, &f12, &u1pi00, &u1pi01, &u1pi02, &u1pi11, &u1pi12, &u1pi22,
+            &f01, &f11, &f12, &u1pi00, &u1pi01, &u1pi02, &u1pi11, &u1pi12, &u1pi22, &u1pi33,
         ],
         ([&u0, &u1, &u2], [0, 1, 2]),
         constraints,
@@ -357,7 +379,7 @@ fn flux<const V: usize>(
         Dir::Y,
         t,
         [
-            &f02, &f12, &f22, &u2pi00, &u2pi01, &u2pi02, &u2pi11, &u2pi12, &u2pi22,
+            &f02, &f12, &f22, &u2pi00, &u2pi01, &u2pi02, &u2pi11, &u2pi12, &u2pi22, &u2pi33,
         ],
         ([&u0, &u1, &u2], [0, 1, 2]),
         constraints,
@@ -369,11 +391,12 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _pi11, _pi12, _pi22] = transform(
-        t,
-        constraints(t, ov[bound[1](pos[1], V)][bound[0](pos[0], V)]),
-    );
-    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22] = transform(
+    let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33] =
+        transform(
+            t,
+            constraints(t, ov[bound[1](pos[1], V)][bound[0](pos[0], V)]),
+        );
+    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33] = transform(
         t,
         constraints(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]),
     );
@@ -395,7 +418,7 @@ fn flux<const V: usize>(
     ];
     let du = [dtu, dxu, dyu];
     let mut ddu = [0.0f64; 3];
-    let mut dcuc = 0.0;
+    let mut dcuc = u[0] / t;
     for j in 0..3 {
         dcuc += du[j][j];
         for i in 0..3 {
@@ -407,33 +430,35 @@ fn flux<const V: usize>(
     let s = (e + pe) / temp;
     let eta = etaovers * s;
     let taupi = 3.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
-    let ivt = 1.0 / t;
 
-    let pirhs = |a: usize, b: usize| {
-        let mut spi = -0.5 * ivt * u[0] * pi[a][b] - 0.5 * pi[a][b] / taupi - pi[a][b] * dcuc / 6.0;
-        for i in 0..3 {
-            spi += -g[i][i] * pi[i][b] * u[a] * ddu[i];
-            spi += eta / taupi * (g[a][i] * du[i][b]);
-        }
-        spi += eta / taupi * (-u[a] * ddu[b] - delta[a][b] * dcuc / 3.0);
-
-        spi
-    };
-
-    let mut spi = [0.0f64; 6];
-    if e > 1e-4 {
+    let mut spi = [0.0f64; 7];
+    let cutoff = 1e-2;
+    if e > cutoff {
         let mut i = 0;
         for a in 0..3 {
             for b in a..3 {
-                spi[i] = pirhs(a, b) + pirhs(b, a);
+                let pi_ns: f64 = eta
+                    * ((0..3)
+                        .map(|i| delta[a][i] * du[i][b] + delta[b][i] * du[i][a])
+                        .sum::<f64>()
+                        - 2.0 / 3.0 * delta[a][b] * dcuc);
+                let ipi = -1.0 / 3.0 * pi[a][b] * dcuc
+                    - pi[a][b] * u[0] / t
+                    - (0..3)
+                        .map(|i| (u[a] * pi[b][i] + u[b] * pi[a][i]) * ddu[i] * g[i][i])
+                        .sum::<f64>();
+                spi[i] = -(pi[a][b] - pi_ns) / taupi + ipi;
                 i += 1;
             }
         }
     }
+    let g33 = -1.0 / (t * t);
+    let pi33_ns = eta * 2.0 * g33 * (u[0] / t - dcuc / 3.0);
+    spi[6] = -(pi33 - pi33_ns) / taupi - 1.0 / 3.0 * pi33 * dcuc - pi33 * u[0] / t;
 
-    let s = pe;
+    let s00 = pe + t * t * pi33;
     [
-        -dxf[0] - dyf[0] - dtpi[0] - s,
+        -dxf[0] - dyf[0] - dtpi[0] - s00,
         -dxf[1] - dyf[1] - dtpi[1],
         -dxf[2] - dyf[2] - dtpi[2],
         -dxf[3] - dyf[3] + spi[0],
@@ -442,13 +467,14 @@ fn flux<const V: usize>(
         -dxf[6] - dyf[6] + spi[3],
         -dxf[7] - dyf[7] + spi[4],
         -dxf[8] - dyf[8] + spi[5],
+        -dxf[9] - dyf[9] + spi[6],
     ]
 }
 
 pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
     t: f64,
-    _vs: &[[[f64; 9]; VX]; VY],
-    tran: &[[[f64; 12]; VX]; VY],
+    _vs: &[[[f64; 10]; VX]; VY],
+    tran: &[[[f64; 13]; VX]; VY],
 ) -> Vec<f64> {
     let mut mt11 = 0.0;
     let mut mt22 = 0.0;
@@ -474,20 +500,22 @@ pub fn shear2d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     temperature: Eos,
-    init: Init2D<9>,
+    init: Init2D<10>,
     etaovers: f64,
-) -> Option<([[[f64; 9]; V]; V], f64, usize, usize)> {
+) -> Option<([[[f64; 10]; V]; V], f64, usize, usize)> {
     let schemename = r.name;
-    let mut vs = [[[0.0; 9]; V]; V];
+    let mut vs = [[[0.0; 10]; V]; V];
     let names = (
         [
             "tt00", "tt01", "tt02", "utpi00", "utpi01", "utpi02", "utpi11", "utpi12", "utpi22",
+            "utpi33",
         ],
         [
             "e", "pe", "dpde", "ut", "ux", "uy", "pi00", "pi01", "pi02", "pi11", "pi12", "pi22",
+            "pi33",
         ],
     );
-    let mut k = [[[[0.0; 9]; V]; V]; S];
+    let mut k = [[[[0.0; 10]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {
@@ -525,7 +553,7 @@ pub fn shear2d<const V: usize, const S: usize>(
         dpde,
     };
 
-    let observables: [Observable<9, 12, V, V>; 1] =
+    let observables: [Observable<10, 13, V, V>; 1] =
         [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
 
     run(
