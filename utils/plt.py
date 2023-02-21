@@ -45,10 +45,10 @@ ID2Dut = 9
 ID2Dux = 10
 ID2Duy = 11
 if viscous:
-    ID2De  += 6
-    ID2Dut += 6 
-    ID2Dux += 6 
-    ID2Duy += 6 
+    ID2De  += 7
+    ID2Dut += 7 
+    ID2Dux += 7 
+    ID2Duy += 7 
 
 CUT = 1e-9
 

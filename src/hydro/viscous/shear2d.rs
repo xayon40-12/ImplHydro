@@ -71,6 +71,7 @@ fn constraints(t: f64, mut vs: [f64; 10]) -> [f64; 10] {
             .unwrap();
 
         if pe + smallest < 0.0 {
+            // check that viscosity does not make pressure negative
             let m = -pe / smallest * 0.95;
             for j in 0..3 {
                 for i in 0..3 {
@@ -462,13 +463,17 @@ fn flux<const V: usize>(
     }
 
     let temp = temperature(e);
+    let mev = temp * 197.3;
+    let cutmev = 50.0;
     let s = (e + pe) / temp;
-    let eta = etaovers * s;
+    let mut eta = etaovers * s;
     let taupi = 3.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
+    if mev < cutmev {
+        eta = 0.0;
+    }
 
     let mut spi = [0.0f64; 7];
-    let cutoff = 1e-4;
-    if e > cutoff {
+    {
         let mut i = 0;
         for a in 0..3 {
             for b in a..3 {
@@ -486,10 +491,10 @@ fn flux<const V: usize>(
                 i += 1;
             }
         }
+        let g33 = -1.0 / (t * t);
+        let pi33_ns = eta * 2.0 * g33 * (u[0] / t - dcuc / 3.0);
+        spi[6] = -(pi33 - pi33_ns) / taupi - 1.0 / 3.0 * pi33 * dcuc - pi33 * u[0] / t;
     }
-    let g33 = -1.0 / (t * t);
-    let pi33_ns = eta * 2.0 * g33 * (u[0] / t - dcuc / 3.0);
-    spi[6] = -(pi33 - pi33_ns) / taupi - 1.0 / 3.0 * pi33 * dcuc - pi33 * u[0] / t;
 
     let s00 = pe + t * t * pi33;
     [

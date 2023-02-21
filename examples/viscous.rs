@@ -25,7 +25,7 @@ fn hydro2d<const V: usize, const S: usize>(
     let name = format!("InitTrento{}", i);
     let (p, dpde, temp): (Eos, Eos, Eos) = (&wb::p, &wb::dpde, &wb::T);
     println!("{}", name);
-    let init = init_from_energy_2d(t0, es, p, dpde, temp, etaovers);
+    let init = init_from_energy_2d(t0, es, p, dpde);
     shear2d::<V, S>(
         &name, maxdt, er, t0, tend, dx, r, p, dpde, temp, &init, etaovers,
     )
