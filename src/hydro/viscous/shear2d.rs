@@ -12,6 +12,8 @@ use crate::{
 
 use crate::hydro::{Eos, Init2D, VOID};
 
+use nalgebra::base::Matrix3;
+
 fn constraints(t: f64, mut vs: [f64; 10]) -> [f64; 10] {
     let tt00 = vs[0];
     let tt01 = vs[1];
@@ -19,6 +21,7 @@ fn constraints(t: f64, mut vs: [f64; 10]) -> [f64; 10] {
     let tm = (tt01 * tt01 + tt02 * tt02).sqrt();
     let tt00 = tt00.max(tm * (1.0 + 1e-15));
     vs[0] = tt00;
+    let utpi00 = vs[3];
     let utpi01 = vs[4];
     let utpi02 = vs[5];
     let utpi11 = vs[6];
@@ -28,7 +31,8 @@ fn constraints(t: f64, mut vs: [f64; 10]) -> [f64; 10] {
     vs[3] = utpi11 + utpi22 + t * t * utpi33; // traceless
 
     const ORTH: bool = false;
-    if ORTH {
+    const PRESSURE: bool = true;
+    if ORTH || PRESSURE {
         let t00 = tt00 / t;
         let t01 = tt01 / t;
         let t02 = tt02 / t;
@@ -50,21 +54,51 @@ fn constraints(t: f64, mut vs: [f64; 10]) -> [f64; 10] {
         let uy = t02 / ((e + pe) * ut);
         let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
+        let pi00 = utpi00 / ut;
         let pi01 = utpi01 / ut;
         let pi02 = utpi02 / ut;
         let pi11 = utpi11 / ut;
         let pi12 = utpi12 / ut;
         let pi22 = utpi22 / ut;
+        let mut pi33 = utpi33 / ut;
+        let mut pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
 
-        let utpi00 = ux * pi01 + uy * pi02;
-        let utpi01 = ux * pi11 + uy * pi12;
-        let utpi02 = ux * pi12 + uy * pi22;
-        if (vs[3] - utpi00).abs() > 1e-6 {
-            panic!("\nutpi00\n{:e} {:e}", vs[3], utpi00);
+        let m = Matrix3::from_fn(|j, i| pi[j][i]);
+        let eigs = m.symmetric_eigenvalues();
+        let smallest = [eigs[0], eigs[1], eigs[2], t * t * pi33]
+            .into_iter()
+            .min_by(f64::total_cmp)
+            .unwrap();
+
+        if pe + smallest < 0.0 {
+            let m = -pe / smallest * 0.95;
+            for j in 0..3 {
+                for i in 0..3 {
+                    pi[j][i] *= m;
+                }
+            }
+            pi33 *= m;
         }
-        // vs[3] = utpi00;
-        vs[4] = utpi01;
-        vs[5] = utpi02;
+
+        vs[3] = pi00 * ut;
+        vs[4] = pi01 * ut;
+        vs[5] = pi02 * ut;
+        vs[6] = pi11 * ut;
+        vs[7] = pi12 * ut;
+        vs[8] = pi22 * ut;
+        vs[9] = pi33 * ut;
+
+        if ORTH {
+            // let utpi00 = ux * pi01 + uy * pi02;
+            let utpi01 = ux * pi11 + uy * pi12;
+            let utpi02 = ux * pi12 + uy * pi22;
+            // if (vs[3] - utpi00).abs() > 1e-6 {
+            //     panic!("\nutpi00\n{:e} {:e}", vs[3], utpi00);
+            // }
+            // vs[3] = utpi00;
+            vs[4] = utpi01;
+            vs[5] = utpi02;
+        }
     }
 
     vs
@@ -400,8 +434,9 @@ fn flux<const V: usize>(
         t,
         constraints(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]),
     );
-    let u = [ut, ux, uy];
     let pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
+
+    let u = [ut, ux, uy];
     let g = [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]];
     let mut delta = [[0.0f64; 3]; 3];
     for a in 0..3 {
@@ -432,7 +467,7 @@ fn flux<const V: usize>(
     let taupi = 3.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
     let mut spi = [0.0f64; 7];
-    let cutoff = 1e-2;
+    let cutoff = 1e-4;
     if e > cutoff {
         let mut i = 0;
         for a in 0..3 {
@@ -535,7 +570,7 @@ pub fn shear2d<const V: usize, const S: usize>(
         constraints: &constraints,
         transform: &transform,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
-        post_constraints: None,
+        post_constraints: Some(&constraints),
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vs,
         total_diff_vs: zeros(&vs),

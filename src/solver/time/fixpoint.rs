@@ -107,7 +107,7 @@ pub fn fixpoint<
             let m = vs.iter().fold(0.0, |acc: f64, v| {
                 acc.max(v.iter().fold(0.0, |acc, v| acc.max(v[f])))
             });
-            Box::new(move |x, y| (vs[y][x][f] / m)) // due to '/m', the reference is in <=1
+            Box::new(move |x, y| (vs[y][x][f]) / m) // due to '/m', the reference is in <=1
         } else {
             Box::new(|_, _| 1.0)
         };
