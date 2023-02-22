@@ -15,37 +15,17 @@ use crate::hydro::{Eos, Init2D, VOID};
 use nalgebra::base::Matrix3;
 
 fn constraints(t: f64, mut vs: [f64; 10]) -> [f64; 10] {
-    let tt00 = vs[0];
-    let tt01 = vs[1];
-    let tt02 = vs[2];
-    let tm = (tt01 * tt01 + tt02 * tt02).sqrt();
-    let tt00 = tt00.max(tm * (1.0 + 1e-15));
-    vs[0] = tt00;
-    let utpi00 = vs[3];
-    let utpi01 = vs[4];
-    let utpi02 = vs[5];
-    let utpi11 = vs[6];
-    let utpi12 = vs[7];
-    let utpi22 = vs[8];
-    let utpi33 = vs[9];
-    vs[3] = utpi11 + utpi22 + t * t * utpi33; // traceless
+    let t00 = vs[0] / t;
+    let t01 = vs[1] / t;
+    let t02 = vs[2] / t;
+    let m = (t01 * t01 + t02 * t02).sqrt();
+    let t00 = t00.max(m * (1.0 + 1e-15));
+    vs[0] = t * t00;
 
-    const ORTH: bool = false;
     const PRESSURE: bool = true;
-    if ORTH || PRESSURE {
-        let t00 = tt00 / t;
-        let t01 = tt01 / t;
-        let t02 = tt02 / t;
-
-        let sv = |v: f64| {
-            let m = (t01 * t01 + t02 * t02).sqrt();
-            let e = (t00 - m * v).max(VOID);
-            let v = m / (t00 + wb::p(e));
-
-            v
-        };
-        let v = newton(1e-5, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
-        let m = (t01 * t01 + t02 * t02).sqrt();
+    if PRESSURE {
+        let sv = |v: f64| m / (t00 + wb::p((t00 - m * v).max(VOID)));
+        let v = newton(1e-5, 0.95, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
 
         let e = (t00 - m * v).max(VOID);
         let pe = wb::p(e);
@@ -54,52 +34,41 @@ fn constraints(t: f64, mut vs: [f64; 10]) -> [f64; 10] {
         let uy = t02 / ((e + pe) * ut);
         let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
-        let pi00 = utpi00 / ut;
-        let pi01 = utpi01 / ut;
-        let pi02 = utpi02 / ut;
-        let pi11 = utpi11 / ut;
-        let pi12 = utpi12 / ut;
-        let pi22 = utpi22 / ut;
-        let mut pi33 = utpi33 / ut;
-        let mut pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
+        let mut utpi33 = vs[9];
+        let mut utpi = [
+            [vs[3], vs[4], vs[5]],
+            [vs[4], vs[6], vs[7]],
+            [vs[5], vs[7], vs[8]],
+        ];
+        // utpi[0][0] = utpi[1][1] + utpi[2][2] + utpi33; // traceless
 
-        let m = Matrix3::from_fn(|j, i| pi[j][i]);
+        let m = Matrix3::from_fn(|j, i| utpi[j][i]);
         let eigs = m.symmetric_eigenvalues();
-        let smallest = [eigs[0], eigs[1], eigs[2], t * t * pi33]
+        let smallest = [eigs[0], eigs[1], eigs[2], utpi33]
             .into_iter()
             .min_by(f64::total_cmp)
-            .unwrap();
+            .unwrap()
+            / ut;
 
-        if pe + smallest < 0.0 {
+        let epe = e + pe;
+        if epe + smallest < 0.0 {
             // check that viscosity does not make pressure negative
-            let m = -pe / smallest * 0.95;
+            let m = -epe / smallest;
             for j in 0..3 {
                 for i in 0..3 {
-                    pi[j][i] *= m;
+                    utpi[j][i] *= m;
                 }
             }
-            pi33 *= m;
+            utpi33 *= m;
         }
 
-        vs[3] = pi00 * ut;
-        vs[4] = pi01 * ut;
-        vs[5] = pi02 * ut;
-        vs[6] = pi11 * ut;
-        vs[7] = pi12 * ut;
-        vs[8] = pi22 * ut;
-        vs[9] = pi33 * ut;
-
-        if ORTH {
-            // let utpi00 = ux * pi01 + uy * pi02;
-            let utpi01 = ux * pi11 + uy * pi12;
-            let utpi02 = ux * pi12 + uy * pi22;
-            // if (vs[3] - utpi00).abs() > 1e-6 {
-            //     panic!("\nutpi00\n{:e} {:e}", vs[3], utpi00);
-            // }
-            // vs[3] = utpi00;
-            vs[4] = utpi01;
-            vs[5] = utpi02;
-        }
+        vs[3] = utpi[0][0];
+        vs[4] = utpi[0][1];
+        vs[5] = utpi[0][2];
+        vs[6] = utpi[1][1];
+        vs[7] = utpi[1][2];
+        vs[8] = utpi[2][2];
+        vs[9] = utpi33;
     }
 
     vs
@@ -115,16 +84,10 @@ fn gen_transform<'a>(
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
-
-            let sv = |v: f64| {
-                let m = (t01 * t01 + t02 * t02).sqrt();
-                let e = (t00 - m * v).max(VOID);
-                let v = m / (t00 + p(e));
-
-                v
-            };
-            let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
             let m = (t01 * t01 + t02 * t02).sqrt();
+
+            let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
+            let v = newton(er, 0.95, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
 
             let e = (t00 - m * v).max(VOID);
             let pe = p(e);
@@ -491,12 +454,12 @@ fn flux<const V: usize>(
                 i += 1;
             }
         }
-        let g33 = -1.0 / (t * t);
+        let g33 = -1.0; // instead of -1.0 / (t * t) because it is the 'tilde' one
         let pi33_ns = eta * 2.0 * g33 * (u[0] / t - dcuc / 3.0);
         spi[6] = -(pi33 - pi33_ns) / taupi - 1.0 / 3.0 * pi33 * dcuc - pi33 * u[0] / t;
     }
 
-    let s00 = pe + t * t * pi33;
+    let s00 = pe + pi33;
     [
         -dxf[0] - dyf[0] - dtpi[0] - s00,
         -dxf[1] - dyf[1] - dtpi[1],
