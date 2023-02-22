@@ -63,13 +63,15 @@ pub fn run<const V: usize, const TRENTO: usize>(
 }
 pub fn run_trento<const V: usize, const TRENTO: usize>(t0: f64, tend: f64, l: f64, etaovers: f64) {
     let trentos = prepare_trento::<V, TRENTO>();
-    let gl1 = gauss_legendre_1(Some(0));
+    // let r = gauss_legendre_1(Some(0));
+    let r = heun();
+    const S: usize = 2;
     let dx = 2.0 * l / V as f64;
     let dt = dx * 0.1;
     let er = dt * dt;
     for i in 0..TRENTO {
         let trento = (trentos[i], i);
-        hydro2d::<V, 1>(t0, tend, dx, dt, er, etaovers, gl1, trento);
+        hydro2d::<V, S>(t0, tend, dx, dt, er, etaovers, r, trento);
     }
 }
 
@@ -83,7 +85,7 @@ fn big_stack() {
     // run::<100, 1>(t0, tend, l, ermin, etaovers);
     // run::<200, 2>(t0, tend, l, ermin, etaovers);
 
-    run_trento::<100, 100>(t0, tend, l, etaovers);
+    run_trento::<100, 3>(t0, tend, l, etaovers);
     // run_trento::<200, 100>(t0, tend, l, etaovers);
 }
 

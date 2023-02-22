@@ -46,7 +46,7 @@ pub fn explicit<
     let mut ct = *t;
     for vy in 0..VY {
         for vx in 0..VX {
-            (_, trs[vy][vx]) = constraints(ct, vdtk[vy][vx]);
+            (_, trk[vy][vx]) = constraints(ct, vdtk[vy][vx]);
         }
     }
 

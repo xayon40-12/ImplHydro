@@ -28,7 +28,7 @@ fn gen_constraints<'a>(
             let t00 = t00.max(m * (1.0 + 1e-15));
 
             let sv = |v: f64| m / (t00 + wb::p((t00 - m * v).max(VOID)));
-            let v = newton(1e-5, 0.95, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+            let v = newton(er, 0.95, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
 
             let e = (t00 - m * v).max(VOID);
             let pe = p(e);
@@ -414,7 +414,7 @@ pub fn shear2d<const V: usize, const S: usize>(
         maxdt,
         er,
         t,
-        ot: t,
+        ot: t - 1.0,
         t0: t,
         tend,
         opt: (etaovers, temperature),
