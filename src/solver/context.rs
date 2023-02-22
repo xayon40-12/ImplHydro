@@ -1,6 +1,6 @@
 use crate::hydro::Eos;
 
-use super::{time::schemes::Scheme, Transform};
+use super::{time::schemes::Scheme, Constraint};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Integration {
@@ -12,8 +12,8 @@ pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
 pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY: usize> =
     &'a (dyn Fn(
         [&[[[f64; F]; VX]; VY]; 2],
-        Transform<F, F>,
-        Transform<F, C>,
+        [&[[[f64; C]; VX]; VY]; 2],
+        Constraint<F, C>,
         &[Boundary; 2],
         [i32; 2], // position in index [x,y]
         f64,      // dx
@@ -33,12 +33,11 @@ pub struct Context<
     const S: usize,
 > {
     pub fun: Fun<'a, Opt, F, C, VX, VY>,
-    pub constraints: Transform<'a, F, F>,
-    pub transform: Transform<'a, F, C>,
+    pub constraints: Constraint<'a, F, C>,
     pub boundary: &'a [Boundary<'a>; 2],
-    pub post_constraints: Option<Transform<'a, F, F>>,
+    pub post_constraints: Option<Constraint<'a, F, C>>,
     pub local_interaction: [i32; 2],
-    pub vs: [[[f64; F]; VX]; VY],
+    pub vstrs: ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]),
     pub total_diff_vs: [[[f64; F]; VX]; VY],
     pub k: [[[[f64; F]; VX]; VY]; S],
     pub r: Scheme<S>,
@@ -47,6 +46,7 @@ pub struct Context<
     pub maxdt: f64,
     pub er: f64,
     pub t: f64,
+    pub ot: f64,
     pub t0: f64,
     pub tend: f64,
     pub opt: Opt,

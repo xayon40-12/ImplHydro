@@ -4,23 +4,19 @@ use crate::solver::{
     space::{kt::kt, Dir, Eigenvalues},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zero, zeros},
-    Transform,
+    Constraint,
 };
 
 use crate::hydro::{solve_v, Eos, Init1D, VOID};
 
-fn constraints(_t: f64, [t00, t01]: [f64; 2]) -> [f64; 2] {
-    let m = t01.abs();
-    let t00 = t00.max(m * (1.0 + 1e-15));
-    [t00, t01]
-}
-fn gen_transform<'a>(
+fn gen_constraints<'a>(
     er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
-) -> Box<dyn Fn(f64, [f64; 2]) -> [f64; 5] + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; 2]) -> ([f64; 2], [f64; 5]) + 'a + Sync> {
     Box::new(move |_t, [t00, t01]| {
         let m = t01.abs();
+        let t00 = t00.max(m * (1.0 + 1e-15));
         let sv = solve_v(t00, m, p);
         let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
         let e = (t00 - m * v).max(VOID);
@@ -28,7 +24,7 @@ fn gen_transform<'a>(
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
         let ux = t01 / ((e + pe) * ut);
         let ut = (1.0 + ux * ux).sqrt();
-        [e, pe, dpde(e), ut, ux]
+        ([t00, t01], [e, pe, dpde(e), ut, ux])
     })
 }
 
@@ -50,8 +46,8 @@ fn f1(_t: f64, [e, pe, _, ut, ux]: [f64; 5]) -> [f64; 2] {
 
 fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 2]; V]; 1]; 2],
-    constraints: Transform<2, 2>,
-    transform: Transform<2, 5>,
+    [_otrs, _trs]: [&[[[f64; 5]; V]; 1]; 2],
+    constraints: Constraint<2, 5>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
@@ -88,7 +84,6 @@ fn flux<const V: usize>(
         &f1,
         (&|_, _| [], []),
         constraints,
-        transform,
         Eigenvalues::Analytical(&eigenvalues),
         pre,
         post,
@@ -110,30 +105,30 @@ pub fn ideal1d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init1D<2>,
-) -> Option<([[[f64; 2]; V]; 1], f64, usize, usize)> {
+) -> Option<(([[[f64; 2]; V]; 1], [[[f64; 5]; V]; 1]), f64, usize, usize)> {
+    let constraints = gen_constraints(er, p, dpde);
     let schemename = r.name;
     let mut vs = [[[0.0; 2]; V]];
+    let mut trs = [[[0.0; 5]; V]];
     let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);
     let mut k = [[[[0.0; 2]; V]]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {
         let x = (i as f64 - v2) * dx;
-        vs[0][i] = init(i, x);
+        (vs[0][i], trs[0][i]) = constraints(t, init(i, x));
     }
     match r.integration {
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
         Integration::FixPoint(_) => {}
     }
-    let transform = gen_transform(er, &p, &dpde);
     let integration = r.integration;
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        transform: &transform,
         boundary: &[&ghost, &zero], // use noboundary to emulate 1D
         post_constraints: None,
         local_interaction: [1, 0], // use a distance of 0 to emulate 1D
-        vs,
+        vstrs: (vs, trs),
         total_diff_vs: zeros(&vs),
         k,
         r,
@@ -142,6 +137,7 @@ pub fn ideal1d<const V: usize, const S: usize>(
         maxdt,
         er,
         t,
+        ot: t,
         t0: t,
         tend,
         opt: (),

@@ -21,7 +21,7 @@ fn hydro2d<const V: usize, const S: usize>(
     er: f64,
     r: Scheme<S>,
     init_e: Option<([[f64; V]; V], usize)>,
-) -> HydroOutput<V, V, F_IDEAL_2D> {
+) -> HydroOutput<V, V, F_IDEAL_2D, C_IDEAL_2D> {
     let name = if let Some((_, i)) = init_e {
         format!("InitTrento{}", i)
     } else {

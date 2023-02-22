@@ -8,8 +8,9 @@ use {
     time::{explicit::explicit, fixpoint::fixpoint},
 };
 
-pub type Transform<'a, const F: usize, const C: usize> =
-    &'a (dyn Fn(f64, [f64; F]) -> [f64; C] + Sync);
+pub type Constraint<'a, const F: usize, const C: usize> =
+    &'a (dyn Fn(f64, [f64; F]) -> ([f64; F], [f64; C]) + Sync);
+pub type Transform<'a, const F: usize> = &'a (dyn Fn(f64, [f64; F]) -> [f64; F] + Sync);
 pub type Observable<'a, const F: usize, const C: usize, const VX: usize, const VY: usize> = (
     &'a str,
     &'a (dyn Fn(f64, &[[[f64; F]; VX]; VY], &[[[f64; C]; VX]; VY]) -> Vec<f64> + Sync),
@@ -39,8 +40,7 @@ pub fn save<
     let t = context.t;
     let dx = context.dx;
     let maxdt = context.maxdt;
-    let v = context.vs;
-    let mut trans = [[[0.0f64; C]; VX]; VY];
+    let (v, trs) = context.vstrs;
     let diffv = context.total_diff_vs;
     let dim = if VY == 1 { 1 } else { 2 };
     let foldername = &format!(
@@ -71,9 +71,8 @@ pub fn save<
             let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
             let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
             let v = v[j][i];
+            let vars = trs[j][i];
             let diffv = diffv[j][i];
-            trans[j][i] = (context.transform)(t, (context.constraints)(t, v));
-            let vars = trans[j][i];
 
             if TXT {
                 let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
@@ -128,7 +127,7 @@ pub fn save<
         )?;
     }
     for (name, obs) in observables {
-        let ligne = obs(t, &v, &trans);
+        let ligne = obs(t, &v, &trs);
         std::fs::write(
             &format!("{}/{}.dat", dir, name),
             ligne
@@ -163,7 +162,12 @@ pub fn run<
     integration: Integration,
     names: &([&str; F], [&str; C]),
     observables: &[Observable<F, C, VX, VY>],
-) -> Option<([[[f64; F]; VX]; VY], f64, usize, usize)> {
+) -> Option<(
+    ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]),
+    f64,
+    usize,
+    usize,
+)> {
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
     let mut tsteps = 0;
@@ -232,5 +236,5 @@ pub fn run<
     }
     let elapsed = now.elapsed().as_secs_f64();
     eprintln!("Elapsed: {:.4}", elapsed);
-    Some((context.vs, context.t, cost as usize, tsteps))
+    Some((context.vstrs, context.t, cost as usize, tsteps))
 }

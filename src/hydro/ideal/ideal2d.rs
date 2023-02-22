@@ -4,23 +4,17 @@ use crate::solver::{
     space::{kt::kt, Dir, Eigenvalues},
     time::{newton::newton, schemes::Scheme},
     utils::{ghost, zeros},
-    Observable, Transform,
+    Constraint, Observable,
 };
 
 use crate::hydro::{solve_v, Eos, Init2D, VOID};
 
-fn constraints(_t: f64, [t00, t01, t02]: [f64; 3]) -> [f64; 3] {
-    let m = (t01 * t01 + t02 * t02).sqrt();
-    let t00 = t00.max(m * (1.0 + 1e-15));
-    [t00, t01, t02]
-}
-
-fn gen_transform<'a>(
+fn gen_constraints<'a>(
     er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
     coord: &Coordinate,
-) -> Box<dyn Fn(f64, [f64; 3]) -> [f64; 6] + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; 3]) -> ([f64; 3], [f64; 6]) + 'a + Sync> {
     let st = match coord {
         Coordinate::Cartesian => |_| 1.0,
         Coordinate::Milne => |t| t,
@@ -31,6 +25,7 @@ fn gen_transform<'a>(
         let t01 = t01 / t;
         let t02 = t02 / t;
         let m = (t01 * t01 + t02 * t02).sqrt();
+        let t00 = t00.max(m * (1.0 + 1e-15));
         let sv = solve_v(t00, m, p);
         let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
         let e = (t00 - m * v).max(VOID);
@@ -39,7 +34,7 @@ fn gen_transform<'a>(
         let ux = t01 / ((e + pe) * ut);
         let uy = t02 / ((e + pe) * ut);
         let ut = (1.0 + ux * ux + uy * uy).sqrt();
-        [e, pe, dpde(e), ut, ux, uy]
+        ([t * t00, t * t01, t * t02], [e, pe, dpde(e), ut, ux, uy])
     })
 }
 
@@ -85,8 +80,8 @@ pub enum Coordinate {
 
 fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
-    constraints: Transform<3, 3>,
-    transform: Transform<3, 6>,
+    [_otrs, trs]: [&[[[f64; 6]; V]; V]; 2],
+    constraints: Constraint<3, 6>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
@@ -132,7 +127,6 @@ fn flux<const V: usize>(
         &f1,
         (&|_, _| [], []),
         constraints,
-        transform,
         *eigx,
         pre,
         post,
@@ -148,7 +142,6 @@ fn flux<const V: usize>(
         &f2,
         (&|_, _| [], []),
         constraints,
-        transform,
         *eigy,
         pre,
         post,
@@ -159,10 +152,9 @@ fn flux<const V: usize>(
     let s: f64 = match coord {
         Coordinate::Cartesian => 0.0,
         Coordinate::Milne => {
-            let [_e, pe, _dpde, _ut, _ux, _uy] = transform(
-                t,
-                constraints(t, vs[bound[1](pos[1], V)][bound[0](pos[0], V)]),
-            );
+            let y = bound[1](pos[1], V);
+            let x = bound[0](pos[0], V);
+            let [_e, pe, _dpde, _ut, _ux, _uy] = trs[y][x];
             pe
         }
     };
@@ -201,10 +193,13 @@ pub fn ideal2d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init2D<3>,
-) -> Option<([[[f64; 3]; V]; V], f64, usize, usize)> {
+) -> Option<(([[[f64; 3]; V]; V], [[[f64; 6]; V]; V]), f64, usize, usize)> {
     let coord = Coordinate::Milne;
+    let constraints = gen_constraints(er, &p, &dpde, &coord);
     let schemename = r.name;
     let mut vs = [[[0.0; 3]; V]; V];
+    let mut trs = [[[0.0; 6]; V]; V];
+
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
     let mut k = [[[[0.0; 3]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
@@ -212,14 +207,13 @@ pub fn ideal2d<const V: usize, const S: usize>(
         for i in 0..V {
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
-            vs[j][i] = init((i, j), (x, y));
+            (vs[j][i], trs[j][i]) = constraints(t, init((i, j), (x, y)));
         }
     }
     match r.integration {
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
         Integration::FixPoint(_) => {}
     }
-    let transform = gen_transform(er, &p, &dpde, &coord);
     let integration = r.integration;
 
     let eigx = Eigenvalues::Analytical(&eigenvaluesx);
@@ -231,11 +225,10 @@ pub fn ideal2d<const V: usize, const S: usize>(
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        transform: &transform,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
         post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
-        vs,
+        vstrs: (vs, trs),
         total_diff_vs: zeros(&vs),
         k,
         r,
@@ -244,6 +237,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
         maxdt,
         er,
         t,
+        ot: t,
         t0: t,
         tend,
         opt: (coord, [eigx, eigy]),

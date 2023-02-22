@@ -16,19 +16,19 @@ pub fn explicit<
     Context {
         fun,
         constraints,
-        transform,
         boundary,
         post_constraints,
         local_interaction: _,
         total_diff_vs,
-        vs,
+        vstrs: (vs, trs),
         k, // k[S-1] is used as old vs
         r: Scheme { aij: a, .. },
         dt,
         dx,
         maxdt,
         er: _,
-        t: ot,
+        ot,
+        t,
         t0: _,
         tend: _,
         opt,
@@ -41,29 +41,37 @@ pub fn explicit<
     let nbiter = [[1usize; VX]; VY];
     let mut fu = [[[0.0f64; F]; VX]; VY];
     let mut vdtk = *vs;
+    let mut trdtk = *trs;
+    let mut trk = [[[0.0f64; C]; VX]; VY];
+    let mut ct = *t;
+    for vy in 0..VY {
+        for vx in 0..VX {
+            (_, trs[vy][vx]) = constraints(ct, vdtk[vy][vx]);
+        }
+    }
 
     let mut c;
-    let mut cdt = *dt;
-    let mut t = *ot;
+    let mut cdt = *t - *ot;
     for s in 0..S {
         for vy in 0..VY {
             for vx in 0..VX {
-                vdtk[vy][vx] = constraints(t, vdtk[vy][vx]);
+                (vdtk[vy][vx], trdtk[vy][vx]) = constraints(ct, vdtk[vy][vx]);
             }
         }
         pfor2d(&mut fu, &|(Coord { x, y }, fu)| {
             *fu = fun(
                 [&k[S - 1], &vdtk],
+                [&trk, &trdtk],
                 constraints,
-                transform,
                 boundary,
                 [x as i32, y as i32],
                 *dx,
-                [*ot, t],
+                [*ot, ct],
                 [*dt, cdt],
                 opt,
             );
         });
+        trk = trdtk;
         k[S - 1] = vdtk;
         k[s] = fu;
         pfor2d(&mut vdtk, &|(Coord { x, y }, vdtk)| {
@@ -75,19 +83,21 @@ pub fn explicit<
             }
         });
         c = a[s].iter().fold(0.0, |acc, r| acc + r);
-        cdt = t;
-        t = *ot + c * *dt;
-        cdt = t - cdt; // difference between current time and previous time
+        cdt = ct;
+        *ot = ct;
+        ct = *t + c * *dt;
+        cdt = ct - cdt; // difference between current time and previous time
     }
     k[S - 1] = *vs; // store the old vs in k[S-1] for next time step
     *vs = vdtk;
 
-    *ot += *dt;
+    *ot = *t;
+    *t += *dt;
     if let Some(post) = post_constraints {
         for vy in 0..VY {
             for vx in 0..VX {
                 let tmp = vs[vy][vx];
-                vs[vy][vx] = post(*ot, vs[vy][vx]);
+                (vs[vy][vx], trs[vy][vx]) = post(*ot, vs[vy][vx]);
                 for f in 0..F {
                     total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
                 }

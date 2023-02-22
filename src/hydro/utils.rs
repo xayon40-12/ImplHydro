@@ -23,10 +23,10 @@ pub fn compare<const VX: usize, const VY: usize, const F: usize>(
     (maximum, average)
 }
 
-pub fn converge<const VX: usize, const VY: usize, const F: usize>(
+pub fn converge<const VX: usize, const VY: usize, const F: usize, const C: usize>(
     mut er: f64,
     mut ermin: f64,
-    fun: impl Fn(f64) -> HydroOutput<VX, VY, F>,
+    fun: impl Fn(f64) -> HydroOutput<VX, VY, F, C>,
 ) -> Option<()> {
     if ermin < 1e-15 {
         eprintln!("ermin<1e-15 in converge, might not converge, set to ermin=1e-15 for safety.");
@@ -37,7 +37,7 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize>(
     er *= 0.1;
     while er > ermin {
         let f2 = fun(er)?.0;
-        let (ma, av) = compare(0, &f, &f2);
+        let (ma, av) = compare(0, &f.0, &f2.0);
         println!("er: {:.3e}, max: {:.3e}, average: {:.3e}", er, ma, av);
         f = f2;
         er *= 0.1;

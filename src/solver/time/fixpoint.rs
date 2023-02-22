@@ -18,11 +18,10 @@ pub fn fixpoint<
     Context {
         fun,
         constraints,
-        transform,
         post_constraints,
         boundary,
         local_interaction,
-        vs,
+        vstrs: (vs, trs),
         total_diff_vs,
         k,
         r: Scheme { aij: a, bj: b, .. },
@@ -30,7 +29,8 @@ pub fn fixpoint<
         dx,
         maxdt,
         er,
-        t: ot,
+        t,
+        ot,
         t0: _,
         tend: _,
         opt,
@@ -45,6 +45,7 @@ pub fn fixpoint<
     let ko = *k;
     let mut fu = *k;
     let mut vdtk = [[[0.0f64; F]; VX]; VY];
+    let mut trdtk = [[[0.0f64; C]; VX]; VY];
     let mut errs = [[true; VX]; VY];
     let mut nbiter = [[0usize; VX]; VY];
     let mut dt = *dto;
@@ -75,26 +76,26 @@ pub fn fixpoint<
         for s in 0..S {
             let c = a[s].iter().fold(0.0, |acc, r| acc + r);
             let cdt = c * dt;
-            let t = *ot + cdt;
-            pfor2d(&mut vdtk, &|(Coord { x, y }, vdtk)| {
+            let ct = *t + cdt;
+            pfor2d2(&mut vdtk, &mut trdtk, &|(Coord { x, y }, vdtk, trdtk)| {
                 for f in 0..F {
                     vdtk[f] = vs[y][x][f];
                     for s1 in 0..S {
                         vdtk[f] += dt * a[s][s1] * fu[s1][y][x][f];
                     }
-                    *vdtk = constraints(t, *vdtk);
+                    (*vdtk, *trdtk) = constraints(ct, *vdtk);
                 }
             });
             pfor2d(&mut fu[s], &|(Coord { x, y }, fu)| {
                 if errs[y][x] {
                     *fu = fun(
                         [&vs, &vdtk],
+                        [&trs, &trdtk],
                         constraints,
-                        transform,
                         boundary,
                         [x as i32, y as i32],
                         *dx,
-                        [*ot, t],
+                        [*t, ct],
                         [dt, cdt],
                         opt,
                     );
@@ -157,13 +158,14 @@ pub fn fixpoint<
         .flat_map(|e| e.par_iter())
         .map(|v| *v)
         .reduce(|| 0, |acc, a| acc + a)) as f64;
-    *ot += dt;
+    *ot = *t;
+    *t += dt;
     *dto = maxdt.min(dt * 1.1);
     if let Some(post) = post_constraints {
         for vy in 0..VY {
             for vx in 0..VX {
                 let tmp = vs[vy][vx];
-                vs[vy][vx] = post(*ot, vs[vy][vx]);
+                (vs[vy][vx], trs[vy][vx]) = post(*t, vs[vy][vx]);
                 for f in 0..F {
                     total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
                 }

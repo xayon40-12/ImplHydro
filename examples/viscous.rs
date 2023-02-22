@@ -6,7 +6,7 @@ use implhydro::{
         utils::{converge, prepare_trento},
         viscous::init_from_energy_2d,
         viscous::shear2d::shear2d,
-        Eos, HydroOutput, F_SHEAR_2D,
+        Eos, HydroOutput, C_SHEAR_2D, F_SHEAR_2D,
     },
     solver::time::schemes::*,
 };
@@ -20,7 +20,7 @@ fn hydro2d<const V: usize, const S: usize>(
     etaovers: f64,
     r: Scheme<S>,
     init_e: ([[f64; V]; V], usize),
-) -> HydroOutput<V, V, F_SHEAR_2D> {
+) -> HydroOutput<V, V, F_SHEAR_2D, C_SHEAR_2D> {
     let (es, i) = init_e;
     let name = format!("InitTrento{}", i);
     let (p, dpde, temp): (Eos, Eos, Eos) = (&wb::p, &wb::dpde, &wb::T);
