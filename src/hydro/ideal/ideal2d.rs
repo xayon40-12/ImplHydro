@@ -119,7 +119,7 @@ fn flux<const V: usize>(
 
     let diff = kt;
     let (divf1, _) = diff(
-        vs,
+        (vs, trs),
         bound,
         pos,
         Dir::X,
@@ -134,7 +134,7 @@ fn flux<const V: usize>(
         theta,
     );
     let (divf2, _) = diff(
-        vs,
+        (vs, trs),
         bound,
         pos,
         Dir::Y,

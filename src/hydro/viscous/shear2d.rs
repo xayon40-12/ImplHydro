@@ -183,7 +183,7 @@ pub enum Coordinate {
 }
 
 fn flux<const V: usize>(
-    [ov, vs]: [&[[[f64; 10]; V]; V]; 2],
+    [_ov, vs]: [&[[[f64; 10]; V]; V]; 2],
     [otrs, trs]: [&[[[f64; 13]; V]; V]; 2],
     constraints: Constraint<10, 13>,
     bound: &[Boundary; 2],
@@ -219,7 +219,7 @@ fn flux<const V: usize>(
 
     let diff = kt;
     let (dxf, dxu) = diff(
-        vs,
+        (vs, trs),
         bound,
         pos,
         Dir::X,
@@ -234,7 +234,7 @@ fn flux<const V: usize>(
         theta,
     );
     let (dyf, dyu) = diff(
-        vs,
+        (vs, trs),
         bound,
         pos,
         Dir::Y,

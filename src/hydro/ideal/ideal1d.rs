@@ -46,7 +46,7 @@ fn f1(_t: f64, [e, pe, _, ut, ux]: [f64; 5]) -> [f64; 2] {
 
 fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 2]; V]; 1]; 2],
-    [_otrs, _trs]: [&[[[f64; 5]; V]; 1]; 2],
+    [_otrs, trs]: [&[[[f64; 5]; V]; 1]; 2],
     constraints: Constraint<2, 5>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
@@ -76,7 +76,7 @@ fn flux<const V: usize>(
     let diff = kt;
 
     let (divf0, _) = diff(
-        vs,
+        (vs, trs),
         bound,
         pos,
         Dir::X,
