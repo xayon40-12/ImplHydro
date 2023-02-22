@@ -40,14 +40,12 @@ fn eigenvalues(_t: f64, [_e, _pe, dpde, ut, ux]: [f64; 5]) -> f64 {
     (a.abs() + b.sqrt()) / d
 }
 
-pub fn f00(_t: f64, [e, pe, _, ut, _]: [f64; 5]) -> f64 {
-    (e + pe) * ut * ut - pe
+pub fn f0(_t: f64, [e, pe, _, ut, ux]: [f64; 5]) -> [f64; 2] {
+    [(e + pe) * ut * ut - pe, (e + pe) * ut * ux]
 }
-pub fn f01(_t: f64, [e, pe, _, ut, ux]: [f64; 5]) -> f64 {
-    (e + pe) * ut * ux
-}
-fn f11(_t: f64, [e, pe, _, _, ux]: [f64; 5]) -> f64 {
-    (e + pe) * ux * ux + pe
+
+fn f1(_t: f64, [e, pe, _, ut, ux]: [f64; 5]) -> [f64; 2] {
+    [(e + pe) * ut * ux, (e + pe) * ux * ux + pe]
 }
 
 fn flux<const V: usize>(
@@ -87,8 +85,8 @@ fn flux<const V: usize>(
         pos,
         Dir::X,
         1.0,
-        [&f01, &f11],
-        ([], []),
+        &f1,
+        (&|_, _| [], []),
         constraints,
         transform,
         Eigenvalues::Analytical(&eigenvalues),

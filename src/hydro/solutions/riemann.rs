@@ -1,4 +1,4 @@
-use crate::hydro::ideal::ideal1d::{f00, f01};
+use crate::hydro::ideal::ideal1d::f0;
 
 use crate::hydro::{Eos, VOID};
 
@@ -13,6 +13,6 @@ pub fn init_riemann<'a>(
     Box::new(move |_, x| {
         let e = if x < 0.0 { el } else { er };
         let vars = [e, p(e), dpde(e), 1.0, 0.0];
-        [f00(t0, vars), f01(t0, vars)]
+        f0(t0, vars)
     })
 }

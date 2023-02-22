@@ -8,8 +8,8 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     [x, y]: [i32; 2],
     dir: Dir,
     t: f64,
-    flux: [Flux<C>; F],
-    (secondary, sidx): ([Flux<C>; SD], [usize; SD]),
+    flux: Flux<F, C>,
+    (secondary, sidx): (Flux<SD, C>, [usize; SD]),
     constraints: Transform<F, F>,
     transform: Transform<F, C>,
     eigenvalues: Eigenvalues<C>,
@@ -34,8 +34,8 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     for l in 0..3 {
         for f in 0..F {
             deriv[l][f] = flux_limiter(theta, vals[l][f], vals[l + 1][f], vals[l + 2][f]);
-            fj[l][f] = flux[f](t, tvals[l + 1]);
         }
+        fj[l] = flux(t, tvals[l + 1]);
     }
     let mut upm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
     let mut tupm: [[[f64; C]; 2]; 2] = [[[0.0; C]; 2]; 2];
@@ -54,12 +54,8 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     let mut sdpm: [[[f64; SD]; 2]; 2] = [[[0.0; SD]; 2]; 2];
     for jpm in 0..2 {
         for pm in 0..2 {
-            for n in 0..F {
-                fpm[jpm][pm][n] = flux[n](t, tupm[jpm][pm]);
-            }
-            for n in 0..SD {
-                sdpm[jpm][pm][n] = secondary[n](t, tupm[jpm][pm]);
-            }
+            fpm[jpm][pm] = flux(t, tupm[jpm][pm]);
+            sdpm[jpm][pm] = secondary(t, tupm[jpm][pm]);
         }
     }
     let mut a: [f64; 2] = [0.0; 2];

@@ -2,7 +2,7 @@ pub mod kt;
 
 use crate::solver::{context::Boundary, Transform};
 
-pub type Flux<'a, const C: usize> = &'a dyn Fn(f64, [f64; C]) -> f64;
+pub type Flux<'a, const F: usize, const C: usize> = &'a dyn Fn(f64, [f64; C]) -> [f64; F];
 #[derive(Clone, Copy)]
 pub enum Eigenvalues<'a, const C: usize> {
     Analytical(&'a (dyn Fn(f64, [f64; C]) -> f64 + Sync)), // Fn(time, non dymical variables) -> max eigenvalue
@@ -25,7 +25,7 @@ pub type SpaceDiff<'a, const F: usize, const VX: usize, const VY: usize, const C
         [i32; 2],
         Dir,
         f64,
-        [Flux<C>; F],
+        Flux<F, C>,
         Transform<F, F>,
         Transform<F, C>,
         Eigenvalues<C>,

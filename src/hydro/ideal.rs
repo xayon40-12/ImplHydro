@@ -12,7 +12,7 @@ pub fn init_from_energy_1d<'a, const VX: usize>(
     Box::new(move |i, _| {
         let e = es[i].max(VOID);
         let vars = [e, p(e), dpde(e), 1.0, 0.0];
-        [ideal1d::f00(t0, vars), ideal1d::f01(t0, vars)]
+        ideal1d::f0(t0, vars)
     })
 }
 
@@ -25,10 +25,6 @@ pub fn init_from_energy_2d<'a, const VX: usize, const VY: usize>(
     Box::new(move |(i, j), _| {
         let e = es[j][i].max(VOID);
         let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0];
-        [
-            ideal2d::f00(t0, vars),
-            ideal2d::f01(t0, vars),
-            ideal2d::f02(t0, vars),
-        ]
+        ideal2d::f0(t0, vars)
     })
 }

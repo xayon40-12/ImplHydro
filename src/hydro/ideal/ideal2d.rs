@@ -54,28 +54,28 @@ fn eigenvaluesy(t: f64, [e, pe, dpde, ut, ux, uy]: [f64; 6]) -> f64 {
     eigenvaluesx(t, [e, pe, dpde, ut, uy, ux])
 }
 
-pub fn f00(t: f64, [e, pe, _, ut, _, _]: [f64; 6]) -> f64 {
-    t * ((e + pe) * ut * ut - pe)
-}
-pub fn f01(t: f64, [e, pe, _, ut, ux, _]: [f64; 6]) -> f64 {
-    t * ((e + pe) * ut * ux)
-}
-pub fn f02(t: f64, [e, pe, _, ut, _, uy]: [f64; 6]) -> f64 {
-    t * ((e + pe) * uy * ut)
+pub fn f0(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
+    [
+        t * ((e + pe) * ut * ut - pe),
+        t * ((e + pe) * ut * ux),
+        t * ((e + pe) * uy * ut),
+    ]
 }
 
-fn f11(t: f64, [e, pe, _, _, ux, _]: [f64; 6]) -> f64 {
-    t * ((e + pe) * ux * ux + pe)
-}
-fn f12(t: f64, [e, pe, _, _, ux, uy]: [f64; 6]) -> f64 {
-    t * ((e + pe) * ux * uy)
+fn f1(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
+    [
+        t * ((e + pe) * ut * ux),
+        t * ((e + pe) * ux * ux + pe),
+        t * ((e + pe) * ux * uy),
+    ]
 }
 
-fn f21(t: f64, [e, pe, _, _, ux, uy]: [f64; 6]) -> f64 {
-    t * ((e + pe) * uy * ux)
-}
-fn f22(t: f64, [e, pe, _, _, _, uy]: [f64; 6]) -> f64 {
-    t * ((e + pe) * uy * uy + pe)
+fn f2(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
+    [
+        t * ((e + pe) * uy * ut),
+        t * ((e + pe) * uy * ux),
+        t * ((e + pe) * uy * uy + pe),
+    ]
 }
 
 pub enum Coordinate {
@@ -129,8 +129,8 @@ fn flux<const V: usize>(
         pos,
         Dir::X,
         t,
-        [&f01, &f11, &f12],
-        ([], []),
+        &f1,
+        (&|_, _| [], []),
         constraints,
         transform,
         *eigx,
@@ -145,8 +145,8 @@ fn flux<const V: usize>(
         pos,
         Dir::Y,
         t,
-        [&f02, &f21, &f22],
-        ([], []),
+        &f2,
+        (&|_, _| [], []),
         constraints,
         transform,
         *eigy,
@@ -182,8 +182,8 @@ pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
     let mut mt22 = 0.0;
     for j in 0..VY {
         for i in 0..VX {
-            mt11 += f11(t, tran[j][i]);
-            mt22 += f22(t, tran[j][i]);
+            mt11 += f1(t, tran[j][i])[1];
+            mt22 += f2(t, tran[j][i])[2];
         }
     }
     let anysotropy = (mt11 - mt22) / (mt11 + mt22);

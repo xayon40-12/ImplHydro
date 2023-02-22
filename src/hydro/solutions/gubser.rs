@@ -1,4 +1,4 @@
-use crate::hydro::ideal::ideal2d::{f00, f01, f02};
+use crate::hydro::ideal::ideal2d::f0;
 
 use crate::hydro::Eos;
 
@@ -49,6 +49,6 @@ pub fn init_gubser<'a>(
     Box::new(move |_, (x, y)| {
         let [e, ut, ux, uy] = gubser(x, y, t0);
         let vars = [e, p(e), dpde(e), ut, ux, uy];
-        [f00(t0, vars), f01(t0, vars), f02(t0, vars)]
+        f0(t0, vars)
     })
 }
