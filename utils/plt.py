@@ -192,25 +192,25 @@ def info2name(info, scheme=True):
 def convall(l, ds):
     [dim,name,t0,tend,dx,nx,t] = l
     # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
-    ally = [("max", 2), ("mean", 3)]
+    ally = [((5,8), "max", 2), ((3,5,1,5,1,5), "mean", 3)]
     allx = [("cost", 5)]
     # ally = [("max", 2)]
     for (dtcost, dci) in allx:
-        for (meanmax, mmi) in ally:
-            plt.rcParams["figure.figsize"] = [8, 5]
-            plt.figure()
-            plt.xlabel(dtcost)
-            plt.ylabel(meanmax+" error")
-            # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
-            d = ds[list(ds)[0]]
-            scs = sorted(list(d.keys()))
-            dts = sorted([dt for dt in d[scs[0]]])
-            mindt = dts[0]
-            scs.sort(key=lambda s: integrationPriority(d[s][mindt][0]["integration"]))
-            if len(scs) <= 1:
-                plt.close()
-                return 
-            s1 = scs[0]
+        plt.rcParams["figure.figsize"] = [8, 5]
+        plt.figure()
+        plt.xlabel(dtcost)
+        plt.ylabel("error")
+        # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
+        d = ds[list(ds)[0]]
+        scs = sorted(list(d.keys()))
+        dts = sorted([dt for dt in d[scs[0]]])
+        mindt = dts[0]
+        scs.sort(key=lambda s: integrationPriority(d[s][mindt][0]["integration"]))
+        if len(scs) <= 1:
+            plt.close()
+            return 
+        s1 = scs[0]
+        for (linestyle, meanmax, mmi) in ally:
             for (s0,col) in zip(scs,plt_setting.clist):
                 for case in ds: 
                     d = ds[case]
@@ -222,18 +222,19 @@ def convall(l, ds):
                         schemetype = "Implicit"
                     else:
                         schemetype = "Explicit"
+                    schemetype = meanmax+" "+schemetype
                     c = convergence(d[s0],refs[s1])
-                    plt.loglog(c[fromref:,dci],c[fromref:,mmi], 'o', label=schemetype, color=col, linestyle="-.", linewidth=1, alpha=0.5)
-            labels = []
-            for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
-                label = p.get_label()
-                if label in labels:    # check for Name already exists
-                    p.set_label('_' + label)       # hide label in auto-legend
-                else:
-                    labels += [label]
-            plt.legend()
-            plt.savefig("figures/convergence_{}_{}_crop:{}_{}.pdf".format(dtcost, meanmax, crop, info2name(info, False)))
-            plt.close()
+                    plt.loglog(c[fromref:,dci],c[fromref:,mmi], 'o', label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=0.5)
+        labels = []
+        for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
+            label = p.get_label()
+            if label in labels:    # check for Name already exists
+                p.set_label('_' + label)       # hide label in auto-legend
+            else:
+                labels += [label]
+        plt.legend()
+        plt.savefig("figures/convergence_{}_meanmax_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
+        plt.close()
 
 def integrationPriority(integration):
     if integration == "Explicit":
@@ -253,6 +254,7 @@ def plot1d(l, datas):
     dts = sorted([dt for dt in datas[schemes[0]]])
     dts = [dts[0],dts[-1]] # only keep best and worst
     mindt = dts[0]
+    maxdt = dts[-1]
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
     (info,ref,diffref) = datas["Heun"][mindt]
     ref = mask(ref)
@@ -289,19 +291,27 @@ def plot1d(l, datas):
 
     for dt in dts:
         timename = "dt{}".format(dt)
-        if dt == mindt:
+        if dt == maxdt:
+            timename = "worst_"+timename
+        elif dt == mindt:
             timename = "best_"+timename
 
-    
         # plt.rcParams["figure.figsize"] = [8, 12]
         # _,axs = plt.subplots(4, 1, sharex=True)
         plt.rcParams["figure.figsize"] = [8, 9]
         _,axs = plt.subplots(3, 1, sharex=True)
-        continuum ,= axs[1].plot(x,ycontinuum, color="grey", label="continuum", linewidth=2)
+        continuum ,= axs[0].plot(x,ycontinuum, color="grey", label="continuum", linewidth=2)
         # numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
 
         for (scheme,linestyle) in zip(schemes, lstyles):
             (sinfo, data, diff) = datas[scheme][dt]
+            if sinfo["integration"] == "FixPoint":
+                schemetype = "Implicit"
+            else:
+                schemetype = "Explicit"
+            nbStages = 2
+            if scheme == "GL1":
+                nbStages = 1
             data = mask(data)
             if "Gubser" in name:
                 iter = diagonal(data[:,IDiter])
@@ -314,31 +324,24 @@ def plot1d(l, datas):
                 yut = data[:,ID1Dut]
                 yux = data[:,ID1Dux]
             iter = iter[nl:nr]
+            cost = iter*nbStages
             y = y[nl:nr]
             yut = yut[nl:nr]
             yux = yux[nl:nr]
             yvx = yux/yut
             yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
         
-            if sinfo["integration"] == "FixPoint":
-                schemetype = "Implicit"
-            else:
-                schemetype = "Explicit"
-            iterations ,= axs[0].plot(x,iter, '.', label=schemetype)
-            numerics ,= axs[1].plot(x,y, label=schemetype, linestyle=linestyle, linewidth=3 )
-            errcontinuum ,= axs[2].plot(x,yerr, label=schemetype, linestyle=linestyle, linewidth=3 )
+            numerics ,= axs[0].plot(x,y, label=schemetype, linestyle=linestyle, linewidth=3 )
+            errcontinuum ,= axs[1].plot(x,yerr, label=schemetype, linestyle=linestyle, linewidth=3 )
+            pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
+            # iterations ,= axs[2].plot(x,iter, '.', label=schemetype)
             # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
 
-        axs[0].set_ylabel("iterations")
-        # axs[0].legend()
-        axs[1].set_ylabel("e")
-        axs[1].legend()
-        axs[2].set_ylabel("continuum err")
+        axs[0].set_ylabel("e")
+        axs[0].legend()
+        axs[1].set_ylabel("continuum err")
+        axs[2].set_ylabel("cost")
         axs[2].set_xlabel("x/t")
-        # axs[2].legend()
-        # axs[3].set_ylabel("vx")
-        # axs[3].set_xlabel("x/t")
-        # axs[3].legend()
         plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info, False)))
         plt.close()
 
@@ -348,6 +351,7 @@ def plot2d(l, datadts):
     (info, ref, diffref) = datadts[maxdts[0]]
     ref = mask(ref)
     if len(maxdts) == 1:
+        global fromref
         fromref = 0
     (einfo, data, diff) = datadts[maxdts[fromref]]
 
