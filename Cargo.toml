@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rayon = "1.6.1"
 nalgebra = "0.32.1"
+clap = { version = "4.1.7", features = ["derive"] }

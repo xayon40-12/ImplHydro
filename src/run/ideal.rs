@@ -1,6 +1,4 @@
-use std::thread;
-
-use implhydro::{
+use crate::{
     hydro::{
         eos::wb,
         ideal::init_from_energy_2d,
@@ -8,7 +6,7 @@ use implhydro::{
         ideal_gas,
         solutions::{gubser::init_gubser, riemann::init_riemann},
         utils::{converge, prepare_trento},
-        Eos, HydroOutput, F_IDEAL_1D, F_IDEAL_2D,
+        Eos, HydroOutput, C_IDEAL_1D, C_IDEAL_2D, F_IDEAL_1D, F_IDEAL_2D,
     },
     solver::time::schemes::*,
 };
@@ -49,7 +47,7 @@ fn hydro1d<const V: usize, const S: usize>(
     er: f64,
     r: Scheme<S>,
     use_void: bool,
-) -> HydroOutput<V, 1, F_IDEAL_1D> {
+) -> HydroOutput<V, 1, F_IDEAL_1D, C_IDEAL_1D> {
     let void = if use_void { "Void" } else { "" };
     println!("Rieman{}", void);
     let p = &ideal_gas::p;
@@ -59,69 +57,55 @@ fn hydro1d<const V: usize, const S: usize>(
     ideal1d::ideal1d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
 }
 
-pub fn run_convergence<const V: usize, const S: usize, const TRENTO: usize>(
+pub fn run_convergence<const V: usize, const S: usize>(
     t0: f64,
     tend: f64,
     l: f64,
-    ermin: f64,
+    dtmin: f64,
+    dtmax: f64,
     r: Scheme<S>,
+    nb_trento: usize,
 ) {
-    let trentos = prepare_trento::<V, TRENTO>();
+    let trentos = prepare_trento::<V>(nb_trento);
     let dx = 2.0 * l / V as f64;
-    let er0 = (dx / 2.0).powf(2.0); // er0 is so that dt0 = sq2(er0) = dx/2
-    let sq2 = |v: f64| v.powf(0.5);
+    let dt0 = dtmax;
+    let erpow = 2;
     println!("{}", r.name);
-    converge(er0, ermin, |er| {
-        hydro1d::<V, S>(t0, tend, dx, sq2(er), er, r, true)
+    converge(dt0, dtmin, erpow, |dt, er| {
+        hydro1d::<V, S>(t0, tend, dx, dt, er, r, true)
     });
-    converge(er0, ermin, |er| {
-        hydro1d::<V, S>(t0, tend, dx, sq2(er), er, r, false)
+    converge(dt0, dtmin, erpow, |dt, er| {
+        hydro1d::<V, S>(t0, tend, dx, dt, er, r, false)
     });
-    converge(er0, ermin, |er| {
-        hydro2d::<V, S>(t0, tend, dx, sq2(er), er, r, None)
+    converge(dt0, dtmin, erpow, |dt, er| {
+        hydro2d::<V, S>(t0, tend, dx, dt, er, r, None)
     });
-    for i in 0..TRENTO {
+    for i in 0..nb_trento {
         let trento = Some((trentos[i], i));
-        converge(er0, ermin, |er| {
-            hydro2d::<V, S>(t0, tend, dx, sq2(er), er, r, trento)
+        converge(dt0, dtmin, erpow, |dt, er| {
+            hydro2d::<V, S>(t0, tend, dx, dt, er, r, trento)
         });
     }
 }
-pub fn run<const V: usize, const TRENTO: usize>(t0: f64, tend: f64, l: f64, ermin: f64) {
-    run_convergence::<V, 1, TRENTO>(t0, tend, l, ermin, gauss_legendre_1(Some(0)));
-    run_convergence::<V, 2, TRENTO>(t0, tend, l, ermin, heun());
+pub fn run<const V: usize>(t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64, nb_trento: usize) {
+    run_convergence::<V, 1>(
+        t0,
+        tend,
+        l,
+        dtmin,
+        dtmax,
+        gauss_legendre_1(Some(0)),
+        nb_trento,
+    );
+    run_convergence::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
 }
-pub fn run_trento<const V: usize, const TRENTO: usize>(t0: f64, tend: f64, l: f64) {
-    let trentos = prepare_trento::<V, TRENTO>();
+pub fn run_trento<const V: usize>(t0: f64, tend: f64, l: f64, dt: f64, nb_trento: usize) {
+    let trentos = prepare_trento::<V>(nb_trento);
     let gl1 = gauss_legendre_1(Some(0));
     let dx = 2.0 * l / V as f64;
-    let dt = dx * 0.1;
     let er = dt * dt;
-    for i in 0..TRENTO {
+    for i in 0..nb_trento {
         let trento = Some((trentos[i], i));
         hydro2d::<V, 1>(t0, tend, dx, dt, er, gl1, trento);
     }
-}
-
-fn big_stack() {
-    let t0 = 1.0;
-    let tend = t0 + 3.5;
-    let l = 10.0;
-
-    let ermin = 1e-4;
-    run::<100, 2>(t0, tend, l, ermin);
-    run::<200, 2>(t0, tend, l, ermin);
-
-    run_trento::<100, 100>(t0, tend, l);
-    run_trento::<200, 100>(t0, tend, l);
-}
-
-fn main() {
-    const STACK_SIZE: usize = 64 * 1024 * 1024; // if you want to run 2D simulation with more than 200x200 cells, you will need to increase the stack size
-    thread::Builder::new()
-        .stack_size(STACK_SIZE)
-        .spawn(big_stack)
-        .unwrap()
-        .join()
-        .unwrap();
 }

@@ -24,23 +24,36 @@ pub fn compare<const VX: usize, const VY: usize, const F: usize>(
 }
 
 pub fn converge<const VX: usize, const VY: usize, const F: usize, const C: usize>(
-    mut er: f64,
-    mut ermin: f64,
-    fun: impl Fn(f64) -> HydroOutput<VX, VY, F, C>,
+    mut dt: f64,
+    dtmin: f64,
+    erpow: i32,
+    fun: impl Fn(f64, f64) -> HydroOutput<VX, VY, F, C>,
 ) -> Option<()> {
+    let mut ermin = dtmin.powi(erpow);
+    let dtmul = 0.5;
     if ermin < 1e-15 {
-        eprintln!("ermin<1e-15 in converge, might not converge, set to ermin=1e-15 for safety.");
+        eprintln!(
+            "dtmin^{}<1e-15 in converge, might not converge, set to 1e-15 for safety.",
+            erpow
+        );
         ermin = 1e-15;
     }
-    let mut f = fun(er)?.0;
+    let mut er = dt.powi(erpow);
+    let mut f = fun(dt, er)?.0;
     println!("error convergence:");
-    er *= 0.1;
+    let update = |dt: f64| {
+        let dt = dt * dtmul;
+        let er = dt.powi(2);
+        (dt, er)
+    };
+    (dt, er) = update(dt);
+
     while er > ermin {
-        let f2 = fun(er)?.0;
+        let f2 = fun(dt, er)?.0;
         let (ma, av) = compare(0, &f.0, &f2.0);
         println!("er: {:.3e}, max: {:.3e}, average: {:.3e}", er, ma, av);
         f = f2;
-        er *= 0.1;
+        (dt, er) = update(dt);
     }
     println!("");
 
@@ -86,9 +99,9 @@ pub fn load_matrix<const VX: usize, const VY: usize>(
     Ok(mat)
 }
 
-pub fn prepare_trento<const V: usize, const TRENTO: usize>() -> [[[f64; V]; V]; TRENTO] {
-    let mut trentos = [[[0.0f64; V]; V]; TRENTO];
-    for i in 0..TRENTO {
+pub fn prepare_trento<const V: usize>(nb_trento: usize) -> Vec<[[f64; V]; V]> {
+    let mut trentos = vec![[[0.0f64; V]; V]; nb_trento];
+    for i in 0..nb_trento {
         trentos[i] = load_matrix(&format!("e{}/{:0>2}.dat", V, i)).expect(&format!(
             "Could not load trento initial condition file \"e{}/{:0>2}.dat\".",
             V, i
