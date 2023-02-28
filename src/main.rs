@@ -38,8 +38,8 @@ enum ToSimulate {
     Benchmark {
         #[arg(long, default_value_t = 1e-3)]
         dtmin: f64,
-        #[arg(long, default_value_t = 1e-2)]
-        dtmax: f64,
+        #[arg(long)]
+        dtmax: Option<f64>,
         #[arg(short, long, default_value_t = 10)]
         nb_trento: usize,
     },
@@ -69,7 +69,7 @@ fn run<const CELLS: usize>(args: Cli) {
     }
     let checkdt = |dtmin: f64, dtmax: f64| {
         if dtmin >= dtmax {
-            panic!("The smallest time interval 'dtmin' must be smaller than the largest 'dtmax'.");
+            panic!("The smallest time interval 'dtmin={}' must be smaller than the largest 'dtmax={}'.", dtmin, dtmax);
         }
     };
     let dx = l / CELLS as f64;
@@ -80,6 +80,7 @@ fn run<const CELLS: usize>(args: Cli) {
                 dtmax,
                 nb_trento,
             } => {
+                let dtmax = dtmax.unwrap_or(dx * 0.1);
                 checkdt(dtmin, dtmax);
                 ideal::run::<CELLS>(t0, tend, l, dtmin, dtmax, nb_trento);
             }
@@ -94,6 +95,7 @@ fn run<const CELLS: usize>(args: Cli) {
                 dtmax,
                 nb_trento,
             } => {
+                let dtmax = dtmax.unwrap_or(dx * 0.1);
                 checkdt(dtmin, dtmax);
                 shear::run::<CELLS>(t0, tend, l, dtmin, dtmax, etaovers, nb_trento);
             }
