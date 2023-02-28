@@ -40,7 +40,7 @@ pub fn run_convergence<const V: usize, const S: usize>(
     nb_trento: usize,
 ) {
     let trentos = prepare_trento::<V>(nb_trento);
-    let dx = 2.0 * l / V as f64;
+    let dx = l / V as f64;
     println!("{}", r.name);
     let erpow = 2;
     for i in 0..nb_trento {
@@ -71,13 +71,19 @@ pub fn run<const V: usize>(
     );
     run_convergence::<V, 2>(t0, tend, l, dtmin, dtmax, etaovers, heun(), nb_trento);
 }
-pub fn run_trento<const V: usize>(t0: f64, tend: f64, l: f64, etaovers: f64, nb_trento: usize) {
+pub fn run_trento<const V: usize>(
+    t0: f64,
+    tend: f64,
+    l: f64,
+    dt: f64,
+    etaovers: f64,
+    nb_trento: usize,
+) {
     let trentos = prepare_trento::<V>(nb_trento);
     let r = gauss_legendre_1(Some(0));
     // let r = heun();
     const S: usize = 1;
-    let dx = 2.0 * l / V as f64;
-    let dt = dx * 0.1;
+    let dx = l / V as f64;
     let er = dt * dt;
     for i in 0..nb_trento {
         let trento = (trentos[i], i);

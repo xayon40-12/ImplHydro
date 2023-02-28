@@ -101,7 +101,7 @@ fn run<const CELLS: usize>(args: Cli) {
             }
             ToSimulate::Trento { dt, nb_trento } => {
                 let dt = dt.unwrap_or(dx * 0.1);
-                shear::run_trento::<CELLS>(t0, tend, l, dt, nb_trento);
+                shear::run_trento::<CELLS>(t0, tend, l, dt, etaovers, nb_trento);
             }
         },
     }
