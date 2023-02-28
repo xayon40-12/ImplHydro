@@ -403,7 +403,7 @@ pub fn shear2d<const V: usize, const S: usize>(
         fun: &flux,
         constraints: &constraints,
         boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
-        post_constraints: Some(&constraints),
+        post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs, trs),
         total_diff_vs: zeros(&vs),

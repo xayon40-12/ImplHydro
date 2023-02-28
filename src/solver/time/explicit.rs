@@ -93,6 +93,15 @@ pub fn explicit<
 
     *ot = *t;
     *t += *dt;
+    for vy in 0..VY {
+        for vx in 0..VX {
+            let tmp = vs[vy][vx];
+            (vs[vy][vx], trs[vy][vx]) = constraints(*ot, vs[vy][vx]);
+            for f in 0..F {
+                total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
+            }
+        }
+    }
     if let Some(post) = post_constraints {
         for vy in 0..VY {
             for vx in 0..VX {

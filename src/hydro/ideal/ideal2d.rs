@@ -237,7 +237,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
         maxdt,
         er,
         t,
-        ot: t,
+        ot: t - 1.0,
         t0: t,
         tend,
         opt: (coord, [eigx, eigy]),
