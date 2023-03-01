@@ -174,7 +174,7 @@ def convergence(a, ref=None):
         elapsed = info["elapsed"]
         vid = info["ID"]
         id = vid["e"]
-        (maxerr, meanerr) = compare(cid, ref, v)
+        (maxerr, meanerr) = compare(id, ref, v)
         all += [(v, info, maxerr, meanerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
@@ -198,7 +198,7 @@ def info2name(info, scheme=True):
 def convall(l, ds):
     [dim,name,visc,t0,tend,dx,nx,t] = l
     # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
-    ally = [((5,8), "max", 2), ((3,5,1,5,1,5), "mean", 3)]
+    ally = [((5,8), "o", "max", 2), ((3,5,1,5,1,5), "v", "mean", 3)]
     allx = [("cost", 5)]
     # ally = [("max", 2)]
     for (dtcost, dci) in allx:
@@ -216,7 +216,7 @@ def convall(l, ds):
             plt.close()
             return 
         s1 = scs[0]
-        for (linestyle, meanmax, mmi) in ally:
+        for (linestyle, pointstyle, meanmax, mmi) in ally:
             for (s0,col) in zip(scs,plt_setting.clist):
                 for case in ds: 
                     d = ds[case]
@@ -224,13 +224,13 @@ def convall(l, ds):
                     dtref = sorted(list(ds0.keys()))[0]
                     info = ds0[dtref][0]
                     refs = {s: d[s][sorted(list(d[s].keys()))[0]][1] for s in d}
-                    if info["integration"] == "FixPoint":
+                    if "FixPoint" in info["integration"]:
                         schemetype = "Implicit"
                     else:
                         schemetype = "Explicit"
                     schemetype = meanmax+" "+schemetype
                     c = convergence(d[s0],refs[s1])
-                    plt.loglog(c[fromref:,dci],c[fromref:,mmi], 'o', label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=0.5)
+                    plt.loglog(c[fromref:,dci],c[fromref:,mmi], pointstyle, label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=0.5)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
             label = p.get_label()
@@ -243,7 +243,7 @@ def convall(l, ds):
         plt.close()
 
 def integrationPriority(integration):
-    if integration == "Explicit":
+    if "Explicit" in integration:
         return 1
     else:
         return 2

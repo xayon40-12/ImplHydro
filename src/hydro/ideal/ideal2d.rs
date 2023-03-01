@@ -14,12 +14,13 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     coord: &Coordinate,
-) -> Box<dyn Fn(f64, [f64; 3]) -> ([f64; 3], [f64; 6]) + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; 3], [f64; 6]) -> ([f64; 3], [f64; 6]) + 'a + Sync> {
     let st = match coord {
         Coordinate::Cartesian => |_| 1.0,
         Coordinate::Milne => |t| t,
     };
-    Box::new(move |t, [t00, t01, t02]| {
+    Box::new(move |t, [t00, t01, t02], otrs| {
+        let oe = otrs[0];
         let t = st(t);
         let t00 = t00 / t;
         let t01 = t01 / t;
@@ -27,7 +28,8 @@ fn gen_constraints<'a>(
         let m = (t01 * t01 + t02 * t02).sqrt();
         let t00 = t00.max(m * (1.0 + 1e-15));
         let sv = solve_v(t00, m, p);
-        let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+        let v0 = m / (t00 + p(oe));
+        let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
         let e = (t00 - m * v).max(VOID);
         let pe = p(e);
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
@@ -125,7 +127,7 @@ fn flux<const V: usize>(
         Dir::X,
         t,
         &f1,
-        (&|_, _| [], []),
+        &|_, _| [],
         constraints,
         *eigx,
         pre,
@@ -140,7 +142,7 @@ fn flux<const V: usize>(
         Dir::Y,
         t,
         &f2,
-        (&|_, _| [], []),
+        &|_, _| [],
         constraints,
         *eigy,
         pre,
@@ -206,7 +208,9 @@ pub fn ideal2d<const V: usize, const S: usize>(
         for i in 0..V {
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
-            (vs[j][i], trs[j][i]) = constraints(t, init((i, j), (x, y)));
+            vs[j][i] = init((i, j), (x, y));
+            trs[j][i][0] = vs[i][i][0];
+            (vs[j][i], trs[j][i]) = constraints(t, vs[j][i], trs[j][i]);
         }
     }
     match r.integration {

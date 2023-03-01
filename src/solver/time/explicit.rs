@@ -46,7 +46,7 @@ pub fn explicit<
     let mut ct = *t;
     for vy in 0..VY {
         for vx in 0..VX {
-            (_, trk[vy][vx]) = constraints(ct, vdtk[vy][vx]);
+            (_, trk[vy][vx]) = constraints(ct, vdtk[vy][vx], trdtk[vy][vx]);
         }
     }
 
@@ -55,7 +55,7 @@ pub fn explicit<
     for s in 0..S {
         for vy in 0..VY {
             for vx in 0..VX {
-                (vdtk[vy][vx], trdtk[vy][vx]) = constraints(ct, vdtk[vy][vx]);
+                (vdtk[vy][vx], trdtk[vy][vx]) = constraints(ct, vdtk[vy][vx], trdtk[vy][vx]);
             }
         }
         pfor2d(&mut fu, &|(Coord { x, y }, fu)| {
@@ -96,7 +96,7 @@ pub fn explicit<
     for vy in 0..VY {
         for vx in 0..VX {
             let tmp = vs[vy][vx];
-            (vs[vy][vx], trs[vy][vx]) = constraints(*ot, vs[vy][vx]);
+            (vs[vy][vx], trs[vy][vx]) = constraints(*ot, vs[vy][vx], trs[vy][vx]);
             for f in 0..F {
                 total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
             }
@@ -106,7 +106,7 @@ pub fn explicit<
         for vy in 0..VY {
             for vx in 0..VX {
                 let tmp = vs[vy][vx];
-                (vs[vy][vx], trs[vy][vx]) = post(*ot, vs[vy][vx]);
+                (vs[vy][vx], trs[vy][vx]) = post(*ot, vs[vy][vx], trs[vy][vx]);
                 for f in 0..F {
                     total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
                 }

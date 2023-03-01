@@ -50,25 +50,19 @@ pub fn fixpoint<
     let mut nbiter = [[0usize; VX]; VY];
     let mut dt = *dto;
     let mut iter = 0;
-    let mut failed = 0;
-    let maxiter = 30;
-    let maxfailed = 10;
-    let muldt: f64 = 1.01;
+    let mut failed = 1;
+    let maxiter = 10;
+    let maxfailed = 30;
     let divdt: f64 = 0.5;
-    let mut reset = false;
     while iserr {
         iter += 1;
-        if iter > maxiter {
+        if iter > failed * maxiter {
+            eprintln!("fail {}", failed);
             failed += 1;
             if failed >= maxfailed {
                 return None;
             }
-            if reset {
-                dt *= divdt;
-            } else {
-                dt /= muldt.powf(3.0);
-            }
-            reset = true;
+            dt *= divdt;
             iter = 0;
             *k = ko;
             errs = [[true; VX]; VY];
@@ -83,7 +77,7 @@ pub fn fixpoint<
                     for s1 in 0..S {
                         vdtk[f] += dt * a[s][s1] * fu[s1][y][x][f];
                     }
-                    (*vdtk, *trdtk) = constraints(ct, *vdtk);
+                    (*vdtk, *trdtk) = constraints(ct, *vdtk, *trdtk);
                 }
             });
             pfor2d(&mut fu[s], &|(Coord { x, y }, fu)| {
@@ -104,11 +98,11 @@ pub fn fixpoint<
         }
 
         let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some(f) = err_ref {
-            let vs = &vs;
-            let m = vs.iter().fold(0.0, |acc: f64, v| {
+            let trs = &trs;
+            let m = trs.iter().fold(0.0, |acc: f64, v| {
                 acc.max(v.iter().fold(0.0, |acc, v| acc.max(v[f])))
             });
-            Box::new(move |x, y| (vs[y][x][f]) / m) // due to '/m', the reference is in <=1
+            Box::new(move |x, y| (trs[y][x][f] / m).powi(2)) // due to '/m', the reference is in <=1, WARNING taking the square might be problematic
         } else {
             Box::new(|_, _| 1.0)
         };
@@ -164,7 +158,7 @@ pub fn fixpoint<
     for vy in 0..VY {
         for vx in 0..VX {
             let tmp = vs[vy][vx];
-            (vs[vy][vx], trs[vy][vx]) = constraints(*t, vs[vy][vx]);
+            (vs[vy][vx], trs[vy][vx]) = constraints(*t, vs[vy][vx], trs[vy][vx]);
             for f in 0..F {
                 total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
             }
@@ -174,7 +168,7 @@ pub fn fixpoint<
         for vy in 0..VY {
             for vx in 0..VX {
                 let tmp = vs[vy][vx];
-                (vs[vy][vx], trs[vy][vx]) = post(*t, vs[vy][vx]);
+                (vs[vy][vx], trs[vy][vx]) = post(*t, vs[vy][vx], trs[vy][vx]);
                 for f in 0..F {
                     total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
                 }

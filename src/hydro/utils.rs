@@ -43,7 +43,7 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize, const C: usize
     println!("error convergence:");
     let update = |dt: f64| {
         let dt = dt * dtmul;
-        let er = dt.powi(2);
+        let er = dt.powi(erpow);
         (dt, er)
     };
     (dt, er) = update(dt);

@@ -13,12 +13,14 @@ fn gen_constraints<'a>(
     er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
-) -> Box<dyn Fn(f64, [f64; 2]) -> ([f64; 2], [f64; 5]) + 'a + Sync> {
-    Box::new(move |_t, [t00, t01]| {
+) -> Box<dyn Fn(f64, [f64; 2], [f64; 5]) -> ([f64; 2], [f64; 5]) + 'a + Sync> {
+    Box::new(move |_t, [t00, t01], otrs| {
+        let oe = otrs[0];
         let m = t01.abs();
         let t00 = t00.max(m * (1.0 + 1e-15));
         let sv = solve_v(t00, m, p);
-        let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+        let v0 = m / (t00 + p(oe));
+        let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
         let e = (t00 - m * v).max(VOID);
         let pe = p(e);
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
@@ -82,7 +84,7 @@ fn flux<const V: usize>(
         Dir::X,
         1.0,
         &f1,
-        (&|_, _| [], []),
+        &|_, _| [],
         constraints,
         Eigenvalues::Analytical(&eigenvalues),
         pre,
@@ -114,7 +116,9 @@ pub fn ideal1d<const V: usize, const S: usize>(
     let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {
         let x = (i as f64 - v2) * dx;
-        (vs[0][i], trs[0][i]) = constraints(t, init(i, x));
+        vs[0][i] = init(i, x);
+        trs[0][i][0] = vs[0][i][0];
+        (vs[0][i], trs[0][i]) = constraints(t, vs[0][i], trs[0][i]);
     }
     match r.integration {
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)

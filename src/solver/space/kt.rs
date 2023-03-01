@@ -9,7 +9,7 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     dir: Dir,
     t: f64,
     flux: Flux<F, C>,
-    (secondary, sidx): (Flux<SD, C>, [usize; SD]),
+    secondary: Flux<SD, C>,
     constraints: Constraint<F, C>,
     eigenvalues: Eigenvalues<C>,
     pre_flux_limiter: Transform<F>,
@@ -49,11 +49,11 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             for f in 0..F {
                 upm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
             }
-            for c in 0..F {
+            for c in 0..C {
                 tupm[jpm][pm][c] = tvals[1 + j][c] - s * tderiv[j][c];
             }
             upm[jpm][pm] = post_flux_limiter(t, upm[jpm][pm]);
-            (upm[jpm][pm], tupm[jpm][pm]) = constraints(t, upm[jpm][pm]);
+            (upm[jpm][pm], tupm[jpm][pm]) = constraints(t, upm[jpm][pm], tupm[jpm][pm]);
         }
     }
     let mut fpm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
@@ -99,8 +99,7 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
                 fpm[jpm][1][n] + fpm[jpm][0][n] - a[jpm] * (upm[jpm][1][n] - upm[jpm][0][n]);
         }
         for n in 0..SD {
-            sdh[jpm][n] = sdpm[jpm][1][n] + sdpm[jpm][0][n]
-                - a[jpm] * (upm[jpm][1][sidx[n]] - upm[jpm][0][sidx[n]]);
+            sdh[jpm][n] = sdpm[jpm][1][n] + sdpm[jpm][0][n];
         }
     }
     let mut res: [f64; F] = [0.0; F];

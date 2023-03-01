@@ -1,9 +1,9 @@
 use crate::{
-    hydro::{eos::wb, Viscosity},
+    hydro::Viscosity,
     solver::{
         context::{Boundary, Context, Integration},
         run,
-        space::{kt::kt, Dir, Eigenvalues},
+        space::{id_flux_limiter, kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint, Observable,
@@ -18,17 +18,21 @@ fn gen_constraints<'a>(
     er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
-) -> Box<dyn Fn(f64, [f64; 10]) -> ([f64; 10], [f64; 13]) + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; 10], [f64; 13]) -> ([f64; 10], [f64; 13]) + 'a + Sync> {
     Box::new(
-        move |t, [tt00, tt01, tt02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22, mut utpi33]| {
+        move |t,
+              [tt00, tt01, tt02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22, mut utpi33],
+              otrs| {
+            let oe = otrs[0].max(VOID);
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
             let m = (t01 * t01 + t02 * t02).sqrt();
             let t00 = t00.max(m * (1.0 + 1e-15));
 
-            let sv = |v: f64| m / (t00 + wb::p((t00 - m * v).max(VOID)));
-            let v = newton(er, 0.95, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+            let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
+            let v0 = m / (t00 + p(oe));
+            let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
 
             let e = (t00 - m * v).max(VOID);
             let pe = p(e);
@@ -56,7 +60,7 @@ fn gen_constraints<'a>(
             let epe = e + pe;
             if epe + smallest < 0.0 {
                 // check that viscosity does not make pressure negative
-                let m = -epe / smallest;
+                let m = -epe / smallest * 0.99;
                 for j in 0..3 {
                     for i in 0..3 {
                         utpi[j][i] *= m;
@@ -225,7 +229,7 @@ fn flux<const V: usize>(
         Dir::X,
         t,
         &fxuxpi,
-        (&u, [0, 1, 2]),
+        &u,
         constraints,
         Eigenvalues::Analytical(&eigenvaluesx),
         pre,
@@ -240,7 +244,7 @@ fn flux<const V: usize>(
         Dir::Y,
         t,
         &fyuypi,
-        (&u, [0, 1, 2]),
+        &u,
         constraints,
         Eigenvalues::Analytical(&eigenvaluesy),
         pre,
@@ -390,7 +394,9 @@ pub fn shear2d<const V: usize, const S: usize>(
         for i in 0..V {
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
-            (vs[j][i], trs[j][i]) = constraints(t, init((i, j), (x, y)));
+            vs[j][i] = init((i, j), (x, y));
+            trs[j][i][0] = vs[j][i][0];
+            (vs[j][i], trs[j][i]) = constraints(t, vs[j][i], trs[j][i]);
         }
     }
     match r.integration {
