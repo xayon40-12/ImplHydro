@@ -1,3 +1,5 @@
+use crate::hydro::Viscosity;
+
 pub mod context;
 pub mod space;
 pub mod time;
@@ -27,12 +29,11 @@ pub fn save<
     context: &Context<Opt, F, C, VX, VY, S>,
     (namesf, namesc): &([&str; F], [&str; C]),
     name: &str, // simulation name
-    schemename: &str,
+    viscosity: Viscosity,
     elapsed: f64,
     cost: usize,
     tsteps: usize,
     nbiter: [[usize; VX]; VY],
-    integration: Integration,
     observables: &[Observable<F, C, VX, VY>],
 ) -> std::io::Result<()> {
     let t0 = context.t0;
@@ -43,9 +44,20 @@ pub fn save<
     let (v, trs) = context.vstrs;
     let diffv = context.total_diff_vs;
     let dim = if VY == 1 { 1 } else { 2 };
+    let schemename = context.r.name;
+    let integration = context.r.integration;
+    let stages = S;
     let foldername = &format!(
-        "{}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
-        name, context.r.integration, dim, S, &context.r.name, VX, context.maxdt, context.dx
+        "{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
+        name,
+        viscosity,
+        context.r.integration,
+        dim,
+        S,
+        &context.r.name,
+        VX,
+        context.maxdt,
+        context.dx
     );
 
     const TXT: bool = false;
@@ -139,9 +151,22 @@ pub fn save<
     if TXT {
         std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
     }
+    let viscosity = match viscosity {
+        Viscosity::Ideal => format!("Ideal"),
+        Viscosity::Bulk(zeta) => format!("Bulk\nzeta: {}", zeta),
+        Viscosity::Shear(etaovers) => format!("Shear\netaovers: {}", etaovers),
+        Viscosity::Both(zeta, etaovers) => format!("Both\nzeta: {}\netaovers: {}", zeta, etaovers),
+    };
+    let variables = ["x", "y", "iter"]
+        .iter()
+        .chain(namesf.iter())
+        .chain(namesc.iter())
+        .map(|&s| s)
+        .collect::<Vec<&str>>()
+        .join(" ");
     let info = format!(
-        "elapsed: {:e}\ntsteps: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nname: {}\n",
-        elapsed, tsteps, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, name,
+        "elapsed: {:e}\ntsteps: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\nviscosity: {}\nvariables: {}\n",
+        elapsed, tsteps, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, stages, name, viscosity, variables,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -158,8 +183,7 @@ pub fn run<
 >(
     mut context: Context<Opt, F, C, VX, VY, S>,
     name: &str,
-    schemename: &str,
-    integration: Integration,
+    viscosity: Viscosity,
     names: &([&str; F], [&str; C]),
     observables: &[Observable<F, C, VX, VY>],
 ) -> Option<(
@@ -174,6 +198,7 @@ pub fn run<
     use std::time::Instant;
     let now = Instant::now();
 
+    let integration = context.r.integration;
     let save_every = 0.1f64.max(context.maxdt);
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
@@ -185,12 +210,11 @@ pub fn run<
             ctx,
             names,
             name,
-            schemename,
+            viscosity,
             elapsed,
             cost as usize,
             tsteps,
             nbiter,
-            integration,
             observables,
         );
         match err {

@@ -16,6 +16,7 @@ from riemann import riemann
 from gubser import gubser
 from scipy import signal
 from math import ceil,log
+from enum import Enum
 
 warnings.filterwarnings("ignore", category=matplotlib.MatplotlibDeprecationWarning) # disable matplotlib deprecation warning
 np.seterr(invalid='ignore') # disable invalid waring for numpy as NaN are used to discard data in the void
@@ -24,32 +25,14 @@ np.seterr(divide='ignore') # disable divide by zero worining
 
 
 animate = False
-animate_arg = "-animate="
-viscous = False
-viscous_arg = "-viscous="
-for arg in sys.argv:
-    if animate_arg in arg:
-        animate = bool(arg[len(animate_arg):])
-    if viscous_arg in arg:
-        viscous = bool(arg[len(viscous_arg):])
+def setAnimate():
+    animate = True
 
-IDx = 0
-IDy = 1
-IDiter = 2
-IDt00 = 3
-IDt01 = 4
-ID1De = 5
-ID1Dut = 8
-ID1Dux = 9
-ID2De = 6
-ID2Dut = 9
-ID2Dux = 10
-ID2Duy = 11
-if viscous:
-    ID2De  += 7
-    ID2Dut += 7 
-    ID2Dux += 7 
-    ID2Duy += 7 
+argActions = [(["-a","--animate"], setAnimate)]
+for arg in sys.argv:
+    for (larg, act) in argActions:
+        if arg in larg:
+            act()
 
 CUT = 1e-9
 
@@ -70,7 +53,7 @@ def dd(n):
     else:
         return defaultdict(lambda: dd(n-1))
 
-datas = dd(10)
+datas = dd(20)
 
 def convert(v):
     try:
@@ -118,6 +101,20 @@ for d in os.listdir(dir):
     (name, case) = extractCase(name)
     info["name"] = name
     info["case"] = case
+    info["variables"] = info["variables"].split(" ")
+    vid = {n: i for (i,n) in enumerate(info["variables"])}
+    info["ID"] = vid
+    visc = info["viscosity"]
+    match visc:
+        case "Ideal":
+            visc = ()
+        case "Shear":
+            visc = (info["etaovers"])
+        case "Bulk":
+            visc = (info["zeta"])
+        case "Both":
+            visc = (info["zeta"],info["etaovers"])
+    info["visc"] = visc
 
     # data = np.loadtxt(p+"/data.txt")
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
@@ -131,15 +128,15 @@ for d in os.listdir(dir):
         datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),find_diff(dird+"/"+t)) for t in ts]
         info["datats"] = datats
 
-    t00 = data[:,IDt00]
-    m = t00>CUT
-    err = abs(t00.sum()-t00[m].sum())/t00.sum()
+    e = data[:,vid["e"]]
+    m = e>CUT
+    err = abs(e.sum()-e[m].sum())/e.sum()
     meanvoidratio += err
     maxvoidratio = max(maxvoidratio, err)
     countvoidratio += 1
 
     # print(p, dim, integration, t0, tend, dx, nx, maxdt)
-    datas[dim][name][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data, diff)
+    datas[dim][name][visc][t0][tend][dx][nx][t][case][scheme][maxdt] = (info, data, diff)
 
 meanvoidratio /= countvoidratio
 print("maxvoidratio: ", maxvoidratio, "meanvoidratio: ", meanvoidratio)
@@ -153,7 +150,7 @@ def compare(i, vss, wss):
     meanerr = 0
     count = 0
     for (vs, ws) in zip(vss,wss):
-        if  vs[IDt00] > CUT and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
+        if  vs[i] > CUT and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
             count += 1
             a = vs[i]
             b = ws[i]
@@ -175,23 +172,31 @@ def convergence(a, ref=None):
         dt = info["maxdt"]
         avdt = (info["tend"]-info["t0"])/info["tsteps"]
         elapsed = info["elapsed"]
-        if info["dim"] == "1D":
-            id = ID1De
-        else:
-            id = ID2De
-        (maxerr, meanerr) = compare(id, ref, v)
+        vid = info["ID"]
+        id = vid["e"]
+        (maxerr, meanerr) = compare(cid, ref, v)
         all += [(v, info, maxerr, meanerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
 
 def info2name(info, scheme=True):
+    visc = info["viscosity"]
+    match visc:
+        case "Ideal":
+            visc = "Ideal"
+        case "Shear":
+            visc = "Shear({})".format(info["etaovers"])
+        case "Bulk":
+            visc = "Bulk({})".format(info["zeta"])
+        case "Both":
+            visc = "Both({},{})".format(info["zeta"],info["etaovers"])
     if scheme:
-        return "{}_{}{}_{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["case"],info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
+        return "{}_{}{}_{}_{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["case"],visc,info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
     else:
-        return "{}_{}{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["case"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
+        return "{}_{}{}_{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["case"],visc,info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
 
 def convall(l, ds):
-    [dim,name,t0,tend,dx,nx,t] = l
+    [dim,name,visc,t0,tend,dx,nx,t] = l
     # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
     ally = [((5,8), "max", 2), ((3,5,1,5,1,5), "mean", 3)]
     allx = [("cost", 5)]
@@ -243,14 +248,12 @@ def integrationPriority(integration):
     else:
         return 2
 
-# def mask(m,data):
-#     return np.concatenate((data[:,:3], data[:,3:]/m[:,None]), axis=1)
-def mask(data):
-    m = (data[:,IDt00]>CUT).astype(int)
+def mask(data,vid):
+    m = (data[:,vid["e"]]>CUT).astype(int)
     return np.concatenate((data[:,:3], data[:,3:]/m[:,None]), axis=1)
 
 def plot1d(l, datas):
-    [dim,name,t0,tend,dx,n,t,case] = l
+    [dim,name,visc,t0,tend,dx,n,t,case] = l
     schemes = sorted(list(datas.keys()))
     dts = sorted([dt for dt in datas[schemes[0]]])
     dts = [dts[0],dts[-1]] # only keep best and worst
@@ -258,7 +261,8 @@ def plot1d(l, datas):
     maxdt = dts[-1]
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
     (info,ref,diffref) = datas["Heun"][mindt]
-    ref = mask(ref)
+    vid = info["ID"]
+    ref = mask(ref,vid)
     nl = 2
     # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
     lstyles = [(3*i,(3,5,1,5)) for i in range(nl)]
@@ -277,7 +281,7 @@ def plot1d(l, datas):
         v = v.reshape((n,n))
         return np.array([v[i,i] for i in range(n)])
 
-    x = ref[:,IDx]
+    x = ref[:,vid["x"]]
     nl = next(i for (i,v) in zip(range(n),x) if v >= -crop)
     nr = n-1-nl
     x = x[nl:nr]
@@ -285,9 +289,9 @@ def plot1d(l, datas):
         x = x/(t-t0)
     ycontinuum = [e(x) for x in x]
     if "Gubser" in name:
-        yref = diagonal(ref[:,ID2De])
+        yref = diagonal(ref[:,vid["e"]])
     else:
-        yref = ref[:,ID1De]
+        yref = ref[:,vid["e"]]
     yref = yref[nl:nr]
 
     for dt in dts:
@@ -306,6 +310,7 @@ def plot1d(l, datas):
 
         for (scheme,linestyle) in zip(schemes, lstyles):
             (sinfo, data, diff) = datas[scheme][dt]
+            vid = sinfo["ID"]
             if sinfo["integration"] == "FixPoint":
                 schemetype = "Implicit"
             else:
@@ -313,17 +318,17 @@ def plot1d(l, datas):
             nbStages = 2
             if scheme == "GL1":
                 nbStages = 1
-            data = mask(data)
+            data = mask(data,vid)
             if "Gubser" in name:
-                iter = diagonal(data[:,IDiter])
-                y = diagonal(data[:,ID2De])
-                yut = diagonal(data[:,ID2Dut])
-                yux = diagonal(data[:,ID2Dux])
+                iter = diagonal(data[:,vid["iter"]])
+                y = diagonal(data[:,vid["e"]])
+                yut = diagonal(data[:,vid["ut"]])
+                yux = diagonal(data[:,vid["ux"]])
             else:
-                iter = data[:,IDiter]
-                y = data[:,ID1De]
-                yut = data[:,ID1Dut]
-                yux = data[:,ID1Dux]
+                iter = data[:,vid["iter"]]
+                y = data[:,vid["e"]]
+                yut = data[:,vid["ut"]]
+                yux = data[:,vid["ux"]]
             iter = iter[nl:nr]
             cost = iter*nbStages
             y = y[nl:nr]
@@ -347,10 +352,11 @@ def plot1d(l, datas):
         plt.close()
 
 def plot2d(l, datadts):
-    [dim,name,t0,tend,dx,n,t,case,scheme] = l
+    [dim,name,visc,t0,tend,dx,n,t,case,scheme] = l
     maxdts = sorted([dt for dt in datadts])
     (info, ref, diffref) = datadts[maxdts[0]]
-    ref = mask(ref)
+    vid = info["ID"]
+    ref = mask(ref,vid)
     if len(maxdts) == 1:
         global fromref
         fromref = 0
@@ -380,17 +386,17 @@ def plot2d(l, datadts):
         if not hasattr(axs[0], "__len__"):
             axs = [axs]
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
-            mdata = mask(data)
+            mdata = mask(data,vid)
             n = info["nx"]
-            x = mdata[:,IDx]
-            y = mdata[:,IDy]
-            z = mdata[:,ID2De]
-            zref = ref[:,ID2De]
-            ziter = mdata[:,IDiter]
-            zut = mdata[:,ID2Dut]
-            zux = mdata[:,ID2Dux]
+            x = mdata[:,vid["x"]]
+            y = mdata[:,vid["y"]]
+            z = mdata[:,vid["e"]]
+            zref = ref[:,vid["e"]]
+            ziter = mdata[:,vid["iter"]]
+            zut = mdata[:,vid["ut"]]
+            zux = mdata[:,vid["ux"]]
             zvx = zux/zut
-            zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
+            zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)]
             zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
             zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
             nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
@@ -441,17 +447,17 @@ def plot2d(l, datadts):
         datats = [datats[-1]]
 
     for (id, (t,data,diff)) in zip(range(1000000), datats):
-        mdata = mask(data)
+        mdata = mask(data,vid)
         n = info["nx"]
-        x = mdata[:,IDx]
-        y = mdata[:,IDy]
-        z = mdata[:,ID2De]
-        zref = ref[:,ID2De]
-        ziter = mdata[:,IDiter]
-        zut = mdata[:,ID2Dut]
-        zux = mdata[:,ID2Dux]
+        x = mdata[:,vid["x"]]
+        y = mdata[:,vid["y"]]
+        z = mdata[:,vid["e"]]
+        zref = ref[:,vid["e"]]
+        ziter = mdata[:,vid["iter"]]
+        zut = mdata[:,vid["ut"]]
+        zux = mdata[:,vid["ux"]]
         zvx = zux/zut
-        zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)] # this is energy density not t00
+        zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)]
         zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
         zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
         nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
@@ -514,9 +520,9 @@ def plot2d(l, datadts):
             dt00 = np.reshape(diff[:,2], (n,n))
             dt01 = np.reshape(diff[:,3], (n,n))
             dt02 = np.reshape(diff[:,4], (n,n))
-            totdt00 = dt00.sum()/abs(data[:,IDt00]).sum()
-            totdt01 = dt01.sum()/abs(data[:,IDt00+1]).sum()
-            totdt02 = dt02.sum()/abs(data[:,IDt00+2]).sum()
+            totdt00 = dt00.sum()/abs(data[:,2]).sum()
+            totdt01 = dt01.sum()/abs(data[:,3]).sum()
+            totdt02 = dt02.sum()/abs(data[:,4]).sum()
             all = [("diff T00",dt00,totdt00),("diff T01",dt01,totdt01),("diff T02",dt02,totdt02)]
             nb = len(all)
             plt.rcParams["figure.figsize"] = [2+nb*4, 5]
@@ -571,6 +577,6 @@ try:
 except FileExistsError:
     None
     
-alldata(7, datas, convall)
-alldata(8, datas, plotall1D)
-alldata(9, datas, plotall2D)
+alldata(8, datas, convall)
+alldata(9, datas, plotall1D)
+alldata(10, datas, plotall2D)

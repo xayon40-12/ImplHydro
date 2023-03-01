@@ -1,5 +1,5 @@
 use crate::{
-    hydro::eos::wb,
+    hydro::{eos::wb, Viscosity},
     solver::{
         context::{Boundary, Context, Integration},
         run,
@@ -372,7 +372,6 @@ pub fn shear2d<const V: usize, const S: usize>(
     usize,
 )> {
     let constraints = gen_constraints(er, &p, &dpde);
-    let schemename = r.name;
     let mut vs = [[[0.0; 10]; V]; V];
     let mut trs = [[[0.0; 13]; V]; V];
     let names = (
@@ -398,7 +397,6 @@ pub fn shear2d<const V: usize, const S: usize>(
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
         Integration::FixPoint(_) => {}
     }
-    let integration = r.integration;
     let context = Context {
         fun: &flux,
         constraints: &constraints,
@@ -428,8 +426,7 @@ pub fn shear2d<const V: usize, const S: usize>(
     run(
         context,
         name,
-        &schemename,
-        integration,
+        Viscosity::Shear(etaovers),
         &names,
         &observables,
     )

@@ -107,7 +107,6 @@ pub fn ideal1d<const V: usize, const S: usize>(
     init: Init1D<2>,
 ) -> Option<(([[[f64; 2]; V]; 1], [[[f64; 5]; V]; 1]), f64, usize, usize)> {
     let constraints = gen_constraints(er, p, dpde);
-    let schemename = r.name;
     let mut vs = [[[0.0; 2]; V]];
     let mut trs = [[[0.0; 5]; V]];
     let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);
@@ -121,7 +120,6 @@ pub fn ideal1d<const V: usize, const S: usize>(
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
         Integration::FixPoint(_) => {}
     }
-    let integration = r.integration;
     let context = Context {
         fun: &flux,
         constraints: &constraints,
@@ -144,5 +142,5 @@ pub fn ideal1d<const V: usize, const S: usize>(
         p,
         dpde,
     };
-    run(context, name, &schemename, integration, &names, &[])
+    run(context, name, crate::hydro::Viscosity::Ideal, &names, &[])
 }

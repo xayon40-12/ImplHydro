@@ -196,7 +196,6 @@ pub fn ideal2d<const V: usize, const S: usize>(
 ) -> Option<(([[[f64; 3]; V]; V], [[[f64; 6]; V]; V]), f64, usize, usize)> {
     let coord = Coordinate::Milne;
     let constraints = gen_constraints(er, &p, &dpde, &coord);
-    let schemename = r.name;
     let mut vs = [[[0.0; 3]; V]; V];
     let mut trs = [[[0.0; 6]; V]; V];
 
@@ -214,7 +213,6 @@ pub fn ideal2d<const V: usize, const S: usize>(
         Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
         Integration::FixPoint(_) => {}
     }
-    let integration = r.integration;
 
     let eigx = Eigenvalues::Analytical(&eigenvaluesx);
     let eigy = Eigenvalues::Analytical(&eigenvaluesy);
@@ -251,8 +249,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
     run(
         context,
         name,
-        &schemename,
-        integration,
+        crate::hydro::Viscosity::Ideal,
         &names,
         &observables,
     )
