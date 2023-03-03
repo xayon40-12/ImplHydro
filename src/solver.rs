@@ -253,7 +253,7 @@ pub fn run<
         tsteps += 1;
         let res = match integration {
             Integration::Explicit => explicit(&mut context),
-            Integration::FixPoint(err_ref) => fixpoint(&mut context, err_ref),
+            Integration::FixPoint(err_ref_p) => fixpoint(&mut context, err_ref_p),
         };
         if let Some((c, nbs)) = res {
             cost += c;

@@ -70,7 +70,7 @@ pub fn run<const V: usize>(
         dtmax,
         etaovers,
         tempcut,
-        gauss_legendre_1(Some(0)),
+        gauss_legendre_1(Some((0, 2.0))),
         nb_trento,
     );
     run_convergence::<V, 2>(
@@ -95,7 +95,7 @@ pub fn run_trento<const V: usize>(
     nb_trento: usize,
 ) {
     let trentos = prepare_trento::<V>(nb_trento);
-    let r = gauss_legendre_1(Some(0));
+    let r = gauss_legendre_1(Some((0, 2.0)));
     // let r = heun();
     const S: usize = 1;
     let dx = l / V as f64;

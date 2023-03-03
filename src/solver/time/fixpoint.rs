@@ -37,7 +37,7 @@ pub fn fixpoint<
         p: _,
         dpde: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
-    err_ref: Option<usize>,
+    err_ref_p: Option<(usize, f64)>,
 ) -> Option<(f64, [[usize; VX]; VY])> {
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
@@ -97,12 +97,13 @@ pub fn fixpoint<
             });
         }
 
-        let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some(f) = err_ref {
+        let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some((f, p)) = err_ref_p {
             let trs = &trs;
             let m = trs.iter().fold(0.0, |acc: f64, v| {
                 acc.max(v.iter().fold(0.0, |acc, v| acc.max(v[f])))
             });
-            Box::new(move |x, y| (trs[y][x][f] / m).powi(2)) // due to '/m', the reference is in <=1, WARNING taking the square might be problematic
+            // Box::new(move |x, y| (trs[y][x][f] / m).powi(2)) // due to '/m', the reference is in <=1, WARNING taking the square might be problematic
+            Box::new(move |x, y| (trs[y][x][f] / m).powf(p))
         } else {
             Box::new(|_, _| 1.0)
         };

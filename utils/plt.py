@@ -26,12 +26,14 @@ np.seterr(divide='ignore') # disable divide by zero worining
 
 animate = False
 def setAnimate():
+    global animate
     animate = True
 
 argActions = [(["-a","--animate"], setAnimate)]
 for arg in sys.argv:
     for (larg, act) in argActions:
         if arg in larg:
+            print(arg)
             act()
 
 CUT = 1e-9
@@ -119,6 +121,7 @@ for d in os.listdir(dir):
             visc = (info["zeta"],info["etaovers"])
             cut = info["energycut"]
     info["visc"] = visc
+    # cut = CUT
     info["CUT"] = cut
 
     # data = np.loadtxt(p+"/data.txt")
@@ -359,6 +362,8 @@ def plot1d(l, datas):
         plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info, False)))
         plt.close()
 
+gref = defaultdict(lambda: None)
+greft = defaultdict(lambda: defaultdict(lambda: None))
 def plot2d(l, datadts):
     [dim,name,visc,t0,tend,dx,n,t,case,scheme] = l
     maxdts = sorted([dt for dt in datadts])
@@ -385,6 +390,7 @@ def plot2d(l, datadts):
     if many:
         num = 5
         nums = np.array([i for i in range(ld) if i%(ld/(num-1)) == 0]+[ld-1])
+        # nb = 4
         nb = 1
         if "Gubser" in info["name"]:
             nb += 1
@@ -395,6 +401,11 @@ def plot2d(l, datadts):
         if not hasattr(axs[0], "__len__"):
             axs = [axs]
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
+            global greft
+            if greft[case][t] is None:
+                greft[case][t] = (data,scheme)
+            elif greft[case][t][1] != scheme:
+                ref = greft[case][t][0]
             mdata = mask(data,vid,cut)
             n = info["nx"]
             x = mdata[:,vid["x"]]
@@ -405,9 +416,17 @@ def plot2d(l, datadts):
             zut = mdata[:,vid["ut"]]
             zux = mdata[:,vid["ux"]]
             zvx = zux/zut
+            sgn = np.sign(zvx)
+            zvx = np.power(zvx*sgn,0.5)*sgn
+            zuy = mdata[:,vid["uy"]]
+            zvy = zuy/zut
+            sgn = np.sign(zvy)
+            zvy = np.power(zvy*sgn,0.5)*sgn
             zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)]
             zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
             zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
+            sgn = np.sign(zerrref)
+            zerrref = np.power(zerrref*sgn,0.5)*sgn
             nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
             nr = n-1-nl
             x = np.reshape(x, (n,n))[nl:nr,nl:nr]
@@ -418,10 +437,12 @@ def plot2d(l, datadts):
             zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
             zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
             zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
+            zvy = np.reshape(zvy, (n,n))[nl:nr,nl:nr]
             l = x[0][0]
             r = x[0][-1]
             d = y[0][0]
             u = y[-1][0]
+            # all = [("e", z),("vy",zvy), ("err ref",zerrref), ("vx", zvx)]
             all = [("e", z)]
             if "Gubser" in info["name"]:
                 all += [("err", zerr)]
@@ -456,6 +477,11 @@ def plot2d(l, datadts):
         datats = [datats[-1]]
 
     for (id, (t,data,diff)) in zip(range(1000000), datats):
+        # global greft
+        if greft[case][t] is None:
+            greft[case][t] = (data,scheme)
+        elif greft[case][t][1] != scheme:
+            ref = greft[case][t][0]
         mdata = mask(data,vid,cut)
         n = info["nx"]
         x = mdata[:,vid["x"]]
@@ -466,9 +492,17 @@ def plot2d(l, datadts):
         zut = mdata[:,vid["ut"]]
         zux = mdata[:,vid["ux"]]
         zvx = zux/zut
+        sgn = np.sign(zvx)
+        zvx = np.power(zvx*sgn,0.5)*sgn
+        zuy = mdata[:,vid["uy"]]
+        zvy = zuy/zut
+        sgn = np.sign(zvy)
+        zvy = np.power(zvy*sgn,0.5)*sgn
         zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)]
         zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
         zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
+        sgn = np.sign(zerrref)
+        zerrref = np.power(zerrref*sgn,0.5)*sgn
         nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
         nr = n-1-nl
         x = np.reshape(x, (n,n))[nl:nr,nl:nr]
@@ -479,11 +513,12 @@ def plot2d(l, datadts):
         zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
         zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
         zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
+        zvy = np.reshape(zvy, (n,n))[nl:nr,nl:nr]
         l = x[0][0]
         r = x[0][-1]
         d = y[0][0]
         u = y[-1][0]
-        # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
+        # all = [("e", z), ("vy", zvy), ("err ref", zerrref),("vx",zvx)]
         all = [("e", z)]
         # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
         if "Gubser" in info["name"] and not "Exponential" in info["name"]:
