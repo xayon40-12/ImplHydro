@@ -16,6 +16,7 @@ fn hydro2d<const V: usize, const S: usize>(
     maxdt: f64,
     er: f64,
     etaovers: f64,
+    tempcut: f64,
     r: Scheme<S>,
     init_e: ([[f64; V]; V], usize),
 ) -> HydroOutput<V, V, F_SHEAR_2D, C_SHEAR_2D> {
@@ -25,7 +26,7 @@ fn hydro2d<const V: usize, const S: usize>(
     println!("{}", name);
     let init = init_from_energy_2d(t0, es, p, dpde);
     shear2d::<V, S>(
-        &name, maxdt, er, t0, tend, dx, r, p, dpde, temp, &init, etaovers,
+        &name, maxdt, er, t0, tend, dx, r, p, dpde, temp, &init, etaovers, tempcut,
     )
 }
 
@@ -36,6 +37,7 @@ pub fn run_convergence<const V: usize, const S: usize>(
     dtmin: f64,
     dtmax: f64,
     etaovers: f64,
+    tempcut: f64,
     r: Scheme<S>,
     nb_trento: usize,
 ) {
@@ -46,7 +48,7 @@ pub fn run_convergence<const V: usize, const S: usize>(
     for i in 0..nb_trento {
         let trento = (trentos[i], i);
         converge(dtmax, dtmin, erpow, |dt, er| {
-            hydro2d::<V, S>(t0, tend, dx, dt, er, etaovers, r, trento)
+            hydro2d::<V, S>(t0, tend, dx, dt, er, etaovers, tempcut, r, trento)
         });
     }
 }
@@ -57,6 +59,7 @@ pub fn run<const V: usize>(
     dtmin: f64,
     dtmax: f64,
     etaovers: f64,
+    tempcut: f64,
     nb_trento: usize,
 ) {
     run_convergence::<V, 1>(
@@ -66,10 +69,21 @@ pub fn run<const V: usize>(
         dtmin,
         dtmax,
         etaovers,
+        tempcut,
         gauss_legendre_1(Some(0)),
         nb_trento,
     );
-    run_convergence::<V, 2>(t0, tend, l, dtmin, dtmax, etaovers, heun(), nb_trento);
+    run_convergence::<V, 2>(
+        t0,
+        tend,
+        l,
+        dtmin,
+        dtmax,
+        etaovers,
+        tempcut,
+        heun(),
+        nb_trento,
+    );
 }
 pub fn run_trento<const V: usize>(
     t0: f64,
@@ -77,6 +91,7 @@ pub fn run_trento<const V: usize>(
     l: f64,
     dt: f64,
     etaovers: f64,
+    tempcut: f64,
     nb_trento: usize,
 ) {
     let trentos = prepare_trento::<V>(nb_trento);
@@ -87,6 +102,6 @@ pub fn run_trento<const V: usize>(
     let er = dt * dt;
     for i in 0..nb_trento {
         let trento = (trentos[i], i);
-        hydro2d::<V, S>(t0, tend, dx, dt, er, etaovers, r, trento);
+        hydro2d::<V, S>(t0, tend, dx, dt, er, etaovers, tempcut, r, trento);
     }
 }

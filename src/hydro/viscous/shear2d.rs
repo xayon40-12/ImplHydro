@@ -1,9 +1,9 @@
 use crate::{
-    hydro::Viscosity,
+    hydro::{Viscosity, HBARC},
     solver::{
         context::{Boundary, Context, Integration},
         run,
-        space::{id_flux_limiter, kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint, Observable,
@@ -195,7 +195,7 @@ fn flux<const V: usize>(
     dx: f64,
     [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
-    (etaovers, temperature): &(f64, Eos),
+    (etaovers, temperature, tempcut): &(f64, Eos, f64),
 ) -> [f64; 10] {
     let theta = 1.1;
 
@@ -286,12 +286,11 @@ fn flux<const V: usize>(
     }
 
     let temp = temperature(e);
-    let mev = temp * 197.3;
-    let cutmev = 50.0;
+    let mev = temp * HBARC;
     let s = (e + pe) / temp;
     let mut eta = etaovers * s;
     let taupi = 3.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
-    if mev < cutmev {
+    if mev < *tempcut {
         eta = 0.0;
     }
 
@@ -369,6 +368,7 @@ pub fn shear2d<const V: usize, const S: usize>(
     temperature: Eos,
     init: Init2D<10>,
     etaovers: f64,
+    tempcut: f64,
 ) -> Option<(
     ([[[f64; 10]; V]; V], [[[f64; 13]; V]; V]),
     f64,
@@ -421,7 +421,7 @@ pub fn shear2d<const V: usize, const S: usize>(
         ot: t - 1.0,
         t0: t,
         tend,
-        opt: (etaovers, temperature),
+        opt: (etaovers, temperature, tempcut),
         p,
         dpde,
     };
@@ -429,10 +429,18 @@ pub fn shear2d<const V: usize, const S: usize>(
     let observables: [Observable<10, 13, V, V>; 1] =
         [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
 
+    let temp = tempcut / HBARC;
+    let ecut = newton(
+        1e-14,
+        temp,
+        |e| temperature(e) - temp,
+        |e| e.max(0.0).min(1000.0),
+    );
+
     run(
         context,
         name,
-        Viscosity::Shear(etaovers),
+        Viscosity::Shear(etaovers, ecut),
         &names,
         &observables,
     )

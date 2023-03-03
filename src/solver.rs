@@ -153,9 +153,19 @@ pub fn save<
     }
     let viscosity = match viscosity {
         Viscosity::Ideal => format!("Ideal"),
-        Viscosity::Bulk(zeta) => format!("Bulk\nzeta: {}", zeta),
-        Viscosity::Shear(etaovers) => format!("Shear\netaovers: {}", etaovers),
-        Viscosity::Both(zeta, etaovers) => format!("Both\nzeta: {}\netaovers: {}", zeta, etaovers),
+        Viscosity::Bulk(zeta, energycut) => {
+            format!("Bulk\nzeta: {:e}\nenergycut: {:e}", zeta, energycut)
+        }
+        Viscosity::Shear(etaovers, energycut) => {
+            format!(
+                "Shear\netaovers: {:e}\nenergycut: {:e}",
+                etaovers, energycut
+            )
+        }
+        Viscosity::Both(zeta, etaovers, energycut) => format!(
+            "Both\nzeta: {:e}\netaovers: {:e}\nenergycut: {:e}",
+            zeta, etaovers, energycut
+        ),
     };
     let variables = ["x", "y", "iter"]
         .iter()

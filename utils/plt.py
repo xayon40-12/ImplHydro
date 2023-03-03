@@ -105,16 +105,21 @@ for d in os.listdir(dir):
     vid = {n: i for (i,n) in enumerate(info["variables"])}
     info["ID"] = vid
     visc = info["viscosity"]
+    cut = CUT
     match visc:
         case "Ideal":
             visc = ()
         case "Shear":
             visc = (info["etaovers"])
+            cut = info["energycut"]
         case "Bulk":
             visc = (info["zeta"])
+            cut = info["energycut"]
         case "Both":
             visc = (info["zeta"],info["etaovers"])
+            cut = info["energycut"]
     info["visc"] = visc
+    info["CUT"] = cut
 
     # data = np.loadtxt(p+"/data.txt")
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
@@ -129,7 +134,7 @@ for d in os.listdir(dir):
         info["datats"] = datats
 
     e = data[:,vid["e"]]
-    m = e>CUT
+    m = e>cut
     err = abs(e.sum()-e[m].sum())/e.sum()
     meanvoidratio += err
     maxvoidratio = max(maxvoidratio, err)
@@ -145,12 +150,12 @@ with open("voidratio.txt", "w") as fv:
 print("finished loading")
 # sys.exit(0)
 
-def compare(i, vss, wss):
+def compare(i, cut, vss, wss):
     maxerr = 0
     meanerr = 0
     count = 0
     for (vs, ws) in zip(vss,wss):
-        if  vs[i] > CUT and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
+        if  vs[i] > cut and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
             count += 1
             a = vs[i]
             b = ws[i]
@@ -174,7 +179,8 @@ def convergence(a, ref=None):
         elapsed = info["elapsed"]
         vid = info["ID"]
         id = vid["e"]
-        (maxerr, meanerr) = compare(id, ref, v)
+        cut = info["CUT"]
+        (maxerr, meanerr) = compare(id, cut, ref, v)
         all += [(v, info, maxerr, meanerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
@@ -248,8 +254,8 @@ def integrationPriority(integration):
     else:
         return 2
 
-def mask(data,vid):
-    m = (data[:,vid["e"]]>CUT).astype(int)
+def mask(data,vid,cut):
+    m = (data[:,vid["e"]]>cut).astype(int)
     return np.concatenate((data[:,:3], data[:,3:]/m[:,None]), axis=1)
 
 def plot1d(l, datas):
@@ -262,7 +268,8 @@ def plot1d(l, datas):
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
     (info,ref,diffref) = datas["Heun"][mindt]
     vid = info["ID"]
-    ref = mask(ref,vid)
+    cut = info["CUT"]
+    ref = mask(ref,vid,cut)
     nl = 2
     # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
     lstyles = [(3*i,(3,5,1,5)) for i in range(nl)]
@@ -311,6 +318,7 @@ def plot1d(l, datas):
         for (scheme,linestyle) in zip(schemes, lstyles):
             (sinfo, data, diff) = datas[scheme][dt]
             vid = sinfo["ID"]
+            cut = sinfo["CUT"]
             if sinfo["integration"] == "FixPoint":
                 schemetype = "Implicit"
             else:
@@ -318,7 +326,7 @@ def plot1d(l, datas):
             nbStages = 2
             if scheme == "GL1":
                 nbStages = 1
-            data = mask(data,vid)
+            data = mask(data,vid,cut)
             if "Gubser" in name:
                 iter = diagonal(data[:,vid["iter"]])
                 y = diagonal(data[:,vid["e"]])
@@ -356,7 +364,8 @@ def plot2d(l, datadts):
     maxdts = sorted([dt for dt in datadts])
     (info, ref, diffref) = datadts[maxdts[0]]
     vid = info["ID"]
-    ref = mask(ref,vid)
+    cut = info["CUT"]
+    ref = mask(ref,vid,cut)
     if len(maxdts) == 1:
         global fromref
         fromref = 0
@@ -386,7 +395,7 @@ def plot2d(l, datadts):
         if not hasattr(axs[0], "__len__"):
             axs = [axs]
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
-            mdata = mask(data,vid)
+            mdata = mask(data,vid,cut)
             n = info["nx"]
             x = mdata[:,vid["x"]]
             y = mdata[:,vid["y"]]
@@ -447,7 +456,7 @@ def plot2d(l, datadts):
         datats = [datats[-1]]
 
     for (id, (t,data,diff)) in zip(range(1000000), datats):
-        mdata = mask(data,vid)
+        mdata = mask(data,vid,cut)
         n = info["nx"]
         x = mdata[:,vid["x"]]
         y = mdata[:,vid["y"]]
