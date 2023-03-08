@@ -94,10 +94,12 @@ pub fn run<const V: usize>(t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64, n
 pub fn run_trento<const V: usize>(t0: f64, tend: f64, l: f64, dt: f64, nb_trento: usize) {
     let trentos = prepare_trento::<V>(nb_trento);
     let gl1 = gauss_legendre_1(None);
+    let heun = heun();
     let dx = l / V as f64;
     let er = dt * dt;
     for i in 0..nb_trento {
         let trento = Some((trentos[i], i));
         hydro2d::<V, 1>(t0, tend, dx, dt, er, gl1, trento);
+        hydro2d::<V, 2>(t0, tend, dx, dt, er, heun, trento);
     }
 }
