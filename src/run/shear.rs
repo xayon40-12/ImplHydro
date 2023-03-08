@@ -95,7 +95,7 @@ pub fn run_trento<const V: usize>(
     nb_trento: usize,
 ) {
     let trentos = prepare_trento::<V>(nb_trento);
-    let gl1 = gauss_legendre_1(Some((0, 1e-2)));
+    let gl1 = gauss_legendre_1(Some((0, 1e-3)));
     let heun = heun();
     let dx = l / V as f64;
     let er = dt * dt;
