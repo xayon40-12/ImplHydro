@@ -98,13 +98,13 @@ pub fn fixpoint<
             });
         }
 
-        let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some((f, p)) = err_ref_p {
+        let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some((f, mi)) = err_ref_p {
             let trs = &trs;
             let m = trs.iter().fold(0.0, |acc: f64, v| {
                 acc.max(v.iter().fold(0.0, |acc, v| acc.max(v[f])))
             });
             // Box::new(move |x, y| (trs[y][x][f] / m).powi(2)) // due to '/m', the reference is in <=1, WARNING taking the square might be problematic
-            Box::new(move |x, y| (trs[y][x][f] / m).powf(p))
+            Box::new(move |x, y| (trs[y][x][f] / m).powi(2).max(mi))
         } else {
             Box::new(|_, _| 1.0)
         };

@@ -70,7 +70,7 @@ pub fn run<const V: usize>(
         dtmax,
         etaovers,
         tempcut,
-        gauss_legendre_1(Some((0, 2.0))),
+        gauss_legendre_1(Some((0, 1e-3))),
         nb_trento,
     );
     run_convergence::<V, 2>(
@@ -95,13 +95,13 @@ pub fn run_trento<const V: usize>(
     nb_trento: usize,
 ) {
     let trentos = prepare_trento::<V>(nb_trento);
-    let r = gauss_legendre_1(Some((0, 2.0)));
-    // let r = heun();
-    const S: usize = 1;
+    let gl1 = gauss_legendre_1(Some((0, 1e-2)));
+    let heun = heun();
     let dx = l / V as f64;
     let er = dt * dt;
     for i in 0..nb_trento {
         let trento = (trentos[i], i);
-        hydro2d::<V, S>(t0, tend, dx, dt, er, etaovers, tempcut, r, trento);
+        hydro2d::<V, 1>(t0, tend, dx, dt, er, etaovers, tempcut, gl1, trento);
+        hydro2d::<V, 2>(t0, tend, dx, dt, er, etaovers, tempcut, heun, trento);
     }
 }

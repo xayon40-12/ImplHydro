@@ -88,20 +88,12 @@ pub fn run_convergence<const V: usize, const S: usize>(
     }
 }
 pub fn run<const V: usize>(t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64, nb_trento: usize) {
-    run_convergence::<V, 1>(
-        t0,
-        tend,
-        l,
-        dtmin,
-        dtmax,
-        gauss_legendre_1(Some((0, 1.0))),
-        nb_trento,
-    );
+    run_convergence::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(None), nb_trento);
     run_convergence::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
 }
 pub fn run_trento<const V: usize>(t0: f64, tend: f64, l: f64, dt: f64, nb_trento: usize) {
     let trentos = prepare_trento::<V>(nb_trento);
-    let gl1 = gauss_legendre_1(Some((0, 1.0)));
+    let gl1 = gauss_legendre_1(None);
     let dx = l / V as f64;
     let er = dt * dt;
     for i in 0..nb_trento {

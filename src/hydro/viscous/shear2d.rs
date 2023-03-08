@@ -399,6 +399,7 @@ pub fn shear2d<const V: usize, const S: usize>(
             (vs[j][i], trs[j][i]) = constraints(t, vs[j][i], trs[j][i]);
         }
     }
+
     let context = Context {
         fun: &flux,
         constraints: &constraints,

@@ -36,7 +36,7 @@ for arg in sys.argv:
             print(arg)
             act()
 
-CUT = 1e-6
+CUT = 1e-9
 
 crop = 9
 defaultfromref = 1
@@ -121,7 +121,7 @@ for d in os.listdir(dir):
             visc = (info["zeta"],info["etaovers"])
             cut = info["energycut"]
     info["visc"] = visc
-    # cut = CUT
+    cut = CUT # do not consider energycut when viscosity is disabled
     info["CUT"] = cut
 
     # data = np.loadtxt(p+"/data.txt")
@@ -239,7 +239,7 @@ def convall(l, ds):
                     else:
                         schemetype = "Explicit"
                     schemetype = meanmax+" "+schemetype
-                    c = convergence(d[s0],refs[s0])
+                    c = convergence(d[s0],refs[s1])
                     plt.loglog(c[fromref:,dci],c[fromref:,mmi], pointstyle, label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=0.5)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
