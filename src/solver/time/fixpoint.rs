@@ -22,6 +22,7 @@ pub fn fixpoint<
         boundary,
         local_interaction,
         vstrs: (vs, trs),
+        ovstrs: (ovs, otrs),
         total_diff_vs,
         k,
         r: Scheme { aij: a, bj: b, .. },
@@ -138,6 +139,8 @@ pub fn fixpoint<
         });
         errs = tmperrs;
     }
+    *ovs = *vs;
+    *otrs = *trs;
     let b = if let Some(b) = b { *b } else { a[S - 1] };
     for f in 0..F {
         for vy in 0..VY {

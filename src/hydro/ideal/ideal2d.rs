@@ -1,5 +1,5 @@
 use crate::solver::{
-    context::{Boundary, Context, Integration},
+    context::{Boundary, Context},
     run,
     space::{kt::kt, Dir, Eigenvalues},
     time::{newton::newton, schemes::Scheme},
@@ -202,7 +202,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
     let mut trs = [[[0.0; 6]; V]; V];
 
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
-    let mut k = [[[[0.0; 3]; V]; V]; S];
+    let k = [[[[0.0; 3]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {
@@ -212,10 +212,6 @@ pub fn ideal2d<const V: usize, const S: usize>(
             trs[j][i][0] = vs[i][i][0];
             (vs[j][i], trs[j][i]) = constraints(t, vs[j][i], trs[j][i]);
         }
-    }
-    match r.integration {
-        Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
-        Integration::FixPoint(_) => {}
     }
 
     let eigx = Eigenvalues::Analytical(&eigenvaluesx);
@@ -231,6 +227,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
         post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs, trs),
+        ovstrs: (vs, trs),
         total_diff_vs: zeros(&vs),
         k,
         r,

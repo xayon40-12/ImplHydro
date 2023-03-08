@@ -1,7 +1,7 @@
 use crate::{
     hydro::{Viscosity, HBARC},
     solver::{
-        context::{Boundary, Context, Integration},
+        context::{Boundary, Context},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -388,7 +388,7 @@ pub fn shear2d<const V: usize, const S: usize>(
             "pi33",
         ],
     );
-    let mut k = [[[[0.0; 10]; V]; V]; S];
+    let k = [[[[0.0; 10]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {
@@ -399,10 +399,6 @@ pub fn shear2d<const V: usize, const S: usize>(
             (vs[j][i], trs[j][i]) = constraints(t, vs[j][i], trs[j][i]);
         }
     }
-    match r.integration {
-        Integration::Explicit => k[S - 1] = vs, // prepare k[S-1] so that it can be use as older time for time derivatives (in this case approximate time derivatives to be zero at initial time)
-        Integration::FixPoint(_) => {}
-    }
     let context = Context {
         fun: &flux,
         constraints: &constraints,
@@ -410,6 +406,7 @@ pub fn shear2d<const V: usize, const S: usize>(
         post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs, trs),
+        ovstrs: (vs, trs),
         total_diff_vs: zeros(&vs),
         k,
         r,

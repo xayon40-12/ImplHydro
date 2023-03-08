@@ -21,7 +21,8 @@ pub fn explicit<
         local_interaction: _,
         total_diff_vs,
         vstrs: (vs, trs),
-        k, // k[S-1] is used as old vs
+        ovstrs: (ovs, otrs),
+        k,
         r: Scheme { aij: a, .. },
         dt,
         dx,
@@ -42,13 +43,9 @@ pub fn explicit<
     let mut fu = [[[0.0f64; F]; VX]; VY];
     let mut vdtk = *vs;
     let mut trdtk = *trs;
-    let mut trk = [[[0.0f64; C]; VX]; VY];
+    let mut ovdtk = *ovs;
+    let mut otrdtk = *otrs;
     let mut ct = *t;
-    for vy in 0..VY {
-        for vx in 0..VX {
-            (_, trk[vy][vx]) = constraints(ct, vdtk[vy][vx], trdtk[vy][vx]);
-        }
-    }
 
     let mut c;
     let mut cdt = *t - *ot;
@@ -60,8 +57,8 @@ pub fn explicit<
         }
         pfor2d(&mut fu, &|(Coord { x, y }, fu)| {
             *fu = fun(
-                [&k[S - 1], &vdtk],
-                [&trk, &trdtk],
+                [&ovdtk, &vdtk],
+                [&otrdtk, &trdtk],
                 constraints,
                 boundary,
                 [x as i32, y as i32],
@@ -71,8 +68,8 @@ pub fn explicit<
                 opt,
             );
         });
-        trk = trdtk;
-        k[S - 1] = vdtk;
+        otrdtk = trdtk;
+        ovdtk = vdtk;
         k[s] = fu;
         pfor2d(&mut vdtk, &|(Coord { x, y }, vdtk)| {
             for f in 0..F {
@@ -88,7 +85,8 @@ pub fn explicit<
         ct = *t + c * *dt;
         cdt = ct - cdt; // difference between current time and previous time
     }
-    k[S - 1] = *vs; // store the old vs in k[S-1] for next time step
+    *ovs = *vs; // store the old vs in k[S-1] for next time step
+    *otrs = *trs;
     *vs = vdtk;
 
     *ot = *t;

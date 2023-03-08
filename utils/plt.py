@@ -36,10 +36,10 @@ for arg in sys.argv:
             print(arg)
             act()
 
-CUT = 1e-9
+CUT = 1e-6
 
 crop = 9
-fromref = 1
+defaultfromref = 1
 
 e0 = 10
 emin = 1
@@ -210,6 +210,7 @@ def convall(l, ds):
     ally = [((5,8), "o", "max", 2), ((3,5,1,5,1,5), "v", "mean", 3)]
     allx = [("cost", 5)]
     # ally = [("max", 2)]
+    fromref = defaultfromref
     for (dtcost, dci) in allx:
         plt.rcParams["figure.figsize"] = [8, 5]
         plt.figure()
@@ -238,7 +239,7 @@ def convall(l, ds):
                     else:
                         schemetype = "Explicit"
                     schemetype = meanmax+" "+schemetype
-                    c = convergence(d[s0],refs[s1])
+                    c = convergence(d[s0],refs[s0])
                     plt.loglog(c[fromref:,dci],c[fromref:,mmi], pointstyle, label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=0.5)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
@@ -322,7 +323,7 @@ def plot1d(l, datas):
             (sinfo, data, diff) = datas[scheme][dt]
             vid = sinfo["ID"]
             cut = sinfo["CUT"]
-            if sinfo["integration"] == "FixPoint":
+            if "FixPoint" in sinfo["integration"]:
                 schemetype = "Implicit"
             else:
                 schemetype = "Explicit"
@@ -371,13 +372,16 @@ def plot2d(l, datadts):
     vid = info["ID"]
     cut = info["CUT"]
     ref = mask(ref,vid,cut)
+    fromref = defaultfromref
     if len(maxdts) == 1:
-        global fromref
         fromref = 0
-    (einfo, data, diff) = datadts[maxdts[fromref]]
+    dt = maxdts[fromref]
+    (einfo, data, diff) = datadts[dt]
+    vid = einfo["ID"]
+    cut = einfo["CUT"]
 
-    name = info["name"]
-    case = info["case"]
+    name = einfo["name"]
+    case = einfo["case"]
     if (("Trento" in name and case == 0) or "Gubser" in name):
         datats = np.array(einfo["datats"], dtype=object)
     else:
@@ -394,25 +398,26 @@ def plot2d(l, datadts):
         nb = 1
         if "Gubser" in info["name"]:
             nb += 1
-        if info["integration"] == "FixPoint":
+        if "FixPoint" in info["integration"]:
             nb += 1
         plt.rcParams["figure.figsize"] = [2+num*4, nb*5]
         fig, axs = plt.subplots(nb,num, sharey=True) #, sharex=True)
         if not hasattr(axs[0], "__len__"):
             axs = [axs]
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
-            global greft
-            if greft[case][t] is None:
-                greft[case][t] = (data,scheme)
-            elif greft[case][t][1] != scheme:
-                ref = greft[case][t][0]
+            # global greft
+            # if greft[case][t] is None:
+            #     greft[case][t] = (data,scheme)
+            # elif greft[case][t][1] != scheme:
+            #     ref = greft[case][t][0]
             mdata = mask(data,vid,cut)
-            n = info["nx"]
+            n = einfo["nx"]
             x = mdata[:,vid["x"]]
             y = mdata[:,vid["y"]]
             z = mdata[:,vid["e"]]
             zref = ref[:,vid["e"]]
             ziter = mdata[:,vid["iter"]]
+            # print(name, case, scheme, dt, n, ziter.sum())
             zut = mdata[:,vid["ut"]]
             zux = mdata[:,vid["ux"]]
             zvx = zux/zut
@@ -446,7 +451,7 @@ def plot2d(l, datadts):
             all = [("e", z)]
             if "Gubser" in info["name"]:
                 all += [("err", zerr)]
-            if info["integration"] == "FixPoint":
+            if "FixPoint" in info["integration"]:
                 all += [("iter", ziter)]
             for (i, (n, z)) in zip(range(nb),all):
                 if n == "iter":
@@ -478,10 +483,10 @@ def plot2d(l, datadts):
 
     for (id, (t,data,diff)) in zip(range(1000000), datats):
         # global greft
-        if greft[case][t] is None:
-            greft[case][t] = (data,scheme)
-        elif greft[case][t][1] != scheme:
-            ref = greft[case][t][0]
+        # if greft[case][t] is None:
+        #     greft[case][t] = (data,scheme)
+        # elif greft[case][t][1] != scheme:
+        #     ref = greft[case][t][0]
         mdata = mask(data,vid,cut)
         n = info["nx"]
         x = mdata[:,vid["x"]]
@@ -523,7 +528,7 @@ def plot2d(l, datadts):
         # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
         if "Gubser" in info["name"] and not "Exponential" in info["name"]:
             all += [("err", zerr)]
-        if info["integration"] == "FixPoint":
+        if "FixPoint" in info["integration"]:
             all += [("iter", ziter)]
         nb = len(all)
         plt.rcParams["figure.figsize"] = [2+nb*4, 5]

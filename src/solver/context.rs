@@ -38,6 +38,7 @@ pub struct Context<
     pub post_constraints: Option<Constraint<'a, F, C>>,
     pub local_interaction: [i32; 2],
     pub vstrs: ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]),
+    pub ovstrs: ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]), // old
     pub total_diff_vs: [[[f64; F]; VX]; VY],
     pub k: [[[[f64; F]; VX]; VY]; S],
     pub r: Scheme<S>,
