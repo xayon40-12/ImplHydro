@@ -36,7 +36,7 @@ for arg in sys.argv:
             print(arg)
             act()
 
-CUT = 1e-9
+CUT = 1e-6
 
 crop = 9
 defaultfromref = 1
