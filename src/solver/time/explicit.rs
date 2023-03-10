@@ -85,7 +85,7 @@ pub fn explicit<
         ct = *t + c * *dt;
         cdt = ct - cdt; // difference between current time and previous time
     }
-    *ovs = *vs; // store the old vs in k[S-1] for next time step
+    *ovs = *vs;
     *otrs = *trs;
     *vs = vdtk;
 
@@ -94,7 +94,7 @@ pub fn explicit<
     for vy in 0..VY {
         for vx in 0..VX {
             let tmp = vs[vy][vx];
-            (vs[vy][vx], trs[vy][vx]) = constraints(*ot, vs[vy][vx], trs[vy][vx]);
+            (vs[vy][vx], trs[vy][vx]) = constraints(*t, vs[vy][vx], trs[vy][vx]);
             for f in 0..F {
                 total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
             }
@@ -104,7 +104,7 @@ pub fn explicit<
         for vy in 0..VY {
             for vx in 0..VX {
                 let tmp = vs[vy][vx];
-                (vs[vy][vx], trs[vy][vx]) = post(*ot, vs[vy][vx], trs[vy][vx]);
+                (vs[vy][vx], trs[vy][vx]) = post(*t, vs[vy][vx], trs[vy][vx]);
                 for f in 0..F {
                     total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
                 }
