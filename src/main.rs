@@ -73,16 +73,9 @@ fn big_stack() {
     let cli = Cli::parse();
 
     match cli.cells {
-        32 => run::<32>(cli),
-        64 => run::<64>(cli),
-        128 => run::<128>(cli),
-        256 => run::<256>(cli),
         100 => run::<100>(cli),
         200 => run::<200>(cli),
-        300 => run::<300>(cli),
-        _ => panic!(
-            "The number of cells must be a value from the list {{32,64,128,256,100,200,300}}."
-        ),
+        _ => panic!("The number of cells must be a value from the list {{100,200}}."),
     };
 }
 fn run<const CELLS: usize>(args: Cli) {

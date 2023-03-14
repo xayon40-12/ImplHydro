@@ -102,7 +102,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     }
 }
 pub fn run_1d<const V: usize>(t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64) {
-    run_convergence_1d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(Some((0, 1e-3))));
+    run_convergence_1d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(Some((0, 1e-2))));
     run_convergence_1d::<V, 2>(t0, tend, l, dtmin, dtmax, heun());
 }
 pub fn run_2d<const V: usize>(
@@ -119,14 +119,14 @@ pub fn run_2d<const V: usize>(
         l,
         dtmin,
         dtmax,
-        gauss_legendre_1(Some((0, 1e-3))),
+        gauss_legendre_1(Some((0, 1e-2))),
         nb_trento,
     );
     run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
 }
 pub fn run_trento_2d<const V: usize>(t0: f64, tend: f64, l: f64, dt: f64, nb_trento: usize) {
     let trentos = prepare_trento::<V>(nb_trento);
-    let gl1 = gauss_legendre_1(Some((0, 1e-3)));
+    let gl1 = gauss_legendre_1(Some((0, 1e-2)));
     let heun = heun();
     let dx = l / V as f64;
     let er = dt * dt;

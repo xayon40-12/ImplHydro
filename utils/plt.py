@@ -132,7 +132,7 @@ for d in os.listdir(dir):
         except FileNotFoundError:
             return None
     diff = find_diff(p)
-    if ("Trento" in name and case == 0) or "Gubser" in name:
+    if case == 0:
         datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),find_diff(dird+"/"+t)) for t in ts]
         info["datats"] = datats
 
@@ -200,14 +200,14 @@ def info2name(info, scheme=True):
         case "Both":
             visc = "Both({},{})".format(info["zeta"],info["etaovers"])
     if scheme:
-        return "{}_{}{}_{}_{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["case"],visc,info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
+        return "{}_{}{}_{}_{}_{}_{}_{}_{}_{:.4e}".format(info["dim"],info["name"],info["case"],visc,info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
     else:
-        return "{}_{}{}_{}_{}_{}_{}_{}_{}".format(info["dim"],info["name"],info["case"],visc,info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
+        return "{}_{}{}_{}_{}_{}_{}_{}_{:.4e}".format(info["dim"],info["name"],info["case"],visc,info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
 
 def convall(l, ds):
     [dim,name,visc,t0,tend,dx,nx,t] = l
     # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
-    ally = [((5,8), "o", "max", 2), ((3,5,1,5,1,5), "v", "mean", 3)]
+    ally = [((1,0), "full", "max", 2), ((5,5), "none", "mean", 3)]
     allx = [("cost", 5)]
     # ally = [("max", 2)]
     fromref = defaultfromref
@@ -218,15 +218,25 @@ def convall(l, ds):
         plt.ylabel("error")
         # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
         d = ds[list(ds)[0]]
+        nbcases = len(ds)
+        alpha = 1
+        if nbcases > 1:
+            alpha = 0.5
         scs = sorted(list(d.keys()))
         dts = sorted([dt for dt in d[scs[0]]])
         mindt = dts[0]
         scs.sort(key=lambda s: integrationPriority(d[s][mindt][0]["integration"]))
+        def pointstyle(s):
+            if "Explicit" in d[s][mindt][0]["integration"]:
+                return "s"
+            else:
+                return "o"
+
         if len(scs) <= 1:
             plt.close()
             return 
         s1 = scs[0]
-        for (linestyle, pointstyle, meanmax, mmi) in ally:
+        for (linestyle, fillstyle, meanmax, mmi) in ally:
             for (s0,col) in zip(scs,plt_setting.clist):
                 for case in ds: 
                     d = ds[case]
@@ -240,7 +250,7 @@ def convall(l, ds):
                         schemetype = "Explicit"
                     schemetype = meanmax+" "+schemetype
                     c = convergence(d[s0],refs[s1])
-                    plt.loglog(c[fromref:,dci],c[fromref:,mmi], pointstyle, label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=0.5)
+                    plt.loglog(c[fromref:,dci],c[fromref:,mmi], pointstyle(s0), fillstyle=fillstyle, label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=alpha)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
             label = p.get_label()
@@ -270,7 +280,7 @@ def plot1d(l, datas):
     mindt = dts[0]
     maxdt = dts[-1]
     schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
-    (info,ref,diffref) = datas["Heun"][mindt]
+    (info,ref,diffref) = datas[schemes[0]][mindt]
     vid = info["ID"]
     cut = info["CUT"]
     ref = mask(ref,vid,cut)
@@ -306,7 +316,7 @@ def plot1d(l, datas):
     yref = yref[nl:nr]
 
     for dt in dts:
-        timename = "dt{}".format(dt)
+        timename = "dt{:.4e}".format(dt)
         if dt == maxdt:
             timename = "worst_"+timename
         elif dt == mindt:
@@ -315,7 +325,7 @@ def plot1d(l, datas):
         # plt.rcParams["figure.figsize"] = [8, 12]
         # _,axs = plt.subplots(4, 1, sharex=True)
         plt.rcParams["figure.figsize"] = [8, 9]
-        _,axs = plt.subplots(3, 1, sharex=True)
+        _,axs = plt.subplots(2, 1, sharex=True)
         continuum ,= axs[0].plot(x,ycontinuum, color="grey", label="continuum", linewidth=2)
         # numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
 
@@ -351,17 +361,60 @@ def plot1d(l, datas):
         
             numerics ,= axs[0].plot(x,y, label=schemetype, linestyle=linestyle, linewidth=3 )
             errcontinuum ,= axs[1].plot(x,yerr, label=schemetype, linestyle=linestyle, linewidth=3 )
-            pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
+            # pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
             # iterations ,= axs[2].plot(x,iter, '.', label=schemetype)
             # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
 
         axs[0].set_ylabel("e")
         axs[0].legend()
         axs[1].set_ylabel("continuum err")
-        axs[2].set_ylabel("cost")
-        axs[2].set_xlabel("x/t")
+        # axs[2].set_ylabel("cost")
+        axs[len(axs)-1].set_xlabel("x/t")
         plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info, False)))
         plt.close()
+
+
+        for (scheme,linestyle) in zip(schemes, lstyles):
+            fig,ax = plt.subplots(1, 1)
+            (sinfo, data, diff) = datas[scheme][dt]
+            vid = sinfo["ID"]
+            if "FixPoint" in sinfo["integration"]:
+                schemetype = "Implicit"
+            else:
+                continue
+                schemetype = "Explicit"
+            nbStages = 2
+            if scheme == "GL1":
+                nbStages = 1
+
+            
+            datats = np.array(sinfo["datats"], dtype=object)
+            tt = datats[:,0]
+            xx = data[:,vid["x"]]
+            iter = np.array([d[:,vid["iter"]] for d in datats[:,1]])
+            cost = iter*nbStages
+            l = xx[0]
+            r = xx[-1]
+            d = tt[0]
+            u = tt[-1]
+            
+        
+            im = ax.imshow(cost, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
+            ax.xaxis.tick_top()
+            ax.xaxis.set_label_position('top') 
+            ax.set_xlabel("x")
+            ax.set_ylabel("t")
+            divider = make_axes_locatable(ax)
+            cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
+            fig.add_axes(cax)
+            cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+            cbar.formatter.set_powerlimits((0, 0))
+            cbar.formatter.set_useMathText(True)
+            cbar.update_ticks()
+            cbar.set_label("cost", labelpad=-60)
+
+            plt.savefig("figures/{}_{}_cost-t_{}.pdf".format(timename,scheme,info2name(info)), dpi=100)
+            plt.close()
 
 gref = defaultdict(lambda: None)
 greft = defaultdict(lambda: defaultdict(lambda: None))
