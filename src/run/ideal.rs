@@ -53,11 +53,31 @@ fn hydro1d<const V: usize, const S: usize>(
     let p = &ideal_gas::p;
     let dpde = &ideal_gas::dpde;
     let name = format!("Riemann{}", void);
-    let init = &init_riemann(1.0, p, dpde, use_void);
+    let init = &init_riemann(t0, p, dpde, use_void);
     ideal1d::ideal1d::<V, S>(&name, maxdt, er, t0, tend, dx, r, p, dpde, &init)
 }
 
-pub fn run_convergence<const V: usize, const S: usize>(
+pub fn run_convergence_1d<const V: usize, const S: usize>(
+    t0: f64,
+    tend: f64,
+    l: f64,
+    dtmin: f64,
+    dtmax: f64,
+    r: Scheme<S>,
+) {
+    let dx = l / V as f64;
+    let dt0 = dtmax;
+    let erpow = 2;
+    println!("{}", r.name);
+    converge(dt0, dtmin, erpow, |dt, er| {
+        hydro1d::<V, S>(t0, tend, dx, dt, er, r, true)
+    });
+    converge(dt0, dtmin, erpow, |dt, er| {
+        hydro1d::<V, S>(t0, tend, dx, dt, er, r, false)
+    });
+}
+
+pub fn run_convergence_2d<const V: usize, const S: usize>(
     t0: f64,
     tend: f64,
     l: f64,
@@ -72,12 +92,6 @@ pub fn run_convergence<const V: usize, const S: usize>(
     let erpow = 2;
     println!("{}", r.name);
     converge(dt0, dtmin, erpow, |dt, er| {
-        hydro1d::<V, S>(t0, tend, dx, dt, er, r, true)
-    });
-    converge(dt0, dtmin, erpow, |dt, er| {
-        hydro1d::<V, S>(t0, tend, dx, dt, er, r, false)
-    });
-    converge(dt0, dtmin, erpow, |dt, er| {
         hydro2d::<V, S>(t0, tend, dx, dt, er, r, None)
     });
     for i in 0..nb_trento {
@@ -87,8 +101,19 @@ pub fn run_convergence<const V: usize, const S: usize>(
         });
     }
 }
-pub fn run<const V: usize>(t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64, nb_trento: usize) {
-    run_convergence::<V, 1>(
+pub fn run_1d<const V: usize>(t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64) {
+    run_convergence_1d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(Some((0, 1e-3))));
+    run_convergence_1d::<V, 2>(t0, tend, l, dtmin, dtmax, heun());
+}
+pub fn run_2d<const V: usize>(
+    t0: f64,
+    tend: f64,
+    l: f64,
+    dtmin: f64,
+    dtmax: f64,
+    nb_trento: usize,
+) {
+    run_convergence_2d::<V, 1>(
         t0,
         tend,
         l,
@@ -97,9 +122,9 @@ pub fn run<const V: usize>(t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64, n
         gauss_legendre_1(Some((0, 1e-3))),
         nb_trento,
     );
-    run_convergence::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
+    run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
 }
-pub fn run_trento<const V: usize>(t0: f64, tend: f64, l: f64, dt: f64, nb_trento: usize) {
+pub fn run_trento_2d<const V: usize>(t0: f64, tend: f64, l: f64, dt: f64, nb_trento: usize) {
     let trentos = prepare_trento::<V>(nb_trento);
     let gl1 = gauss_legendre_1(Some((0, 1e-3)));
     let heun = heun();

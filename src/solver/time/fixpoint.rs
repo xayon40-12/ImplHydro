@@ -98,13 +98,14 @@ pub fn fixpoint<
             });
         }
 
-        let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some((f, mi)) = err_ref_p {
-            let trs = &trs;
-            let m = trs.iter().fold(0.0, |acc: f64, v| {
-                acc.max(v.iter().fold(0.0, |acc, v| acc.max(v[f])))
-            });
+        let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some((_f, mi)) = err_ref_p {
+            // let trs = &trs;
+            // let m = trs.iter().fold(0.0, |acc: f64, v| {
+            //     acc.max(v.iter().fold(0.0, |acc, v| acc.max(v[f])))
+            // });
             // Box::new(move |x, y| (trs[y][x][f] / m).powi(2)) // due to '/m', the reference is in <=1, WARNING taking the square might be problematic
-            Box::new(move |x, y| (trs[y][x][f] / m).powi(2).max(mi))
+            // Box::new(move |x, y| (trs[y][x][f] / m).powi(2).max(mi))
+            Box::new(move |_, _| mi)
         } else {
             Box::new(|_, _| 1.0)
         };
@@ -116,7 +117,14 @@ pub fn fixpoint<
                 for s in 0..S {
                     for f in 0..F {
                         let e = (fu[s][y][x][f] - k[s][y][x][f]).abs();
-                        *errs |= e * err_ref(x, y) > *er || e.is_nan();
+                        if e.is_nan() {
+                            panic!("NaN");
+                        }
+                        *errs |= e * err_ref(x, y) > *er || e.is_nan(); // |f(k)-k| * cutoff > dt^p
+                                                                        // *errs |= e * err_ref(x, y)
+                                                                        //     > (wb::T(trs[y][x][f]).max(20.0 / 200.0).powi(2) * *er)
+                                                                        //     || e.is_nan();
+                                                                        // |f(k)-k| * cutoff > dt^p
                     }
                 }
             }

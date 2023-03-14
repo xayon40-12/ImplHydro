@@ -30,7 +30,7 @@ fn hydro2d<const V: usize, const S: usize>(
     )
 }
 
-pub fn run_convergence<const V: usize, const S: usize>(
+pub fn run_convergence_2d<const V: usize, const S: usize>(
     t0: f64,
     tend: f64,
     l: f64,
@@ -52,7 +52,7 @@ pub fn run_convergence<const V: usize, const S: usize>(
         });
     }
 }
-pub fn run<const V: usize>(
+pub fn run_2d<const V: usize>(
     t0: f64,
     tend: f64,
     l: f64,
@@ -62,7 +62,7 @@ pub fn run<const V: usize>(
     tempcut: f64,
     nb_trento: usize,
 ) {
-    run_convergence::<V, 1>(
+    run_convergence_2d::<V, 1>(
         t0,
         tend,
         l,
@@ -73,7 +73,7 @@ pub fn run<const V: usize>(
         gauss_legendre_1(Some((0, 1e-3))),
         nb_trento,
     );
-    run_convergence::<V, 2>(
+    run_convergence_2d::<V, 2>(
         t0,
         tend,
         l,
@@ -85,7 +85,7 @@ pub fn run<const V: usize>(
         nb_trento,
     );
 }
-pub fn run_trento<const V: usize>(
+pub fn run_trento_2d<const V: usize>(
     t0: f64,
     tend: f64,
     l: f64,

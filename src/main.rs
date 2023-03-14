@@ -10,13 +10,29 @@ struct Cli {
 
     #[arg(short, long, default_value_t = 20.0)]
     physical_length: f64,
-    #[arg(long, default_value_t = 1.0)]
-    t0: f64,
-    #[arg(long, default_value_t = 4.5)]
-    tend: f64,
 
     #[command(subcommand)]
-    command: Hydro,
+    command: Dim,
+}
+
+#[derive(Subcommand, Debug)]
+enum Dim {
+    Dim1 {
+        #[arg(long, default_value_t = 0.0)]
+        t0: f64,
+        #[arg(long, default_value_t = 10.0)]
+        tend: f64,
+        #[command(subcommand)]
+        command: Hydro,
+    },
+    Dim2 {
+        #[arg(long, default_value_t = 1.0)]
+        t0: f64,
+        #[arg(long, default_value_t = 4.5)]
+        tend: f64,
+        #[command(subcommand)]
+        command: Hydro,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -64,52 +80,81 @@ fn big_stack() {
 }
 fn run<const CELLS: usize>(args: Cli) {
     let l = args.physical_length;
-    let t0 = args.t0;
-    let tend = args.tend;
-    if t0 >= tend {
-        panic!("The initial time 't0' must be smaller than the end time 'tend'.");
-    }
     let checkdt = |dtmin: f64, dtmax: f64| {
         if dtmin >= dtmax {
             panic!("The smallest time interval 'dtmin={}' must be smaller than the largest 'dtmax={}'.", dtmin, dtmax);
         }
     };
+    let checkt = |t0: f64, tend: f64| {
+        if t0 >= tend {
+            panic!("The initial time 't0' must be smaller than the end time 'tend'.");
+        }
+    };
     let dx = l / CELLS as f64;
     match args.command {
-        Hydro::Ideal { command } => match command {
-            ToSimulate::Benchmark {
-                dtmin,
-                dtmax,
-                nb_trento,
-            } => {
-                let dtmax = dtmax.unwrap_or(dx * 0.1);
-                checkdt(dtmin, dtmax);
-                ideal::run::<CELLS>(t0, tend, l, dtmin, dtmax, nb_trento);
+        Dim::Dim1 { t0, tend, command } => {
+            checkt(t0, tend);
+            match command {
+                Hydro::Ideal { command } => match command {
+                    ToSimulate::Benchmark {
+                        dtmin,
+                        dtmax,
+                        nb_trento: _,
+                    } => {
+                        let dtmax = dtmax.unwrap_or(dx * 0.1);
+                        checkdt(dtmin, dtmax);
+                        ideal::run_1d::<CELLS>(t0, tend, l, dtmin, dtmax);
+                    }
+                    ToSimulate::Trento { .. } => panic!("No 1D Trento case available."),
+                },
+                Hydro::Shear { .. } => match command {
+                    _ => panic!("No 1D shear case available."),
+                },
             }
-            ToSimulate::Trento { dt, nb_trento } => {
-                let dt = dt.unwrap_or(dx * 0.1);
-                ideal::run_trento::<CELLS>(t0, tend, l, dt, nb_trento);
+        }
+        Dim::Dim2 { t0, tend, command } => {
+            checkt(t0, tend);
+            match command {
+                Hydro::Ideal { command } => match command {
+                    ToSimulate::Benchmark {
+                        dtmin,
+                        dtmax,
+                        nb_trento,
+                    } => {
+                        let dtmax = dtmax.unwrap_or(dx * 0.1);
+                        checkdt(dtmin, dtmax);
+                        ideal::run_2d::<CELLS>(t0, tend, l, dtmin, dtmax, nb_trento);
+                    }
+                    ToSimulate::Trento { dt, nb_trento } => {
+                        let dt = dt.unwrap_or(dx * 0.1);
+                        ideal::run_trento_2d::<CELLS>(t0, tend, l, dt, nb_trento);
+                    }
+                },
+                Hydro::Shear {
+                    etaovers,
+                    tempcut,
+                    command,
+                } => match command {
+                    ToSimulate::Benchmark {
+                        dtmin,
+                        dtmax,
+                        nb_trento,
+                    } => {
+                        let dtmax = dtmax.unwrap_or(dx * 0.1);
+                        checkdt(dtmin, dtmax);
+                        shear::run_2d::<CELLS>(
+                            t0, tend, l, dtmin, dtmax, etaovers, tempcut, nb_trento,
+                        );
+                    }
+                    ToSimulate::Trento { dt, nb_trento } => {
+                        let dt = dt.unwrap_or(dx * 0.1);
+                        shear::run_trento_2d::<CELLS>(
+                            t0, tend, l, dt, etaovers, tempcut, nb_trento,
+                        );
+                    }
+                },
             }
-        },
-        Hydro::Shear {
-            etaovers,
-            tempcut,
-            command,
-        } => match command {
-            ToSimulate::Benchmark {
-                dtmin,
-                dtmax,
-                nb_trento,
-            } => {
-                let dtmax = dtmax.unwrap_or(dx * 0.1);
-                checkdt(dtmin, dtmax);
-                shear::run::<CELLS>(t0, tend, l, dtmin, dtmax, etaovers, tempcut, nb_trento);
-            }
-            ToSimulate::Trento { dt, nb_trento } => {
-                let dt = dt.unwrap_or(dx * 0.1);
-                shear::run_trento::<CELLS>(t0, tend, l, dt, etaovers, tempcut, nb_trento);
-            }
-        },
+        }
     }
 }
 
