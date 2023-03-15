@@ -219,9 +219,7 @@ def convall(l, ds):
         # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
         d = ds[list(ds)[0]]
         nbcases = len(ds)
-        alpha = 1
-        if nbcases > 1:
-            alpha = 0.5
+        alpha = 1/nbcases
         scs = sorted(list(d.keys()))
         dts = sorted([dt for dt in d[scs[0]]])
         mindt = dts[0]
