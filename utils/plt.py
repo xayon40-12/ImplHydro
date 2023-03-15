@@ -28,8 +28,12 @@ animate = False
 def setAnimate():
     global animate
     animate = True
+manycases = False
+def setManyCases():
+    global manycases
+    manycases = True
 
-argActions = [(["-a","--animate"], setAnimate)]
+argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases)]
 for arg in sys.argv:
     for (larg, act) in argActions:
         if arg in larg:
@@ -279,6 +283,8 @@ def mask(data,vid,cut):
 
 def plot1d(l, nds):
     [dim,name,visc,t0,tend,t,case] = l
+    if case > 0 and not manycases:
+        return
     nl = 2
     # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
     lstyles = [(3*i,(3,5,1,5)) for i in range(nl)]
@@ -330,7 +336,7 @@ def plot1d(l, nds):
         # plt.rcParams["figure.figsize"] = [8, 12]
         # _,axs = plt.subplots(4, 1, sharex=True)
         plt.rcParams["figure.figsize"] = [8, 9]
-        _,axs = plt.subplots(2, 1, sharex=True)
+        fig,axs = plt.subplots(2, 1, sharex=True)
         l = 0
         for dxn in nds:
             (dx,n) = dxn
@@ -339,8 +345,8 @@ def plot1d(l, nds):
         if not "Gubser" in name:
             x = x/(t-t0)
         ycontinuum = [e(x) for x in x]
-        continuum ,= axs[0].plot(x,ycontinuum, color="grey", label="continuum", linewidth=2)
-        for dxn in nds:
+        continuum ,= axs[0].plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
+        for dxn in sorted(nds,key=lambda x: x[1]):
             (dx,n) = dxn
             datas = nds[dxn]
             (info,ref,diffref) = datas[schemes[0]][mindt]
@@ -364,7 +370,9 @@ def plot1d(l, nds):
 
             # numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
 
-            for (scheme,linestyle) in zip(schemes, lstyles):
+            for (scheme,col,linestyle) in zip(schemes,plt_setting.clist, lstyles):
+                if n == 100:
+                    col = "gray"
                 (sinfo, data, diff) = datas[scheme][dt]
                 vid = sinfo["ID"]
                 cut = sinfo["CUT"]
@@ -394,14 +402,22 @@ def plot1d(l, nds):
                 yvx = yux/yut
                 yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
         
-                numerics ,= axs[0].plot(x,y, label=schemetype, linestyle=linestyle, linewidth=3 )
-                errcontinuum ,= axs[1].plot(x,yerr, label=schemetype, linestyle=linestyle, linewidth=3 )
+                numerics ,= axs[0].plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+                errcontinuum ,= axs[1].plot(x,yerr, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
                 # pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
                 # iterations ,= axs[2].plot(x,iter, '.', label=schemetype)
                 # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
 
         axs[0].set_ylabel("e")
-        axs[0].legend()
+        # axs[0].legend()
+        handles, labels = [], []
+        hs, ls = axs[0].get_legend_handles_labels()
+        for (h,l) in zip(hs,ls):    # this is the loop to change Labels and colors
+            col = h.get_color()
+            if not (l in labels or col == "gray"):    # check for Name already exists
+                handles += [h]
+                labels += [l]
+        axs[0].legend(handles, labels, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
         axs[1].set_ylabel("continuum err")
         # axs[2].set_ylabel("cost")
         axs[len(axs)-1].set_xlabel("x/t")
@@ -465,6 +481,8 @@ gref = defaultdict(lambda: None)
 greft = defaultdict(lambda: defaultdict(lambda: None))
 def plot2d(l, datadts):
     [dim,name,visc,t0,tend,t,case,dxn,scheme] = l
+    if case > 0 and not manycases:
+        return
     (dx,n) = dxn
     maxdts = sorted([dt for dt in datadts])
     (info, ref, diffref) = datadts[maxdts[0]]
