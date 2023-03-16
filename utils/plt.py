@@ -208,6 +208,9 @@ def info2name(info, scheme=True):
     else:
         return "{}_{}{}_{}_{}_{}_{}_{}_{:.4e}".format(info["dim"],info["name"],info["case"],visc,info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
 
+def lighten(c):
+    return tuple(min(1,(a+b*0.2)*3) for a, b in zip(c,np.roll(c,1)))
+
 def convall(l, cnds):
     [dim,name,visc,t0,tend,t] = l
     # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
@@ -256,18 +259,20 @@ def convall(l, cnds):
                         c = convergence(ds[s0],refs[s1])
                         al = alpha
                         if n == 100:
-                            col = "gray"
-                            al = alpha/2
+                            col = lighten(col)
                         plt.loglog(c[fromref:,dci],c[fromref:,mmi], pointstyle(s0), fillstyle=fillstyle, label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
             label = p.get_label()
             col = p.get_color()
-            if label in labels or col == "gray":    # check for Name already exists
+            m = max(col)
+            if label in labels or m==1:    # check for Name already exists
                 p.set_label('_' + label)       # hide label in auto-legend
             else:
                 labels += [label]
-        plt.legend(loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=2)
+        leg = plt.legend(loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=2)
+        for lh in leg.legendHandles:
+            lh.set_alpha(1)
         plt.savefig("figures/convergence_{}_meanmax_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         plt.close()
 
@@ -287,7 +292,8 @@ def plot1d(l, nds):
         return
     nl = 2
     # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
-    lstyles = [(3*i,(3,5,1,5)) for i in range(nl)]
+    lstyles1 = [(5*i,(3,7)) for i in range(nl)]
+    lstyles2 = [(6*i,(3,9)) for i in range(nl)]
 
     if "Gubser" in name:
         e = lambda x: gubser(x,x,t)
@@ -370,9 +376,12 @@ def plot1d(l, nds):
 
             # numericsref ,= axs[1].plot(x,yref, color="gray", label="numerics ref", linestyle="-.", linewidth=2 )
 
-            for (scheme,col,linestyle) in zip(schemes,plt_setting.clist, lstyles):
+            
+            for (scheme,col,(ls1,ls2)) in zip(schemes,plt_setting.clist, zip(lstyles1,lstyles2)):
+                linestyle = ls1
                 if n == 100:
-                    col = "gray"
+                    linestyle = ls2
+                    col = lighten(col)
                 (sinfo, data, diff) = datas[scheme][dt]
                 vid = sinfo["ID"]
                 cut = sinfo["CUT"]
@@ -414,7 +423,8 @@ def plot1d(l, nds):
         hs, ls = axs[0].get_legend_handles_labels()
         for (h,l) in zip(hs,ls):    # this is the loop to change Labels and colors
             col = h.get_color()
-            if not (l in labels or col == "gray"):    # check for Name already exists
+            m = max(col)
+            if not (l in labels or m == 1):    # check for Name already exists
                 handles += [h]
                 labels += [l]
         axs[0].legend(handles, labels, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
@@ -435,7 +445,7 @@ def plot1d(l, nds):
             elif dt == mindt:
                 timename = "best_"+timename
 
-            for (scheme,linestyle) in zip(schemes, lstyles):
+            for scheme in schemes: 
                 fig,ax = plt.subplots(1, 1)
                 (sinfo, data, diff) = datas[scheme][dt]
                 vid = sinfo["ID"]
@@ -474,7 +484,7 @@ def plot1d(l, nds):
                 cbar.update_ticks()
                 cbar.set_label("cost", labelpad=-60)
 
-                plt.savefig("figures/{}_{}_cost-t_{}.pdf".format(timename,scheme,info2name(info)), dpi=100)
+                plt.savefig("figures/{}_{}_cost-t_{}.pdf".format(timename,scheme,info2name(sinfo)), dpi=100)
                 plt.close()
 
 gref = defaultdict(lambda: None)
