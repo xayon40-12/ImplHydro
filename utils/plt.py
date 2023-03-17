@@ -32,8 +32,12 @@ manycases = False
 def setManyCases():
     global manycases
     manycases = True
+rejectfails = False
+def setRejectFails():
+    global rejectfails
+    rejectfails = True
 
-argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases)]
+argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails)]
 for arg in sys.argv:
     for (larg, act) in argActions:
         if arg in larg:
@@ -95,6 +99,9 @@ for d in os.listdir(dir):
     dx = info["dx"]
     nx = info["nx"]
     t = info["t"]
+    fails = info["fails"]
+    r = 1e10
+    t = float(round(r*t)/r)
     info["l"] = str(dx*nx)
     if info["ny"] == 1:
         dim = "1D"
@@ -129,6 +136,7 @@ for d in os.listdir(dir):
     info["CUT"] = cut
 
     # data = np.loadtxt(p+"/data.txt")
+    data0 = np.fromfile(dird+"/"+ts[0]+"/data.dat", dtype="float64").reshape((n,-1))
     data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
     def find_diff(dir):
         try:
@@ -140,14 +148,22 @@ for d in os.listdir(dir):
         datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),find_diff(dird+"/"+t)) for t in ts]
         info["datats"] = datats
 
+    e0 = data0[:,vid["e"]]
     e = data[:,vid["e"]]
+    # if the total energy sum(e) is bigger at the end time than the initial time, 
+    # it means that explicit failed
+    expl_fail = sum(e) > sum(e0)
+    # if a fail (decreasing dt) happens in implicit, we consider that implicit failed
+    impl_fail = fails > 0
+    if rejectfails and (expl_fail or impl_fail): 
+        continue # skip explicit or implicit that failed
     m = e>cut
     err = abs(e.sum()-e[m].sum())/e.sum()
     meanvoidratio += err
     maxvoidratio = max(maxvoidratio, err)
     countvoidratio += 1
 
-    # print(p, dim, integration, t0, tend, dx, nx, maxdt)
+    # print(p, dim, t0, tend, dx, nx, maxdt)
     datas[dim][name][visc][t0][tend][t][case][(dx,nx)][scheme][maxdt] = (info, data, diff)
 
 meanvoidratio /= countvoidratio
@@ -174,7 +190,7 @@ def compare(i, cut, vss, wss):
     return (maxerr, meanerr)
 
 def convergence(a, ref=None):
-    maxdts = sorted([dt for dt in a])
+    maxdts = sorted(list(a))
     if ref is None:
         ref = a[maxdts[0]][1]
     all = []
@@ -209,7 +225,7 @@ def info2name(info, scheme=True):
         return "{}_{}{}_{}_{}_{}_{}_{}_{:.4e}".format(info["dim"],info["name"],info["case"],visc,info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
 
 def lighten(c):
-    return tuple(min(1,(a+b*0.2)*3) for a, b in zip(c,np.roll(c,1)))
+    return tuple(min(1,(a+b*0.2)*2) for a, b in zip(c,np.roll(c,1)))
 
 def convall(l, cnds):
     [dim,name,visc,t0,tend,t] = l
@@ -250,17 +266,24 @@ def convall(l, cnds):
                         ds0 = ds[s0]
                         dtref = sorted(list(ds0.keys()))[0]
                         info = ds0[dtref][0]
+                        dx = info["dx"]
                         refs = {s: ds[s][sorted(list(ds[s].keys()))[0]][1] for s in ds}
                         if "FixPoint" in info["integration"]:
                             schemetype = "Implicit"
                         else:
                             schemetype = "Explicit"
                         schemetype = meanmax+" "+schemetype
-                        c = convergence(ds[s0],refs[s1])
+                        c = convergence(ds0,refs[s1])
                         al = alpha
                         if n == 100:
                             col = lighten(col)
-                        plt.loglog(c[fromref:,dci],c[fromref:,mmi], pointstyle(s0), fillstyle=fillstyle, label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
+                        plt.loglog(c[fromref:,dci],c[fromref:,mmi], label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
+                        s = 30
+                        sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,4]]
+                        facecolors = fillstyle
+                        if fillstyle == "full":
+                            facecolors = col
+                        plt.scatter(c[fromref:,dci],c[fromref:,mmi],sizes, marker=pointstyle(s0), facecolors=facecolors, color=col, alpha=al) #, fillstyle=fillstyle, color=col, alpha=al)
         labels = []
         for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
             label = p.get_label()
@@ -292,8 +315,8 @@ def plot1d(l, nds):
         return
     nl = 2
     # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
-    lstyles1 = [(5*i,(3,7)) for i in range(nl)]
-    lstyles2 = [(6*i,(3,9)) for i in range(nl)]
+    lstyles1 = [(6*i,(4,8)) for i in range(nl)]
+    lstyles2 = [(2*i,(1,3)) for i in range(nl)]
 
     if "Gubser" in name:
         e = lambda x: gubser(x,x,t)
@@ -753,6 +776,6 @@ try:
 except FileExistsError:
     None
     
-# alldata(6, datas, convall)
+alldata(6, datas, convall)
 alldata(7, datas, plotall1D)
-# alldata(9, datas, plotall2D)
+alldata(9, datas, plotall2D)

@@ -39,7 +39,7 @@ pub fn fixpoint<
         dpde: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
     err_ref_p: Option<(usize, f64)>,
-) -> Option<(f64, [[usize; VX]; VY])> {
+) -> Option<(f64, [[usize; VX]; VY], usize)> {
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
     let mut iserr = true;
@@ -187,5 +187,5 @@ pub fn fixpoint<
             }
         }
     }
-    Some((cost / (VX * VY) as f64, nbiter))
+    Some((cost / (VX * VY) as f64, nbiter, failed - 1))
 }

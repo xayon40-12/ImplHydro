@@ -36,7 +36,7 @@ pub fn explicit<
         p: _,
         dpde: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
-) -> Option<(f64, [[usize; VX]; VY])> {
+) -> Option<(f64, [[usize; VX]; VY], usize)> {
     *dt = maxdt.min(*dt);
     let cost = S as f64;
     let nbiter = [[1usize; VX]; VY];
@@ -111,5 +111,5 @@ pub fn explicit<
             }
         }
     }
-    Some((cost, nbiter))
+    Some((cost, nbiter, 0))
 }

@@ -34,6 +34,7 @@ pub fn save<
     cost: usize,
     tsteps: usize,
     nbiter: [[usize; VX]; VY],
+    fails: usize,
     observables: &[Observable<F, C, VX, VY>],
 ) -> std::io::Result<()> {
     let t0 = context.t0;
@@ -175,8 +176,8 @@ pub fn save<
         .collect::<Vec<&str>>()
         .join(" ");
     let info = format!(
-        "elapsed: {:e}\ntsteps: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\nviscosity: {}\nvariables: {}\n",
-        elapsed, tsteps, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, stages, name, viscosity, variables,
+        "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\nviscosity: {}\nvariables: {}\n",
+        elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, stages, name, viscosity, variables,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -214,7 +215,8 @@ pub fn run<
     let mut next_save = current_save + save_every;
     let mut ctx_dt = None;
     let mut nbiter = [[1usize; VX]; VY];
-    let save = |ctx: &Context<Opt, F, C, VX, VY, S>, cost, tsteps, nbiter| {
+    let mut fails = 0;
+    let save = |ctx: &Context<Opt, F, C, VX, VY, S>, cost, tsteps, nbiter, fails| {
         let elapsed = now.elapsed().as_secs_f64();
         let err = save(
             ctx,
@@ -225,6 +227,7 @@ pub fn run<
             cost as usize,
             tsteps,
             nbiter,
+            fails,
             observables,
         );
         match err {
@@ -232,11 +235,11 @@ pub fn run<
             Ok(()) => {}
         }
     };
-    save(&context, cost, tsteps, nbiter);
+    save(&context, cost, tsteps, nbiter, fails);
     while context.t < context.tend {
         let d = next_save - context.t;
         if d <= context.t * 1e-14 {
-            save(&context, cost, tsteps, nbiter);
+            save(&context, cost, tsteps, nbiter, fails);
             current_save = next_save;
             next_save = current_save + save_every;
             if let Some(dt) = ctx_dt {
@@ -255,9 +258,10 @@ pub fn run<
             Integration::Explicit => explicit(&mut context),
             Integration::FixPoint(err_ref_p) => fixpoint(&mut context, err_ref_p),
         };
-        if let Some((c, nbs)) = res {
+        if let Some((c, nbi, nbf)) = res {
             cost += c;
-            nbiter = nbs;
+            nbiter = nbi;
+            fails += nbf;
         } else {
             eprintln!("Integration failed, abort current run.");
             eprintln!("");
@@ -266,7 +270,7 @@ pub fn run<
     }
     let d = next_save - context.t;
     if d < context.t * 1e-14 && context.t <= context.tend * (1.0 + 1e-14) {
-        save(&context, cost, tsteps, nbiter);
+        save(&context, cost, tsteps, nbiter, fails);
     }
     let elapsed = now.elapsed().as_secs_f64();
     eprintln!("Elapsed: {:.4}", elapsed);
