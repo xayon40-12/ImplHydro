@@ -222,7 +222,7 @@ def convall(l, cnds):
         plt.rcParams["figure.figsize"] = [8, 5]
         plt.figure()
         plt.xlabel(dtcost)
-        plt.ylabel("error")
+        plt.ylabel(r"$\Delta\epsilon$")
         # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
         nbcases = len(cnds)
         alpha = sqrt(1/nbcases)
@@ -417,7 +417,7 @@ def plot1d(l, nds):
                 # iterations ,= axs[2].plot(x,iter, '.', label=schemetype)
                 # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
 
-        axs[0].set_ylabel("e")
+        axs[0].set_ylabel(r"$\epsilon$")
         # axs[0].legend()
         handles, labels = [], []
         hs, ls = axs[0].get_legend_handles_labels()
@@ -428,7 +428,7 @@ def plot1d(l, nds):
                 handles += [h]
                 labels += [l]
         axs[0].legend(handles, labels, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
-        axs[1].set_ylabel("continuum err")
+        axs[1].set_ylabel(r"$\Delta\epsilon$")
         # axs[2].set_ylabel("cost")
         axs[len(axs)-1].set_xlabel("x/t")
         plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info, False)))
@@ -473,8 +473,8 @@ def plot1d(l, nds):
                 im = ax.imshow(cost, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
                 ax.xaxis.tick_top()
                 ax.xaxis.set_label_position('top') 
-                ax.set_xlabel("x")
-                ax.set_ylabel("t")
+                ax.set_xlabel("x (fm)")
+                ax.set_ylabel("t (fm)")
                 divider = make_axes_locatable(ax)
                 cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
                 fig.add_axes(cax)
@@ -577,7 +577,7 @@ def plot2d(l, datadts):
             # all = [("e", z),("vy",zvy), ("err ref",zerrref), ("vx", zvx)]
             all = [("e", z)]
             if "Gubser" in info["name"]:
-                all += [("err", zerr)]
+                all += [(r"$\Delta\epsilon$", zerr)]
             if "FixPoint" in info["integration"]:
                 all += [("iter", ziter)]
             for (i, (n, z)) in zip(range(nb),all):
@@ -588,11 +588,11 @@ def plot2d(l, datadts):
                 axs[i][id].xaxis.tick_top()
                 axs[i][id].xaxis.set_label_position('top') 
                 if i == 0:
-                    axs[i][id].set_xlabel("x")
+                    axs[i][id].set_xlabel("x (fm)")
                 if i>0:
                     axs[i][id].tick_params(axis='x', which='both', labelbottom=False, labeltop=False)
                 if id == 0:
-                    axs[i][id].set_ylabel("y")
+                    axs[i][id].set_ylabel("y (fm)")
                 divider = make_axes_locatable(axs[i][id])
                 cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
                 fig.add_axes(cax)
@@ -667,11 +667,11 @@ def plot2d(l, datadts):
                 im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
             else:
                 im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
-            axs[i].set_xlabel("x")
+            axs[i].set_xlabel("x (fm)")
             axs[i].xaxis.tick_top()
             axs[i].xaxis.set_label_position('top') 
             if i == 0:
-                axs[i].set_ylabel("y")
+                axs[i].set_ylabel("y (fm)")
             divider = make_axes_locatable(axs[i])
             cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
             fig.add_axes(cax)
@@ -707,12 +707,12 @@ def plot2d(l, datadts):
                 axs = [axs]
             for (i, (n, z, tot)) in zip(range(nb),all):
                 im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
-                axs[i].set_xlabel("x")
+                axs[i].set_xlabel("x (fm)")
                 axs[i].xaxis.tick_top()
                 axs[i].xaxis.set_label_position('top') 
                 axs[i].title.set_text("relative: {:.2e}".format(tot))
                 if i == 0:
-                    axs[i].set_ylabel("y")
+                    axs[i].set_ylabel("y (fm)")
                 divider = make_axes_locatable(axs[i])
                 cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
                 fig.add_axes(cax)
@@ -753,6 +753,6 @@ try:
 except FileExistsError:
     None
     
-alldata(6, datas, convall)
+# alldata(6, datas, convall)
 alldata(7, datas, plotall1D)
-alldata(9, datas, plotall2D)
+# alldata(9, datas, plotall2D)
