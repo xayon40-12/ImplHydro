@@ -3,6 +3,7 @@ import sys
 import os
 import warnings
 import matplotlib
+from matplotlib.patches import Patch
 import matplotlib.pyplot as plt
 from matplotlib.colors import CenteredNorm
 from mpl_toolkits import mplot3d
@@ -89,7 +90,15 @@ dir = "results/"
 for d in os.listdir(dir):
     dird = dir+d
     ts = sorted(os.listdir(dird), key=float) 
-    p = dird+"/"+ts[-1]
+    maxt = ts[-1]
+    tlim = 7.5 # choose a time limit
+    if float(maxt) > tlim:
+        for t in ts:
+            if float(t) <= tlim:
+                maxt = t
+            
+
+    p = dird+"/"+maxt
     info = {k: convert(v.strip()) for [k, v] in np.loadtxt(p+"/info.txt", dtype=object, delimiter=":")}
 
     t0 = info["t0"]
@@ -230,21 +239,27 @@ def lighten(c):
 def convall(l, cnds):
     [dim,name,visc,t0,tend,t] = l
     # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
-    ally = [((1,0), "full", "max", 2), ((5,5), "none", "mean", 3)]
+    ally = [((1,0), "full", 2), ((5,5), "none", 3)]
     allx = [("cost", 5)]
     # ally = [("max", 2)]
     fromref = defaultfromref
     for (dtcost, dci) in allx:
         plt.rcParams["figure.figsize"] = [8, 5]
-        plt.figure()
-        plt.xlabel(dtcost)
-        plt.ylabel(r"$\Delta\epsilon$")
+        fig, ax = plt.subplots()
+        fig2, ax2 = plt.subplots()
+        def setlabel(ax):
+            ax.set_xlabel(dtcost)
+            ax.set_ylabel(r"$\Delta\epsilon$")
+        setlabel(ax)
+        setlabel(ax2)
         # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
         nbcases = len(cnds)
         alpha = sqrt(1/nbcases)
         for case in cnds:
             nds = cnds[case]
-            for dxn in sorted(nds,key=lambda x: x[1]): # make 100 be plotted before 200
+            dxs = sorted(nds,key=lambda x: x[1])
+            (maxdx,minn) = dxs[-1]
+            for dxn in dxs: # make 100 be plotted before 200
                 (dx,n) = dxn
                 ds = nds[dxn]
                 scs = sorted(list(ds.keys()))
@@ -261,7 +276,7 @@ def convall(l, cnds):
                     plt.close()
                     return 
                 s1 = scs[0]
-                for (linestyle, fillstyle, meanmax, mmi) in ally:
+                for (linestyle, fillstyle, mmi) in ally:
                     for (s0,col) in zip(scs,plt_setting.clist):
                         ds0 = ds[s0]
                         dtref = sorted(list(ds0.keys()))[0]
@@ -272,31 +287,45 @@ def convall(l, cnds):
                             schemetype = "Implicit"
                         else:
                             schemetype = "Explicit"
-                        schemetype = meanmax+" "+schemetype
                         c = convergence(ds0,refs[s1])
                         al = alpha
                         if n == 100:
-                            col = lighten(col)
-                        plt.loglog(c[fromref:,dci],c[fromref:,mmi], label=schemetype, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
+                            col = np.roll(col,2) # lighten(col)
                         s = 30
                         sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,4]]
                         facecolors = fillstyle
                         if fillstyle == "full":
                             facecolors = col
-                        plt.scatter(c[fromref:,dci],c[fromref:,mmi],sizes, marker=pointstyle(s0), facecolors=facecolors, color=col, alpha=al) #, fillstyle=fillstyle, color=col, alpha=al)
-        labels = []
-        for p in plt.gca().get_lines():    # this is the loop to change Labels and colors
-            label = p.get_label()
-            col = p.get_color()
-            m = max(col)
-            if label in labels or m==1:    # check for Name already exists
-                p.set_label('_' + label)       # hide label in auto-legend
-            else:
-                labels += [label]
-        leg = plt.legend(loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=2)
-        for lh in leg.legendHandles:
-            lh.set_alpha(1)
-        plt.savefig("figures/convergence_{}_meanmax_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
+                        def pl(ax,label):
+                            ax.loglog(c[fromref:,dci],c[fromref:,mmi], label=label, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
+                            ax.scatter(c[fromref:,dci],c[fromref:,mmi],sizes, marker=pointstyle(s0), facecolors=facecolors, color=col, alpha=al) #, fillstyle=fillstyle, color=col, alpha=al)
+                        if dx == maxdx:
+                            pl(ax,schemetype)
+                        if schemetype == "Implicit":
+                            label = r"$\Delta x = "+str(dx)+"$ fm"
+                            pl(ax2,label)
+
+        def line(col,style):
+            return matplotlib.lines.Line2D([],[], color=col,linestyle=style)
+        def clean(ax):
+            handles, labels = [], []
+            hs, ls = ax.get_legend_handles_labels()
+            for (h,l) in zip(hs,ls):    # this is the loop to change Labels and colors
+                col = h.get_color()
+                m = max(col)
+                if not (l in labels or m == 1):    # check for Name already exists
+                    p = line(col,"-")
+                    handles += [p]
+                    labels += [l]
+            handles = [line("black",(0,(1,0))),line("black",(0,(5,5)))]+handles
+            labels = ["max", "mean"]+labels
+            leg = ax.legend(handles, labels)
+            for lh in leg.legendHandles:
+                lh.set_alpha(1)
+        clean(ax)
+        clean(ax2)
+        fig.savefig("figures/convergence_{}_meanmax_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
+        fig2.savefig("figures/convergence_{}_meanmax_dx_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         plt.close()
 
 def integrationPriority(integration):
@@ -366,6 +395,8 @@ def plot1d(l, nds):
         # _,axs = plt.subplots(4, 1, sharex=True)
         plt.rcParams["figure.figsize"] = [8, 9]
         fig,axs = plt.subplots(2, 1, sharex=True)
+        if "Riemann" in name:
+            axin = axs[0].inset_axes([0.02, 0.02, 0.3, 0.5])
         l = 0
         for dxn in nds:
             (dx,n) = dxn
@@ -375,6 +406,8 @@ def plot1d(l, nds):
             x = x/(t-t0)
         ycontinuum = [e(x) for x in x]
         continuum ,= axs[0].plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
+        if "Riemann" in name:
+            axin.plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
         for dxn in sorted(nds,key=lambda x: x[1]):
             (dx,n) = dxn
             datas = nds[dxn]
@@ -404,7 +437,7 @@ def plot1d(l, nds):
                 linestyle = ls1
                 if n == 100:
                     linestyle = ls2
-                    col = lighten(col)
+                    # col = lighten(col)
                 (sinfo, data, diff) = datas[scheme][dt]
                 vid = sinfo["ID"]
                 cut = sinfo["CUT"]
@@ -435,25 +468,40 @@ def plot1d(l, nds):
                 yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
         
                 numerics ,= axs[0].plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+                if "Riemann" in name:
+                    axin.plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+
                 errcontinuum ,= axs[1].plot(x,yerr, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
                 # pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
                 # iterations ,= axs[2].plot(x,iter, '.', label=schemetype)
                 # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
 
-        axs[0].set_ylabel(r"$\epsilon$")
+        if "Riemann" in name:
+            axin.set_xlim(-0.75, -0.5)
+            axin.set_ylim(8.1, 10.1)
+            axs[0].indicate_inset_zoom(axin)
+            axs[0].set_ylabel(r"$\epsilon$")
         # axs[0].legend()
         handles, labels = [], []
         hs, ls = axs[0].get_legend_handles_labels()
+        def line(col,style):
+            return matplotlib.lines.Line2D([],[], color=col,linestyle=style)
         for (h,l) in zip(hs,ls):    # this is the loop to change Labels and colors
             col = h.get_color()
             m = max(col)
             if not (l in labels or m == 1):    # check for Name already exists
-                handles += [h]
+                # p = Patch(linestyle="-",color=col)
+                p = line(col,"-")
+                # h.set_linestyle('-')
+                handles += [p]
                 labels += [l]
-        axs[0].legend(handles, labels, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
+        handles = [line("black",lstyles2[0]),line("black",lstyles1[0])]+handles
+        labels = [r"$\Delta x = 0.2$ fm", r"$\Delta x = 0.1$ fm"]+labels
+        axs[0].legend(handles, labels) #, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
         axs[1].set_ylabel(r"$\Delta\epsilon$")
         # axs[2].set_ylabel("cost")
-        axs[len(axs)-1].set_xlabel("x/t")
+        axs[len(axs)-1].set_xlabel("$x/t$")
+        plt.subplots_adjust(wspace=0,hspace=0)
         plt.savefig("figures/{}_{}.pdf".format(timename,info2name(info, False)))
         plt.close()
 
@@ -493,11 +541,11 @@ def plot1d(l, nds):
                 u = tt[-1]
             
         
-                im = ax.imshow(cost, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
+                im = ax.imshow(cost, extent=[l,r,d,u], origin="lower", label="aoeu") #, norm=CenteredNorm(0)) # , cmap="terrain"
                 ax.xaxis.tick_top()
                 ax.xaxis.set_label_position('top') 
-                ax.set_xlabel("x (fm)")
-                ax.set_ylabel("t (fm)")
+                ax.set_xlabel("$x$ (fm)")
+                ax.set_ylabel("$t$ (fm)")
                 divider = make_axes_locatable(ax)
                 cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
                 fig.add_axes(cax)
@@ -507,6 +555,9 @@ def plot1d(l, nds):
                 cbar.update_ticks()
                 cbar.set_label("cost", labelpad=-60)
 
+                ax.text(0.035, 0.1, r"$\Delta x = "+str(dx)+"$ fm", bbox={"facecolor": "white", "pad": 10},
+                    # verticalalignment='bottom', horizontalalignment='right',
+                    transform=ax.transAxes, fontsize=22)
                 plt.savefig("figures/{}_{}_cost-t_{}.pdf".format(timename,scheme,info2name(sinfo)), dpi=100)
                 plt.close()
 
@@ -611,11 +662,11 @@ def plot2d(l, datadts):
                 axs[i][id].xaxis.tick_top()
                 axs[i][id].xaxis.set_label_position('top') 
                 if i == 0:
-                    axs[i][id].set_xlabel("x (fm)")
+                    axs[i][id].set_xlabel("$x$ (fm)")
                 if i>0:
                     axs[i][id].tick_params(axis='x', which='both', labelbottom=False, labeltop=False)
                 if id == 0:
-                    axs[i][id].set_ylabel("y (fm)")
+                    axs[i][id].set_ylabel("$y$ (fm)")
                 divider = make_axes_locatable(axs[i][id])
                 cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
                 fig.add_axes(cax)
@@ -625,6 +676,10 @@ def plot2d(l, datadts):
                 cbar.update_ticks()
                 cbar.set_label("{} (t = {:.2} fm)".format(n, t), labelpad=-60)
 
+        ax = axs[nb-1][0]
+        ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", bbox={"facecolor": "white", "pad": 10},
+            transform=ax.transAxes, fontsize=22)
+        plt.subplots_adjust(wspace=0)
         plt.savefig("figures/many_best_e_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
     
@@ -690,11 +745,11 @@ def plot2d(l, datadts):
                 im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
             else:
                 im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
-            axs[i].set_xlabel("x (fm)")
+            axs[i].set_xlabel("$x$ (fm)")
             axs[i].xaxis.tick_top()
             axs[i].xaxis.set_label_position('top') 
             if i == 0:
-                axs[i].set_ylabel("y (fm)")
+                axs[i].set_ylabel("$y$ (fm)")
             divider = make_axes_locatable(axs[i])
             cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
             fig.add_axes(cax)
@@ -703,6 +758,9 @@ def plot2d(l, datadts):
             cbar.formatter.set_useMathText(True)
             cbar.update_ticks()
             cbar.set_label(n, labelpad=-60)
+            ax = axs[0]
+            ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", bbox={"facecolor": "white", "pad": 10},
+                transform=ax.transAxes, fontsize=22)
         if many and animate:
             figname = "figures/best_e_{}".format(info2name(info))
             try:
@@ -730,12 +788,12 @@ def plot2d(l, datadts):
                 axs = [axs]
             for (i, (n, z, tot)) in zip(range(nb),all):
                 im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
-                axs[i].set_xlabel("x (fm)")
+                axs[i].set_xlabel("$x$ (fm)")
                 axs[i].xaxis.tick_top()
                 axs[i].xaxis.set_label_position('top') 
                 axs[i].title.set_text("relative: {:.2e}".format(tot))
                 if i == 0:
-                    axs[i].set_ylabel("y (fm)")
+                    axs[i].set_ylabel("$y$ (fm)")
                 divider = make_axes_locatable(axs[i])
                 cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
                 fig.add_axes(cax)
