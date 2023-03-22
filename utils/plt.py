@@ -573,7 +573,7 @@ def plot1d(l, nds):
                 cbar.set_label("cost", labelpad=-60)
 
                 if "Riemann" in name:
-                    ax.legend()
+                    ax.legend(labelcolor="white", facecolor=(0.1,0.1,0.3))
                 ax.text(0.7, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 plt.savefig("figures/{}_{}_cost-t_{}.pdf".format(timename,scheme,info2name(sinfo)), dpi=100)
