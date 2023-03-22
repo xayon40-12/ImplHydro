@@ -22,7 +22,6 @@ from enum import Enum
 warnings.filterwarnings("ignore", category=matplotlib.MatplotlibDeprecationWarning) # disable matplotlib deprecation warning
 np.seterr(invalid='ignore') # disable invalid waring for numpy as NaN are used to discard data in the void
 np.seterr(divide='ignore') # disable divide by zero worining
-# plt.rcParams['axes.grid'] = False
 
 
 animate = False
@@ -238,13 +237,14 @@ def convall(l, cnds):
     # ally = [("max", 2)]
     fromref = defaultfromref
     for (dtcost, dci) in allx:
-        plt.rcParams["figure.figsize"] = [8, 5]
-        fig, ax = plt.subplots()
-        fig2, ax2 = plt.subplots()
+        fig, axs = plt.subplots(2, figsize=(8,9), sharex=True)
+        fig.subplots_adjust(wspace=0,hspace=0)
+        fig2, ax2 = plt.subplots(figsize=(8,5))
         def setlabel(ax):
             ax.set_xlabel(dtcost)
             ax.set_ylabel(r"$\Delta\epsilon$")
-        setlabel(ax)
+        for ax in axs:
+            setlabel(ax)
         setlabel(ax2)
         # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
         nbcases = len(cnds)
@@ -253,7 +253,7 @@ def convall(l, cnds):
             nds = cnds[case]
             dxs = sorted(nds,key=lambda x: x[1])
             (maxdx,minn) = dxs[-1]
-            for dxn in dxs: # make 100 be plotted before 200
+            for (ax,dxn) in zip(axs,dxs): # make 100 be plotted before 200
                 (dx,n) = dxn
                 ds = nds[dxn]
                 scs = sorted(list(ds.keys()))
@@ -270,6 +270,8 @@ def convall(l, cnds):
                     plt.close()
                     return 
                 s1 = scs[0]
+                ax.text(0.03, 0.05, r"$\Delta x = "+str(dx)+"$ fm", color="black", #, bbox={"facecolor": "white", "pad": 10},
+                    transform=ax.transAxes, fontsize=22)
                 for (linestyle, fillstyle, mmi) in ally:
                     for (s0,col) in zip(scs,plt_setting.clist):
                         ds0 = ds[s0]
@@ -283,19 +285,19 @@ def convall(l, cnds):
                             schemetype = "Explicit"
                         c = convergence(ds0,refs[s1])
                         al = alpha
-                        if n == 100:
-                            col = np.roll(col,2) # lighten(col)
                         s = 30
                         sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,4]]
                         facecolors = fillstyle
-                        if fillstyle == "full":
-                            facecolors = col
                         def pl(ax,label):
+                            nonlocal facecolors
+                            if fillstyle == "full":
+                                facecolors = col
                             ax.loglog(c[fromref:,dci],c[fromref:,mmi], label=label, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
                             ax.scatter(c[fromref:,dci],c[fromref:,mmi],sizes, marker=pointstyle(s0), facecolors=facecolors, color=col, alpha=al) #, fillstyle=fillstyle, color=col, alpha=al)
-                        if dx == maxdx:
-                            pl(ax,schemetype)
+                        pl(ax,schemetype)
                         if schemetype == "Implicit":
+                            if n == 100:
+                                col = np.roll(col,2) # lighten(col)
                             label = r"$\Delta x = "+str(dx)+"$ fm"
                             pl(ax2,label)
 
@@ -313,10 +315,10 @@ def convall(l, cnds):
                     labels += [l]
             handles = [line("black",(0,(1,0))),line("black",(0,(5,5)))]+handles
             labels = ["max", "mean"]+labels
-            leg = ax.legend(handles, labels)
+            leg = ax.legend(handles, labels, loc="upper right")
             for lh in leg.legendHandles:
                 lh.set_alpha(1)
-        clean(ax)
+        clean(axs[0])
         clean(ax2)
         fig.savefig("figures/convergence_{}_meanmax_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         fig2.savefig("figures/convergence_{}_meanmax_dx_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
@@ -385,10 +387,7 @@ def plot1d(l, nds):
         elif dt == mindt:
             timename = "best_"+timename
 
-        # plt.rcParams["figure.figsize"] = [8, 12]
-        # _,axs = plt.subplots(4, 1, sharex=True)
-        plt.rcParams["figure.figsize"] = [8, 9]
-        fig,axs = plt.subplots(2, 1, sharex=True)
+        fig,axs = plt.subplots(2, 1, figsize=(8,9), sharex=True)
         if "Riemann" in name:
             axin = axs[0].inset_axes([0.03, 0.05, 0.3, 0.5])
             axin.set_xticklabels([])
@@ -620,8 +619,7 @@ def plot2d(l, datadts):
             nb += 1
         if "FixPoint" in info["integration"]:
             nb += 1
-        plt.rcParams["figure.figsize"] = [2+num*4, nb*5]
-        fig, axs = plt.subplots(nb,num, sharey=True) #, sharex=True)
+        fig, axs = plt.subplots(nb,num, figsize=(2+num*4, nb*5), sharey=True) #, sharex=True)
         if not hasattr(axs[0], "__len__"):
             axs = [axs]
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
@@ -755,8 +753,7 @@ def plot2d(l, datadts):
         if "FixPoint" in info["integration"]:
             all += [("iter", ziter)]
         nb = len(all)
-        plt.rcParams["figure.figsize"] = [2+nb*4, 5]
-        fig, axs = plt.subplots(1,nb, sharey=True)
+        fig, axs = plt.subplots(1,nb, figsize=(2+nb*4, 5), sharey=True)
         if not hasattr(axs, "__len__"):
             axs = [axs]
         for (i, (n, z)) in zip(range(nb),all):
@@ -801,8 +798,7 @@ def plot2d(l, datadts):
             totdt02 = dt02.sum()/abs(data[:,4]).sum()
             all = [("diff T00",dt00,totdt00),("diff T01",dt01,totdt01),("diff T02",dt02,totdt02)]
             nb = len(all)
-            plt.rcParams["figure.figsize"] = [2+nb*4, 5]
-            fig, axs = plt.subplots(1,nb, sharey=True)
+            fig, axs = plt.subplots(1,nb, figsize=(2+nb*4, 5), sharey=True)
             if not hasattr(axs, "__len__"):
                 axs = [axs]
             for (i, (n, z, tot)) in zip(range(nb),all):
