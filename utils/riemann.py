@@ -27,7 +27,7 @@ def riemann(e0,emin,cs2,eps,void):
         def v2(x):
             return v(f2(x))
 
-        return (f2, v2)
+        return (f2, v2, 0, 1)
     else:
         def cont(el, vv):
             vel = v(el)
@@ -60,25 +60,25 @@ def riemann(e0,emin,cs2,eps,void):
                 (nerr, fab, ne, nv) = next(cont, err, 0, e, v)
                 return search(nerr, ne, nv, fab)
 
-        (eq, vc) = search(1e-1, (e0+emin)/3, 0.5, 1)
+        (ep, vs) = search(1e-1, (e0+emin)/3, 0.5, 1)
 
         def f1(x):
             if x < xt(e0):
                 return e0
-            elif x < xt(eq):
+            elif x < xt(ep):
                 return e0*((1-cs)/(1+cs)*(1-x)/(1+x))**((1+cs2)/(2*cs))
-            elif x < vc:
-                return eq
+            elif x < vs:
+                return ep
             else:
                 return emin
 
         def v1(x):
-            if x < vc:
+            if x < vs:
                 return v(f1(x))
             else:
                 return 0
 
-        return (f1, v1)
+        return (f1, v1, ep, vs)
 
 def main() -> int:
     e0 = 10

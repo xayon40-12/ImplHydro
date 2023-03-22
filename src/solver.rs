@@ -237,7 +237,7 @@ pub fn run<
     };
     save(&context, cost, tsteps, nbiter, fails);
     while context.t < context.tend {
-        let d = next_save - context.t;
+        let d = next_save.min(context.tend) - context.t;
         if d <= context.t * 1e-14 {
             save(&context, cost, tsteps, nbiter, fails);
             current_save = next_save;
@@ -246,7 +246,9 @@ pub fn run<
                 context.dt = dt;
                 ctx_dt = None;
             }
-        } else if d <= context.dt {
+        }
+        let d = next_save.min(context.tend) - context.t;
+        if d <= context.dt {
             ctx_dt = ctx_dt.or_else(|| Some(context.dt));
             context.dt = d;
         } else if d <= 2.0 * context.dt {
@@ -268,7 +270,7 @@ pub fn run<
             return None;
         }
     }
-    let d = next_save - context.t;
+    let d = next_save.min(context.tend) - context.t;
     if d < context.t * 1e-14 && context.t <= context.tend * (1.0 + 1e-14) {
         save(&context, cost, tsteps, nbiter, fails);
     }

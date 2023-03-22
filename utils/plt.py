@@ -42,7 +42,6 @@ argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCas
 for arg in sys.argv:
     for (larg, act) in argActions:
         if arg in larg:
-            print(arg)
             act()
 
 CUT = 1e-6
@@ -53,10 +52,11 @@ defaultfromref = 1
 e0 = 10
 emin = 1
 cs2 = 1/3
+cs = np.sqrt(cs2)
 eps = 1e-10
 
-riem_e, riem_v = riemann(e0,emin,cs2,eps,False)
-riem_void_e, riem_void_v = riemann(e0,emin,cs2,eps,True)
+riem_e, riem_v, riem_ep, riem_vs = riemann(e0,emin,cs2,eps,False)
+riem_void_e, riem_void_v, riem_void_ep, riem_void_vs = riemann(e0,emin,cs2,eps,True)
 
 def dd(n):
     if n == 1:
@@ -91,12 +91,6 @@ for d in os.listdir(dir):
     dird = dir+d
     ts = sorted(os.listdir(dird), key=float) 
     maxt = ts[-1]
-    tlim = 7.5 # choose a time limit
-    if float(maxt) > tlim:
-        for t in ts:
-            if float(t) <= tlim:
-                maxt = t
-            
 
     p = dird+"/"+maxt
     info = {k: convert(v.strip()) for [k, v] in np.loadtxt(p+"/info.txt", dtype=object, delimiter=":")}
@@ -162,8 +156,8 @@ for d in os.listdir(dir):
     # if the total energy sum(e) is bigger at the end time than the initial time, 
     # it means that explicit failed
     expl_fail = sum(e) > sum(e0)
-    # if a fail (decreasing dt) happens in implicit, we consider that implicit failed
-    impl_fail = fails > 0
+    # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
+    impl_fail = fails > 0 and maxdt>dx/10
     if rejectfails and (expl_fail or impl_fail): 
         continue # skip explicit or implicit that failed
     m = e>cut
@@ -344,7 +338,7 @@ def plot1d(l, nds):
         return
     nl = 2
     # lstyles = [(nl*i,(nl,(nl-1)*nl)) for i in range(nl)]
-    lstyles1 = [(6*i,(4,8)) for i in range(nl)]
+    lstyles1 = [(5*i,(3,7)) for i in range(nl)]
     lstyles2 = [(2*i,(1,3)) for i in range(nl)]
 
     if "Gubser" in name:
@@ -396,7 +390,13 @@ def plot1d(l, nds):
         plt.rcParams["figure.figsize"] = [8, 9]
         fig,axs = plt.subplots(2, 1, sharex=True)
         if "Riemann" in name:
-            axin = axs[0].inset_axes([0.02, 0.02, 0.3, 0.5])
+            axin = axs[0].inset_axes([0.03, 0.05, 0.3, 0.5])
+            axin.set_xticklabels([])
+            axin.set_yticklabels([])
+            # if not "Void" in name:
+            axinv = axs[0].inset_axes([0.55, 0.45, 0.4, 0.5])
+            axinv.set_xticklabels([])
+            axinv.set_yticklabels([])
         l = 0
         for dxn in nds:
             (dx,n) = dxn
@@ -408,6 +408,8 @@ def plot1d(l, nds):
         continuum ,= axs[0].plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
         if "Riemann" in name:
             axin.plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
+            # if not "Void" in name:
+            axinv.plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
         for dxn in sorted(nds,key=lambda x: x[1]):
             (dx,n) = dxn
             datas = nds[dxn]
@@ -470,6 +472,8 @@ def plot1d(l, nds):
                 numerics ,= axs[0].plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
                 if "Riemann" in name:
                     axin.plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+                    # if not "Void" in name:
+                    axinv.plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
 
                 errcontinuum ,= axs[1].plot(x,yerr, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
                 # pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
@@ -480,7 +484,14 @@ def plot1d(l, nds):
             axin.set_xlim(-0.75, -0.5)
             axin.set_ylim(8.1, 10.1)
             axs[0].indicate_inset_zoom(axin)
-            axs[0].set_ylabel(r"$\epsilon$")
+            if not "Void" in name:
+                axinv.set_xlim(0.5, 1)
+                axinv.set_ylim(0.9, 3.5)
+            else:
+                axinv.set_xlim(0.8, 1.2)
+                axinv.set_ylim(-0.05, 0.1)
+            axs[0].indicate_inset_zoom(axinv)
+        axs[0].set_ylabel(r"$\epsilon$")
         # axs[0].legend()
         handles, labels = [], []
         hs, ls = axs[0].get_legend_handles_labels()
@@ -497,7 +508,7 @@ def plot1d(l, nds):
                 labels += [l]
         handles = [line("black",lstyles2[0]),line("black",lstyles1[0])]+handles
         labels = [r"$\Delta x = 0.2$ fm", r"$\Delta x = 0.1$ fm"]+labels
-        axs[0].legend(handles, labels) #, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
+        axs[1].legend(handles, labels) #, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
         axs[1].set_ylabel(r"$\Delta\epsilon$")
         # axs[2].set_ylabel("cost")
         axs[len(axs)-1].set_xlabel("$x/t$")
@@ -541,6 +552,13 @@ def plot1d(l, nds):
                 u = tt[-1]
             
         
+                if "Riemann" in name:
+                    if "Void" in name:
+                        vs = riem_void_vs
+                    else:
+                        vs = riem_vs
+                    ax.plot(xx, xx/vs, linestyle="--", color="white", label="shock")
+                    ax.plot(xx, -xx/cs, linestyle="-.", color="white", label="rarefaction")
                 im = ax.imshow(cost, extent=[l,r,d,u], origin="lower", label="aoeu") #, norm=CenteredNorm(0)) # , cmap="terrain"
                 ax.xaxis.tick_top()
                 ax.xaxis.set_label_position('top') 
@@ -555,8 +573,9 @@ def plot1d(l, nds):
                 cbar.update_ticks()
                 cbar.set_label("cost", labelpad=-60)
 
-                ax.text(0.035, 0.1, r"$\Delta x = "+str(dx)+"$ fm", bbox={"facecolor": "white", "pad": 10},
-                    # verticalalignment='bottom', horizontalalignment='right',
+                if "Riemann" in name:
+                    ax.legend()
+                ax.text(0.7, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 plt.savefig("figures/{}_{}_cost-t_{}.pdf".format(timename,scheme,info2name(sinfo)), dpi=100)
                 plt.close()
@@ -677,7 +696,7 @@ def plot2d(l, datadts):
                 cbar.set_label("{} (t = {:.2} fm)".format(n, t), labelpad=-60)
 
         ax = axs[nb-1][0]
-        ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", bbox={"facecolor": "white", "pad": 10},
+        ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", #, bbox={"facecolor": "white", "pad": 10},
             transform=ax.transAxes, fontsize=22)
         plt.subplots_adjust(wspace=0)
         plt.savefig("figures/many_best_e_{}.pdf".format(info2name(info)), dpi=100)
@@ -759,7 +778,7 @@ def plot2d(l, datadts):
             cbar.update_ticks()
             cbar.set_label(n, labelpad=-60)
             ax = axs[0]
-            ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", bbox={"facecolor": "white", "pad": 10},
+            ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", #, bbox={"facecolor": "white", "pad": 10},
                 transform=ax.transAxes, fontsize=22)
         if many and animate:
             figname = "figures/best_e_{}".format(info2name(info))
