@@ -1,5 +1,6 @@
 pub mod eos;
 pub mod ideal;
+pub mod isosurface;
 pub mod solutions;
 pub mod utils;
 pub mod viscous;
