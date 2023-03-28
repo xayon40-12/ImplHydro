@@ -2,7 +2,7 @@ use crate::{
     hydro::{
         eos::wb,
         utils::{converge, prepare_trento},
-        viscous::init_from_energy_2d,
+        viscous::init_from_entropy_density_2d,
         viscous::shear2d::shear2d,
         Eos, HydroOutput, C_SHEAR_2D, F_SHEAR_2D,
     },
@@ -19,13 +19,13 @@ fn hydro2d<const V: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_mev: f64,
     r: Scheme<S>,
-    init_e: ([[f64; V]; V], usize),
+    init_s: ([[f64; V]; V], usize),
 ) -> HydroOutput<V, V, F_SHEAR_2D, C_SHEAR_2D> {
-    let (es, i) = init_e;
+    let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
     let (p, dpde, temp): (Eos, Eos, Eos) = (&wb::p, &wb::dpde, &wb::T);
     println!("{}", name);
-    let init = init_from_energy_2d(t0, es, p, dpde);
+    let init = init_from_entropy_density_2d(t0, s, p, dpde, temp);
     shear2d::<V, S>(
         &name,
         maxdt,

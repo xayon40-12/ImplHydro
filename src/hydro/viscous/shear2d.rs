@@ -391,6 +391,7 @@ pub fn shear2d<const V: usize, const S: usize>(
     );
     let k = [[[[0.0; 10]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
+    let mut max_e = 0.0;
     for j in 0..V {
         for i in 0..V {
             let x = (i as f64 - v2) * dx;
@@ -398,12 +399,18 @@ pub fn shear2d<const V: usize, const S: usize>(
             vs[j][i] = init((i, j), (x, y));
             trs[j][i][0] = vs[j][i][0];
             (vs[j][i], trs[j][i]) = constraints(t, vs[j][i], trs[j][i]);
+            max_e = trs[j][i][0].max(max_e);
         }
     }
+    // let e = max_e;
+    // let t = temperature(e);
+    // let s = (e + p(e)) / t;
+    // println!("T({}): {}, s: {}", max_e, t * HBARC, s);
+    // return None;
 
     let freezeout_temp = freezeout_temp_mev / HBARC;
     let freezeout_energy = newton(
-        1e-14,
+        1e-10,
         freezeout_temp,
         |e| temperature(e) - freezeout_temp,
         |e| e.max(0.0).min(1000.0),
@@ -439,7 +446,7 @@ pub fn shear2d<const V: usize, const S: usize>(
 
     let temp = shear_temp_cut / HBARC;
     let ecut = newton(
-        1e-14,
+        1e-10,
         temp,
         |e| temperature(e) - temp,
         |e| e.max(0.0).min(1000.0),
