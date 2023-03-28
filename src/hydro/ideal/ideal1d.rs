@@ -142,6 +142,7 @@ pub fn ideal1d<const V: usize, const S: usize>(
         opt: (),
         p,
         dpde,
+        freezeout_energy: None,
     };
     run(context, name, crate::hydro::Viscosity::Ideal, &names, &[])
 }

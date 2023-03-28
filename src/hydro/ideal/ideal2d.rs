@@ -242,6 +242,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
         opt: (coord, [eigx, eigy]),
         p,
         dpde,
+        freezeout_energy: None,
     };
 
     let observables: [Observable<3, 6, V, V>; 1] =

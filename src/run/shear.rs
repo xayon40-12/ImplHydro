@@ -17,6 +17,7 @@ fn hydro2d<const V: usize, const S: usize>(
     er: f64,
     etaovers: f64,
     tempcut: f64,
+    freezeout_temp_mev: f64,
     r: Scheme<S>,
     init_e: ([[f64; V]; V], usize),
 ) -> HydroOutput<V, V, F_SHEAR_2D, C_SHEAR_2D> {
@@ -26,7 +27,20 @@ fn hydro2d<const V: usize, const S: usize>(
     println!("{}", name);
     let init = init_from_energy_2d(t0, es, p, dpde);
     shear2d::<V, S>(
-        &name, maxdt, er, t0, tend, dx, r, p, dpde, temp, &init, etaovers, tempcut,
+        &name,
+        maxdt,
+        er,
+        t0,
+        tend,
+        dx,
+        r,
+        p,
+        dpde,
+        temp,
+        &init,
+        etaovers,
+        tempcut,
+        freezeout_temp_mev,
     )
 }
 
@@ -38,6 +52,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     dtmax: f64,
     etaovers: f64,
     tempcut: f64,
+    freezeout_temp_mev: f64,
     r: Scheme<S>,
     nb_trento: usize,
 ) {
@@ -48,7 +63,18 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     for i in 0..nb_trento {
         let trento = (trentos[i], i);
         converge(dtmax, dtmin, erpow, |dt, er| {
-            hydro2d::<V, S>(t0, tend, dx, dt, er, etaovers, tempcut, r, trento)
+            hydro2d::<V, S>(
+                t0,
+                tend,
+                dx,
+                dt,
+                er,
+                etaovers,
+                tempcut,
+                freezeout_temp_mev,
+                r,
+                trento,
+            )
         });
     }
 }
@@ -60,6 +86,7 @@ pub fn run_2d<const V: usize>(
     dtmax: f64,
     etaovers: f64,
     tempcut: f64,
+    freezeout_temp_mev: f64,
     nb_trento: usize,
 ) {
     run_convergence_2d::<V, 1>(
@@ -70,6 +97,7 @@ pub fn run_2d<const V: usize>(
         dtmax,
         etaovers,
         tempcut,
+        freezeout_temp_mev,
         gauss_legendre_1(Some((0, 1e-3))),
         nb_trento,
     );
@@ -81,6 +109,7 @@ pub fn run_2d<const V: usize>(
         dtmax,
         etaovers,
         tempcut,
+        freezeout_temp_mev,
         heun(),
         nb_trento,
     );
@@ -92,6 +121,7 @@ pub fn run_trento_2d<const V: usize>(
     dt: f64,
     etaovers: f64,
     tempcut: f64,
+    freezeout_temp_mev: f64,
     nb_trento: usize,
 ) {
     let trentos = prepare_trento::<V>(nb_trento);
@@ -101,7 +131,29 @@ pub fn run_trento_2d<const V: usize>(
     let er = dt * dt;
     for i in 0..nb_trento {
         let trento = (trentos[i], i);
-        hydro2d::<V, 1>(t0, tend, dx, dt, er, etaovers, tempcut, gl1, trento);
-        hydro2d::<V, 2>(t0, tend, dx, dt, er, etaovers, tempcut, heun, trento);
+        hydro2d::<V, 1>(
+            t0,
+            tend,
+            dx,
+            dt,
+            er,
+            etaovers,
+            tempcut,
+            freezeout_temp_mev,
+            gl1,
+            trento,
+        );
+        hydro2d::<V, 2>(
+            t0,
+            tend,
+            dx,
+            dt,
+            er,
+            etaovers,
+            tempcut,
+            freezeout_temp_mev,
+            heun,
+            trento,
+        );
     }
 }

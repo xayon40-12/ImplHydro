@@ -53,4 +53,5 @@ pub struct Context<
     pub opt: Opt,
     pub p: Eos<'a>,
     pub dpde: Eos<'a>,
+    pub freezeout_energy: Option<f64>,
 }

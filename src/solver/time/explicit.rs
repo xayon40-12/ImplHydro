@@ -35,6 +35,7 @@ pub fn explicit<
         opt,
         p: _,
         dpde: _,
+        freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
 ) -> Option<(f64, [[usize; VX]; VY], usize)> {
     *dt = maxdt.min(*dt);

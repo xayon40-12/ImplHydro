@@ -37,6 +37,7 @@ pub fn fixpoint<
         opt,
         p: _,
         dpde: _,
+        freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
     err_ref_p: Option<(usize, f64)>,
 ) -> Option<(f64, [[usize; VX]; VY], usize)> {

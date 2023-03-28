@@ -368,7 +368,8 @@ pub fn shear2d<const V: usize, const S: usize>(
     temperature: Eos,
     init: Init2D<10>,
     etaovers: f64,
-    tempcut: f64,
+    shear_temp_cut: f64,
+    freezeout_temp_mev: f64,
 ) -> Option<(
     ([[[f64; 10]; V]; V], [[[f64; 13]; V]; V]),
     f64,
@@ -400,6 +401,14 @@ pub fn shear2d<const V: usize, const S: usize>(
         }
     }
 
+    let freezeout_temp = freezeout_temp_mev / HBARC;
+    let freezeout_energy = newton(
+        1e-14,
+        freezeout_temp,
+        |e| temperature(e) - freezeout_temp,
+        |e| e.max(0.0).min(1000.0),
+    );
+
     let context = Context {
         fun: &flux,
         constraints: &constraints,
@@ -419,15 +428,16 @@ pub fn shear2d<const V: usize, const S: usize>(
         ot: t - 1.0,
         t0: t,
         tend,
-        opt: (etaovers, temperature, tempcut),
+        opt: (etaovers, temperature, shear_temp_cut),
         p,
         dpde,
+        freezeout_energy: Some(freezeout_energy),
     };
 
     let observables: [Observable<10, 13, V, V>; 1] =
         [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
 
-    let temp = tempcut / HBARC;
+    let temp = shear_temp_cut / HBARC;
     let ecut = newton(
         1e-14,
         temp,

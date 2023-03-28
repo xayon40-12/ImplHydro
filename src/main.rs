@@ -46,6 +46,8 @@ enum Hydro {
         etaovers: f64,
         #[arg(long, default_value_t = 50.0)]
         tempcut: f64,
+        #[arg(long, default_value_t = 155.0)]
+        freezeout: f64,
         #[command(subcommand)]
         command: ToSimulate,
     },
@@ -133,6 +135,7 @@ fn run<const CELLS: usize>(args: Cli) {
                 Hydro::Shear {
                     etaovers,
                     tempcut,
+                    freezeout,
                     command,
                 } => match command {
                     ToSimulate::Benchmark {
@@ -143,13 +146,13 @@ fn run<const CELLS: usize>(args: Cli) {
                         let dtmax = dtmax.unwrap_or(dx * 0.1);
                         checkdt(dtmin, dtmax);
                         shear::run_2d::<CELLS>(
-                            t0, tend, l, dtmin, dtmax, etaovers, tempcut, nb_trento,
+                            t0, tend, l, dtmin, dtmax, etaovers, tempcut, freezeout, nb_trento,
                         );
                     }
                     ToSimulate::Trento { dt, nb_trento } => {
                         let dt = dt.unwrap_or(dx * 0.1);
                         shear::run_trento_2d::<CELLS>(
-                            t0, tend, l, dt, etaovers, tempcut, nb_trento,
+                            t0, tend, l, dt, etaovers, tempcut, freezeout, nb_trento,
                         );
                     }
                 },

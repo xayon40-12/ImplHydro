@@ -1,3 +1,89 @@
+use std::fs::File;
+use std::io::{Result, Write};
+
+pub type IsoSurface2DFun<'a, const C: usize, const VX: usize, const VY: usize> =
+    &'a dyn Fn(
+        &[[[f64; C]; VX]; VY], // old fields
+        &[[[f64; C]; VX]; VY], // new fields
+        usize,                 // ID e
+        [usize; 3],            // ID [ut,ux,uy]
+        Option<[usize; 7]>,    // ID [pitt,pitx,pity,pixx,pixy,piyy,pizz]
+        Option<usize>,         // ID bulk
+        f64,                   // time for fields
+        f64,                   // dx
+        f64,                   // dt
+        f64,                   // freezeout energy fm^-4
+    ) -> Vec<Surface2D>;
+
+pub struct IsoSurfaceHandler<'a, const C: usize, const VX: usize, const VY: usize> {
+    file: File,
+    e_id: usize,
+    u_ids: [usize; 3],             // [ut,ux,uy]
+    shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
+    bulk_id: Option<usize>,
+    dx: f64,
+    freezeout_energy: f64, // fm^-4
+    iso_surface_fun: IsoSurface2DFun<'a, C, VX, VY>,
+}
+
+impl<'a, const C: usize, const VX: usize, const VY: usize> IsoSurfaceHandler<'a, C, VX, VY> {
+    pub fn new(
+        filename: &str,
+        e_id: usize,
+        u_ids: [usize; 3],             // [ut,ux,uy]
+        shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
+        bulk_id: Option<usize>,
+        dx: f64,
+        freezeout_energy: f64, // fm^-4
+    ) -> Result<IsoSurfaceHandler<'a, C, VX, VY>> {
+        let file = File::create(filename)?;
+        let handler = IsoSurfaceHandler {
+            file,
+            e_id,
+            u_ids,
+            shear_ids,
+            bulk_id,
+            dx,
+            freezeout_energy,
+            iso_surface_fun: &zigzag,
+        };
+        Ok(handler)
+    }
+
+    pub fn find_surfaces(
+        &mut self,
+        fields: &[[[f64; C]; VX]; VY],
+        new_fields: &[[[f64; C]; VX]; VY],
+        ot: f64, // time for new_fields
+        nt: f64, // where t+dt is the time of new_fields
+    ) {
+        let surfaces = (self.iso_surface_fun)(
+            fields,
+            new_fields,
+            self.e_id,
+            self.u_ids,
+            self.shear_ids,
+            self.bulk_id,
+            ot,
+            self.dx,
+            nt - ot,
+            self.freezeout_energy,
+        );
+        let bytes = surfaces
+            .into_iter()
+            .flat_map(|ss| ss.to_column_viscous().into_iter())
+            .flat_map(|v| v.to_le_bytes())
+            .collect::<Vec<_>>();
+        if let Err(e) = self.file.write_all(&bytes) {
+            eprintln!("Could not write surfaces in file: {}", e);
+        }
+        if let Err(e) = self.file.flush() {
+            eprintln!("Could not flush file: {}", e);
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Surface2D {
     pub pos: [f64; 3],   // [t,x,y]
     pub sigma: [f64; 3], // [sigma_t, sigma_x, sigma_y]
@@ -29,7 +115,7 @@ impl Surface2D {
     }
 }
 
-pub fn zigzig<const C: usize, const VX: usize, const VY: usize>(
+pub fn zigzag<const C: usize, const VX: usize, const VY: usize>(
     fields: &[[[f64; C]; VX]; VY],
     new_fields: &[[[f64; C]; VX]; VY],
     e_id: usize,

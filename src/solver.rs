@@ -1,4 +1,6 @@
-use crate::hydro::Viscosity;
+use std::collections::HashMap;
+
+use crate::hydro::{isosurface::IsoSurfaceHandler, Viscosity};
 
 pub mod context;
 pub mod space;
@@ -29,6 +31,7 @@ pub fn save<
     context: &Context<Opt, F, C, VX, VY, S>,
     (namesf, namesc): &([&str; F], [&str; C]),
     name: &str, // simulation name
+    foldername: &str,
     viscosity: Viscosity,
     elapsed: f64,
     cost: usize,
@@ -44,22 +47,9 @@ pub fn save<
     let maxdt = context.maxdt;
     let (v, trs) = context.vstrs;
     let diffv = context.total_diff_vs;
-    let dim = if VY == 1 { 1 } else { 2 };
     let schemename = context.r.name;
     let integration = context.r.integration;
     let stages = S;
-    let foldername = &format!(
-        "{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
-        name,
-        viscosity,
-        context.r.integration,
-        dim,
-        S,
-        &context.r.name,
-        VX,
-        context.maxdt,
-        context.dx
-    );
 
     const TXT: bool = false;
     const DIFF: bool = false;
@@ -121,7 +111,7 @@ pub fn save<
         }
     }
 
-    let dir = &format!("results/{}/{:e}", foldername, t);
+    let dir = &format!("{}/{:e}", foldername, t);
     std::fs::create_dir_all(dir)?;
     std::fs::write(
         &format!("{}/data.dat", dir),
@@ -184,6 +174,8 @@ pub fn save<
     Ok(())
 }
 
+pub fn save_surface() {}
+
 pub fn run<
     Opt: Sync,
     const F: usize,
@@ -203,10 +195,69 @@ pub fn run<
     usize,
     usize,
 )> {
+    let dim = if VY == 1 { 1 } else { 2 };
+    let foldername = &format!(
+        "results/{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
+        name,
+        viscosity,
+        context.r.integration,
+        dim,
+        S,
+        &context.r.name,
+        VX,
+        context.maxdt,
+        context.dx
+    );
+    let err = std::fs::create_dir_all(foldername);
+    match err {
+        Err(e) => eprintln!("{}", e),
+        Ok(()) => {}
+    }
+    let surface_filename = format!("{}/surface.dat", foldername);
     // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
     let mut tsteps = 0;
     use std::time::Instant;
+    let ids = names
+        .1
+        .iter()
+        .enumerate()
+        .map(|(i, v)| (*v, i))
+        .collect::<HashMap<&str, usize>>();
+
+    let pis = ["pi00", "pi01", "pi02", "pi11", "pi12", "pi22", "pi33"];
+    let shear_ids =
+        pis.into_iter()
+            .map(|k| ids.get(k))
+            .enumerate()
+            .fold(Some([0; 7]), |acc, (i, id)| {
+                id.and_then(|id| {
+                    acc.and_then(|mut pi| {
+                        pi[i] = *id;
+                        Some(pi)
+                    })
+                })
+            });
+    let bulk_id = ids.get("Pi").and_then(|b| Some(*b));
+    let mut isosurface: Option<IsoSurfaceHandler<C, VX, VY>> =
+        context.freezeout_energy.and_then(|freezeout_energy| {
+            IsoSurfaceHandler::new(
+                &surface_filename,
+                ids["e"],
+                [ids["ut"], ids["ux"], ids["uy"]],
+                shear_ids,
+                bulk_id,
+                context.dx,
+                freezeout_energy,
+            )
+            .map_or_else(
+                |err| {
+                    eprintln!("Error in initializing IsoSurfaceHondler: {}", err);
+                    None
+                },
+                |iso| Some(iso),
+            )
+        });
     let now = Instant::now();
 
     let integration = context.r.integration;
@@ -222,6 +273,7 @@ pub fn run<
             ctx,
             names,
             name,
+            foldername,
             viscosity,
             elapsed,
             cost as usize,
@@ -264,6 +316,11 @@ pub fn run<
             cost += c;
             nbiter = nbi;
             fails += nbf;
+            if let Some(isosurface) = &mut isosurface {
+                let (_, otrs) = &context.ovstrs;
+                let (_, trs) = &context.vstrs;
+                isosurface.find_surfaces(otrs, trs, context.ot, context.t);
+            }
         } else {
             eprintln!("Integration failed, abort current run.");
             eprintln!("");
