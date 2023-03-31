@@ -8,7 +8,7 @@ use crate::solver::{
 use super::schemes::Scheme;
 
 pub fn fixpoint<
-    Opt: Sync,
+    Opt: Clone + Sync,
     const F: usize,
     const C: usize,
     const VX: usize,

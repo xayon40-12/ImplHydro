@@ -23,9 +23,10 @@ pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY:
     ) -> [f64; F]
              + Sync);
 
+#[derive(Clone)]
 pub struct Context<
     'a,
-    Opt: Sync,
+    Opt: Clone + Sync,
     const F: usize,
     const C: usize,
     const VX: usize,

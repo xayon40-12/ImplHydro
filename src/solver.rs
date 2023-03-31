@@ -21,7 +21,7 @@ pub type Observable<'a, const F: usize, const C: usize, const VX: usize, const V
 );
 
 pub fn save<
-    Opt: Sync,
+    Opt: Clone + Sync,
     const F: usize,
     const C: usize,
     const VX: usize,
@@ -177,7 +177,7 @@ pub fn save<
 pub fn save_surface() {}
 
 pub fn run<
-    Opt: Sync,
+    Opt: Clone + Sync,
     const F: usize,
     const C: usize,
     const VX: usize,
@@ -261,10 +261,9 @@ pub fn run<
     let now = Instant::now();
 
     let integration = context.r.integration;
-    let save_every = 0.1f64.max(context.maxdt);
+    let save_every = 0.1f64; //.max(context.maxdt);
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
-    let mut ctx_dt = None;
     let mut nbiter = [[1usize; VX]; VY];
     let mut fails = 0;
     let save = |ctx: &Context<Opt, F, C, VX, VY, S>, cost, tsteps, nbiter, fails| {
@@ -289,23 +288,25 @@ pub fn run<
     };
     save(&context, cost, tsteps, nbiter, fails);
     while context.t < context.tend {
-        let d = next_save.min(context.tend) - context.t;
-        if d <= context.t * 1e-14 {
-            save(&context, cost, tsteps, nbiter, fails);
+        let mut d = next_save.min(context.tend) - context.t;
+        if d <= 2.0 * context.dt {
+            let mut tmp_ctx = context.clone();
+            while d > tmp_ctx.t * 1e-14 {
+                let n = if d <= tmp_ctx.dt { 1 } else { 2 };
+                for _ in 0..n {
+                    tmp_ctx.dt = d / n as f64;
+                    match integration {
+                        Integration::Explicit => explicit(&mut tmp_ctx),
+                        Integration::FixPoint(err_ref_p) => fixpoint(&mut tmp_ctx, err_ref_p),
+                    };
+                }
+                d = next_save.min(tmp_ctx.tend) - tmp_ctx.t;
+            }
+            let m = 1e12;
+            tmp_ctx.t = (tmp_ctx.t * m).round() / m; // round time for saving
+            save(&tmp_ctx, cost, tsteps, nbiter, fails);
             current_save = next_save;
             next_save = current_save + save_every;
-            if let Some(dt) = ctx_dt {
-                context.dt = dt;
-                ctx_dt = None;
-            }
-        }
-        let d = next_save.min(context.tend) - context.t;
-        if d <= context.dt {
-            ctx_dt = ctx_dt.or_else(|| Some(context.dt));
-            context.dt = d;
-        } else if d <= 2.0 * context.dt {
-            ctx_dt = ctx_dt.or_else(|| Some(context.dt));
-            context.dt = d / 2.0;
         }
         tsteps += 1;
         let res = match integration {

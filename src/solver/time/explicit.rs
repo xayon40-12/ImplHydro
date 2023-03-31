@@ -6,7 +6,7 @@ use crate::solver::{
 use super::schemes::Scheme;
 
 pub fn explicit<
-    Opt: Sync,
+    Opt: Clone + Sync,
     const F: usize,
     const C: usize,
     const VX: usize,

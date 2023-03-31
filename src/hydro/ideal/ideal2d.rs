@@ -75,6 +75,7 @@ fn f2(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
     ]
 }
 
+#[derive(Clone)]
 pub enum Coordinate {
     Cartesian,
     Milne,
