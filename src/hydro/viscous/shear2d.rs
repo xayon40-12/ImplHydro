@@ -34,7 +34,7 @@ fn gen_constraints<'a>(
             let v0 = m / (t00 + p(oe));
             let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
 
-            let e = (t00 - m * v).max(VOID);
+            let e = (t00 - m * v).max(VOID).min(1e10);
             let pe = p(e);
             let vs2 = dpde(e);
             let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);

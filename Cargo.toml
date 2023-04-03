@@ -9,3 +9,4 @@ edition = "2021"
 rayon = "1.6.1"
 nalgebra = "0.32.1"
 clap = { version = "4.1.7", features = ["derive"] }
+byteorder = "1.4.3"

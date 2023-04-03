@@ -287,8 +287,9 @@ pub fn run<
         }
     };
     save(&context, cost, tsteps, nbiter, fails);
-    let m = 1e-12;
-    while context.t < context.tend {
+    let m = 1e-14;
+    let r = 1e10;
+    while context.t < context.tend - m {
         let mut d = next_save.min(context.tend) - context.t;
         context.dt = context.dt.min(context.tend - context.t);
         if d <= 2.0 * context.dt {
@@ -304,7 +305,7 @@ pub fn run<
                 }
                 d = next_save.min(tmp_ctx.tend) - tmp_ctx.t;
             }
-            tmp_ctx.t = (tmp_ctx.t / m).round() * m; // round time for saving
+            tmp_ctx.t = (tmp_ctx.t * r).round() / r; // round time for saving
             save(&tmp_ctx, cost, tsteps, nbiter, fails);
             current_save = next_save;
             next_save = current_save + save_every;
@@ -331,6 +332,7 @@ pub fn run<
     }
     let d = next_save.min(context.tend) - context.t;
     if d < context.t * m && context.t <= context.tend * (1.0 + m) {
+        context.t = (context.t * r).round() / r; // round time for saving
         save(&context, cost, tsteps, nbiter, fails);
     }
     let elapsed = now.elapsed().as_secs_f64();

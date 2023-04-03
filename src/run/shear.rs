@@ -1,10 +1,10 @@
 use crate::{
     hydro::{
         eos::wb,
-        utils::{converge, prepare_trento},
-        viscous::init_from_entropy_density_2d,
+        utils::{converge, prepare_trento_freestream},
+        viscous::init_from_freestream_2d,
         viscous::shear2d::shear2d,
-        Eos, HydroOutput, C_SHEAR_2D, F_SHEAR_2D,
+        Eos, HydroOutput, C_SHEAR_2D, FREESTREAM_2D, F_SHEAR_2D,
     },
     solver::time::schemes::*,
 };
@@ -19,13 +19,14 @@ fn hydro2d<const V: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_mev: f64,
     r: Scheme<S>,
-    init_s: ([[f64; V]; V], usize),
+    init_s: ([[[f64; FREESTREAM_2D]; V]; V], usize),
 ) -> HydroOutput<V, V, F_SHEAR_2D, C_SHEAR_2D> {
     let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
     let (p, dpde, temp): (Eos, Eos, Eos) = (&wb::p, &wb::dpde, &wb::T);
     println!("{}", name);
-    let init = init_from_entropy_density_2d(t0, s, p, dpde, temp);
+    // let init = init_from_entropy_density_2d(t0, s, p, dpde, temp);
+    let init = init_from_freestream_2d(t0, s, p, dpde);
     shear2d::<V, S>(
         &name,
         maxdt,
@@ -56,7 +57,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     r: Scheme<S>,
     nb_trento: usize,
 ) {
-    let trentos = prepare_trento::<V>(nb_trento);
+    let trentos = prepare_trento_freestream::<V>(nb_trento);
     let dx = l / V as f64;
     println!("{}", r.name);
     let erpow = 2;
@@ -124,7 +125,7 @@ pub fn run_trento_2d<const V: usize>(
     freezeout_temp_mev: f64,
     nb_trento: usize,
 ) {
-    let trentos = prepare_trento::<V>(nb_trento);
+    let trentos = prepare_trento_freestream::<V>(nb_trento);
     let gl1 = gauss_legendre_1(Some((0, 1e-3)));
     let heun = heun();
     let dx = l / V as f64;

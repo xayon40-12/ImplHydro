@@ -1,6 +1,11 @@
-use std::{fs::File, io::Read};
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+};
 
-use super::HydroOutput;
+use byteorder::{ByteOrder, LittleEndian};
+
+use super::{HydroOutput, FREESTREAM_2D};
 
 pub fn compare<const VX: usize, const VY: usize, const F: usize>(
     f: usize,
@@ -101,11 +106,38 @@ pub fn load_matrix<const VX: usize, const VY: usize>(
 
 pub fn prepare_trento<const V: usize>(nb_trento: usize) -> Vec<[[f64; V]; V]> {
     let mut trentos = vec![[[0.0f64; V]; V]; nb_trento];
+    let width = 1 + nb_trento.ilog10() as usize;
     for i in 0..nb_trento {
-        trentos[i] = load_matrix(&format!("e{}/{:0>2}.dat", V, i)).expect(&format!(
-            "Could not load trento initial condition file \"e{}/{:0>2}.dat\".",
-            V, i
+        trentos[i] = load_matrix(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
+            "Could not load trento initial condition file \"e{V}/{i:0>width$}.dat\"."
         ));
+    }
+    trentos
+}
+
+pub fn prepare_trento_freestream<const V: usize>(
+    nb_trento: usize,
+) -> Vec<[[[f64; FREESTREAM_2D]; V]; V]> {
+    let mut trentos = vec![[[[0.0f64; FREESTREAM_2D]; V]; V]; nb_trento];
+    let width = 1 + nb_trento.ilog10() as usize;
+    for tr in 0..nb_trento {
+        let err = format!(
+            "Could not load freestream trento initial condition file \"e{V}/{tr:0>width$}.dat\"."
+        );
+        let size = FREESTREAM_2D * std::mem::size_of::<f64>();
+        let mut bytes = vec![0; size * V * V];
+        let file = File::open(&format!("s{V}/data{tr:0>width$}.dat")).expect(&err);
+        let mut buf = BufReader::new(file);
+        buf.read_exact(&mut bytes).expect(&err);
+        for y in 0..V {
+            for x in 0..V {
+                let i = x + y * V;
+                LittleEndian::read_f64_into(
+                    &bytes[i * size..(i + 1) * size],
+                    &mut trentos[tr][y][x],
+                );
+            }
+        }
     }
     trentos
 }

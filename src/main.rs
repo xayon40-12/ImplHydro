@@ -44,7 +44,7 @@ enum Hydro {
     Shear {
         #[arg(short, long, default_value_t = 0.08)]
         etaovers: f64,
-        #[arg(long, default_value_t = 50.0)]
+        #[arg(long, default_value_t = 70.0)]
         tempcut: f64,
         #[arg(long, default_value_t = 155.0)]
         freezeout: f64,

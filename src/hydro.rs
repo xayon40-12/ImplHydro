@@ -60,6 +60,8 @@ pub type HydroOutput<const VX: usize, const VY: usize, const F: usize, const C: 
     usize,
 )>;
 
+pub const FREESTREAM_2D: usize = 11;
+
 pub const F_IDEAL_1D: usize = Viscosity::Ideal.nb_fields(Dim::D1.value());
 pub const F_BULK_1D: usize = Viscosity::Bulk(0.0, 0.0).nb_fields(Dim::D1.value());
 pub const F_SHEAR_1D: usize = Viscosity::Shear(0.0, 0.0).nb_fields(Dim::D1.value());

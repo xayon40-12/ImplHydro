@@ -544,7 +544,7 @@ def plot1d(l, nds):
                 tt = datats[:,0]
                 xx = data[:,vid["x"]]
                 iter = np.array([d[:,vid["iter"]] for d in datats[:,1]])
-                cost = iter*nbStages
+                cost = (iter*nbStages).astype(int)
                 l = xx[0]
                 r = xx[-1]
                 d = tt[0]
@@ -558,7 +558,7 @@ def plot1d(l, nds):
                         vs = riem_vs
                     ax.plot(xx, xx/vs, linestyle="--", color="white", label="shock")
                     ax.plot(xx, -xx/cs, linestyle="-.", color="white", label="rarefaction")
-                im = ax.imshow(cost, extent=[l,r,d,u], origin="lower", label="aoeu") #, norm=CenteredNorm(0)) # , cmap="terrain"
+                im = ax.imshow(cost, extent=[l,r,d,u], origin="lower", label="aoeu", vmin=1, vmax=3) #, norm=CenteredNorm(0)) # , cmap="terrain"
                 ax.xaxis.tick_top()
                 ax.xaxis.set_label_position('top') 
                 ax.set_xlabel("$x$ (fm)")
@@ -572,8 +572,9 @@ def plot1d(l, nds):
                 cbar.update_ticks()
                 cbar.set_label("cost", labelpad=-60)
 
-                if "Riemann" in name:
-                    ax.legend(labelcolor="white", facecolor=(0.1,0.1,0.3))
+                # if "Riemann" in name:
+                    # ax.legend(labelcolor="white", facecolor=(0.1,0.1,0.3))
+                    # ax.legend([], [], labelcolor="white", facecolor=(0.1,0.1,0.3))
                 ax.text(0.7, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 plt.savefig("figures/{}_{}_cost-t_{}.pdf".format(timename,scheme,info2name(sinfo)), dpi=100)

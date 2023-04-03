@@ -3,7 +3,7 @@ use crate::{
     solver::time::newton::newton,
 };
 
-use super::F_SHEAR_2D;
+use super::{FREESTREAM_2D, F_SHEAR_2D};
 
 pub mod shear2d;
 
@@ -15,8 +15,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_SHEAR_2D] + 'a> {
     Box::new(move |(i, j), _| {
-        let normalization = 50.0; // TODO adapte it as function of collision evergy
-        let s = normalization * s[j][i];
+        let s = s[j][i];
 
         let e = newton(
             1e-10,
@@ -39,6 +38,56 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
             0.0,
             0.0,
         ];
+        shear2d::fitutpi(t0, vars)
+    })
+}
+
+pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
+    t0: f64,
+    trs: [[[f64; FREESTREAM_2D]; VX]; VY],
+    p: Eos<'a>,
+    dpde: Eos<'a>,
+) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_SHEAR_2D] + 'a> {
+    Box::new(move |(i, j), _| {
+        let e = trs[j][i][0].max(VOID);
+        let ut = trs[j][i][1];
+        let ux = trs[j][i][2];
+        let uy = trs[j][i][3];
+        if ut < 1.0 {
+            println!("{} {} {}", ut, ux, uy);
+        }
+        let pi00 = trs[j][i][4];
+        let pi01 = trs[j][i][5];
+        let pi02 = trs[j][i][6];
+        let pi11 = trs[j][i][7];
+        let pi12 = trs[j][i][8];
+        let pi22 = trs[j][i][9];
+        let pi33 = pi00 - pi11 - pi22;
+        // let bulk = trs[j][i][10];
+        let vars = [
+            e,
+            p(e),
+            dpde(e),
+            ut,
+            ux,
+            uy,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            // pi00,
+            // pi01,
+            // pi02,
+            // pi11,
+            // pi12,
+            // pi22,
+            // pi33,
+            // bulk,
+        ];
+        // println!("vars: {:?}", vars);
         shear2d::fitutpi(t0, vars)
     })
 }
