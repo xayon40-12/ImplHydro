@@ -88,7 +88,8 @@ countvoidratio = 0
 dir = "results/"
 for d in os.listdir(dir):
     dird = dir+d
-    ts = sorted(os.listdir(dird), key=float) 
+    dirs = list(filter(lambda d: os.path.isdir(dird+"/"+d), os.listdir(dird)))
+    ts = sorted(dirs, key=float) 
     maxt = ts[-1]
 
     p = dird+"/"+maxt
@@ -620,7 +621,7 @@ def plot2d(l, datadts):
 
     if many:
         num = 5
-        nums = np.array([i for i in range(ld) if i%(ld/(num-1)) == 0]+[ld-1])
+        nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
         # nb = 4
         nb = 1
         if "Gubser" in info["name"]:

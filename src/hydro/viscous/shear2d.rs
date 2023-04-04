@@ -19,81 +19,83 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
 ) -> Box<dyn Fn(f64, [f64; 6], [f64; 13]) -> ([f64; 6], [f64; 13]) + 'a + Sync> {
-    Box::new(move |t, [tt00, tt01, tt02, utpi11, utpi12, utpi22], otrs| {
-        let oe = otrs[0].max(VOID);
-        let t00 = tt00 / t;
-        let t01 = tt01 / t;
-        let t02 = tt02 / t;
-        let m = (t01 * t01 + t02 * t02).sqrt();
-        let t00 = t00.max(m * (1.0 + 1e-15));
+    Box::new(
+        move |t, [tt00, tt01, tt02, utpi11, utpi12, utpi22], _otrs| {
+            // let oe = otrs[0].max(VOID);
+            let t00 = tt00 / t;
+            let t01 = tt01 / t;
+            let t02 = tt02 / t;
+            let m = (t01 * t01 + t02 * t02).sqrt();
+            let t00 = t00.max(m * (1.0 + 1e-15));
 
-        let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
-        let v0 = m / (t00 + p(oe) + er);
-        let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+            let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
+            // let v0 = m / (t00 + p(oe) + er);
+            let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
 
-        let e = (t00 - m * v).max(VOID).min(1e10);
-        let pe = p(e);
-        let vs2 = dpde(e);
-        let g = (1.0 - v * v).sqrt();
-        // let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
-        let ux = g * t01 / (e + pe);
-        let uy = g * t02 / (e + pe);
-        let ut = (1.0 + ux * ux + uy * uy).sqrt();
+            let e = (t00 - m * v).max(VOID).min(1e10);
+            let pe = p(e);
+            let vs2 = dpde(e);
+            let g = (1.0 - v * v).sqrt();
+            // let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
+            let ux = g * t01 / (e + pe);
+            let uy = g * t02 / (e + pe);
+            let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
-        let pi11 = utpi11 / ut;
-        let pi12 = utpi12 / ut;
-        let pi22 = utpi22 / ut;
-        let pi01 = (ux * pi11 + uy * pi12) / ut;
-        let pi02 = (ux * pi12 + uy * pi22) / ut;
-        let pi00 = (ux * pi01 + uy * pi02) / ut;
-        let pi33 = (pi00 - pi01 - pi02) / (t * t); // TODO check division by t*t
+            let pi11 = utpi11 / ut;
+            let pi12 = utpi12 / ut;
+            let pi22 = utpi22 / ut;
+            let pi01 = (ux * pi11 + uy * pi12) / ut;
+            let pi02 = (ux * pi12 + uy * pi22) / ut;
+            let pi00 = (ux * pi01 + uy * pi02) / ut;
+            let pi33 = (pi00 - pi01 - pi02) / (t * t); // TODO check division by t*t
 
-        let m = matrix![
-            pi11, pi12, 0.0;
-            pi12, pi22, 0.0;
-            0.0, 0.0, pi33;
-        ];
-        let eigs = m.symmetric_eigenvalues();
-        let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
+            let m = matrix![
+                pi11, pi12, 0.0;
+                pi12, pi22, 0.0;
+                0.0, 0.0, pi33;
+            ];
+            let eigs = m.symmetric_eigenvalues();
+            let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
 
-        let epe = e + pe;
-        // check that viscosity does not make pressure negative
-        let mut r = if epe + smallest < 0.0 {
-            -epe / smallest * 0.999
-        } else {
-            1.0
-        };
+            let epe = e + pe;
+            // check that viscosity does not make pressure negative
+            let mut r = if epe + smallest < 0.0 {
+                -epe / smallest * 0.999
+            } else {
+                1.0
+            };
 
-        while (t00 + r * pi00).powi(2) < (t01 + r * pi01).powi(2) + (t02 + r * pi02).powi(2) {
-            r *= 0.99;
-        }
+            while (t00 + r * pi00).powi(2) < (t01 + r * pi01).powi(2) + (t02 + r * pi02).powi(2) {
+                r *= 0.99;
+            }
 
-        let vs = [
-            t00 * t,
-            t01 * t,
-            t02 * t,
-            r * pi11 * ut,
-            r * pi12 * ut,
-            r * pi22 * ut,
-        ];
+            let vs = [
+                t00 * t,
+                t01 * t,
+                t02 * t,
+                r * pi11 * ut,
+                r * pi12 * ut,
+                r * pi22 * ut,
+            ];
 
-        let trans = [
-            e,
-            pe,
-            vs2,
-            ut,
-            ux,
-            uy,
-            r * pi00,
-            r * pi01,
-            r * pi02,
-            r * pi11,
-            r * pi12,
-            r * pi22,
-            r * pi33,
-        ];
-        (vs, trans)
-    })
+            let trans = [
+                e,
+                pe,
+                vs2,
+                ut,
+                ux,
+                uy,
+                r * pi00,
+                r * pi01,
+                r * pi02,
+                r * pi11,
+                r * pi12,
+                r * pi22,
+                r * pi33,
+            ];
+            (vs, trans)
+        },
+    )
 }
 
 fn eigenvaluesx(_t: f64, [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _]: [f64; 13]) -> f64 {
@@ -273,8 +275,7 @@ fn flux<const V: usize>(
     let tc = 154.0; // MeV
     let etaovers = (etas_min + etas_slope * (mev - tc) * (mev / tc).powf(etas_crv)).max(etas_min);
     let mut eta = etaovers * s;
-    let taupi_regularization = 20.0; // WARNING: without a large foctor, it does not work
-    let taupi = taupi_regularization * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
+    let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
     if mev < tempcut {
         eta = 0.0;
