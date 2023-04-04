@@ -15,9 +15,10 @@ use crate::hydro::{Eos, Init2D, VOID};
 use nalgebra::matrix;
 
 fn gen_constraints<'a>(
-    er: f64,
+    _er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
+    _temp: Eos<'a>,
 ) -> Box<dyn Fn(f64, [f64; 6], [f64; 13]) -> ([f64; 6], [f64; 13]) + 'a + Sync> {
     Box::new(
         move |t, [tt00, tt01, tt02, utpi11, utpi12, utpi22], _otrs| {
@@ -29,8 +30,19 @@ fn gen_constraints<'a>(
             let t00 = t00.max(m * (1.0 + 1e-15));
 
             let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
-            // let v0 = m / (t00 + p(oe) + er);
-            let v = newton(er, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+            let eps = 1e-10;
+            let mut v = newton(eps, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+
+            // set maximum allowed gamma
+            let gamma_max = 20.0f64;
+            if (1.0 - v * v) * gamma_max.powi(2) < 1.0 {
+                v = (1.0 - 1.0 / gamma_max.powi(2)).sqrt();
+                // let e = (t00 - m * v).max(VOID).min(1e10);
+                // let t = temp(e) * HBARC;
+                // if t > 20.0 {
+                //     println!("T: {:e}", t);
+                // }
+            }
 
             let e = (t00 - m * v).max(VOID).min(1e10);
             let pe = p(e);
@@ -356,7 +368,7 @@ pub fn shear2d<const V: usize, const S: usize>(
     usize,
     usize,
 )> {
-    let constraints = gen_constraints(er, &p, &dpde);
+    let constraints = gen_constraints(er, &p, &dpde, temperature);
     let mut vs = [[[0.0; 6]; V]; V];
     let mut trs = [[[0.0; 13]; V]; V];
     let names = (
