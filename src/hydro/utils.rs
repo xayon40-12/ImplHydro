@@ -106,7 +106,7 @@ pub fn load_matrix<const VX: usize, const VY: usize>(
 
 pub fn prepare_trento<const V: usize>(nb_trento: usize) -> Vec<[[f64; V]; V]> {
     let mut trentos = vec![[[0.0f64; V]; V]; nb_trento];
-    let width = 1 + nb_trento.ilog10() as usize;
+    let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
         trentos[i] = load_matrix(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
             "Could not load trento initial condition file \"e{V}/{i:0>width$}.dat\"."
@@ -119,7 +119,7 @@ pub fn prepare_trento_freestream<const V: usize>(
     nb_trento: usize,
 ) -> Vec<[[[f64; FREESTREAM_2D]; V]; V]> {
     let mut trentos = vec![[[[0.0f64; FREESTREAM_2D]; V]; V]; nb_trento];
-    let width = 1 + nb_trento.ilog10() as usize;
+    let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for tr in 0..nb_trento {
         let err = format!(
             "Could not load freestream trento initial condition file \"e{V}/{tr:0>width$}.dat\"."

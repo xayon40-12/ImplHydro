@@ -44,7 +44,7 @@ enum Hydro {
     Shear {
         #[arg(short, long, default_value_t = 0.08)]
         etaovers_min: f64,
-        #[arg(short, long, default_value_t = 1.23)]
+        #[arg(short, long, default_value_t = 1.23e-3)] // MeV^-1
         etaovers_slope: f64,
         #[arg(short, long, default_value_t = -0.09)]
         etaovers_crv: f64,

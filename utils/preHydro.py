@@ -11,7 +11,7 @@ num = 10
 pn = int(1+np.log10(num-1))
 half_size = 10 # fm
 b = 3 # fm
-norm = 20
+norm = 20000/197 # fm^-1
 tau_fs = 0.5 # fm
 for c in sys.argv[1:]:
     dx = 2*half_size / float(c)

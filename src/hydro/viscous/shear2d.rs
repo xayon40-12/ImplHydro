@@ -239,7 +239,7 @@ fn flux<const V: usize>(
     let x = bound[0](pos[0], V);
     let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33] =
         otrs[y][x];
-    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33] = trs[y][x];
+    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33] = trs[y][x];
     let pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
 
     let u = [ut, ux, uy];
@@ -270,11 +270,11 @@ fn flux<const V: usize>(
     let temp = temperature(e);
     let mev = temp * HBARC;
     let s = (e + pe) / temp;
-    let tc = 154.0;
+    let tc = 154.0; // MeV
     let etaovers = (etas_min + etas_slope * (mev - tc) * (mev / tc).powf(etas_crv)).max(etas_min);
     let mut eta = etaovers * s;
-    let taupi_regularization = 10.0; // WARNING: without a large foctor, it does not work
-    let taupi = taupi_regularization * 4.0 / 3.0 * eta / ((e + pe) * (1.0 - dpde)) + 1e-100; // the 1e-100 is in case etaovers=0
+    let taupi_regularization = 20.0; // WARNING: without a large foctor, it does not work
+    let taupi = taupi_regularization * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
     if mev < tempcut {
         eta = 0.0;
