@@ -53,16 +53,14 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
         let ut = trs[j][i][1];
         let ux = trs[j][i][2];
         let uy = trs[j][i][3];
-        if ut < 1.0 {
-            println!("{} {} {}", ut, ux, uy);
-        }
-        let pi00 = trs[j][i][4];
-        let pi01 = trs[j][i][5];
-        let pi02 = trs[j][i][6];
-        let pi11 = trs[j][i][7];
-        let pi12 = trs[j][i][8];
-        let pi22 = trs[j][i][9];
-        let pi33 = pi00 - pi11 - pi22;
+        // TODO use viscosity from freestream
+        // let pi00 = trs[j][i][4];
+        // let pi01 = trs[j][i][5];
+        // let pi02 = trs[j][i][6];
+        // let pi11 = trs[j][i][7];
+        // let pi12 = trs[j][i][8];
+        // let pi22 = trs[j][i][9];
+        // let pi33 = (pi00 - pi11 - pi22) / (t0 * t0);
         // let bulk = trs[j][i][10];
         let vars = [
             e,

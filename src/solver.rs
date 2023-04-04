@@ -147,10 +147,10 @@ pub fn save<
         Viscosity::Bulk(zeta, energycut) => {
             format!("Bulk\nzeta: {:e}\nenergycut: {:e}", zeta, energycut)
         }
-        Viscosity::Shear(etaovers, energycut) => {
+        Viscosity::Shear((min, slope, crv), energycut) => {
             format!(
-                "Shear\netaovers: {:e}\nenergycut: {:e}",
-                etaovers, energycut
+                "Shear\netaovers: ({:e},{:e},{:e})\nenergycut: {:e}",
+                min, slope, crv, energycut
             )
         }
         Viscosity::Both(zeta, etaovers, energycut) => format!(

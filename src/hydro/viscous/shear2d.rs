@@ -1,5 +1,5 @@
 use crate::{
-    hydro::{Viscosity, HBARC},
+    hydro::{Viscosity, C_SHEAR_2D, F_SHEAR_2D, HBARC},
     solver::{
         context::{Boundary, Context},
         run,
@@ -12,94 +12,88 @@ use crate::{
 
 use crate::hydro::{Eos, Init2D, VOID};
 
-use nalgebra::base::Matrix3;
+use nalgebra::matrix;
 
 fn gen_constraints<'a>(
     er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
-) -> Box<dyn Fn(f64, [f64; 10], [f64; 13]) -> ([f64; 10], [f64; 13]) + 'a + Sync> {
-    Box::new(
-        move |t,
-              [tt00, tt01, tt02, utpi00, utpi01, utpi02, utpi11, utpi12, utpi22, mut utpi33],
-              otrs| {
-            let oe = otrs[0].max(VOID);
-            let t00 = tt00 / t;
-            let t01 = tt01 / t;
-            let t02 = tt02 / t;
-            let m = (t01 * t01 + t02 * t02).sqrt();
-            let t00 = t00.max(m * (1.0 + 1e-15));
+) -> Box<dyn Fn(f64, [f64; 6], [f64; 13]) -> ([f64; 6], [f64; 13]) + 'a + Sync> {
+    Box::new(move |t, [tt00, tt01, tt02, utpi11, utpi12, utpi22], otrs| {
+        let oe = otrs[0].max(VOID);
+        let t00 = tt00 / t;
+        let t01 = tt01 / t;
+        let t02 = tt02 / t;
+        let m = (t01 * t01 + t02 * t02).sqrt();
+        let t00 = t00.max(m * (1.0 + 1e-15));
 
-            let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
-            let v0 = m / (t00 + p(oe));
-            let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+        let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
+        let v0 = m / (t00 + p(oe) + er);
+        let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
 
-            let e = (t00 - m * v).max(VOID).min(1e10);
-            let pe = p(e);
-            let vs2 = dpde(e);
-            let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
-            let ux = t01 / ((e + pe) * ut);
-            let uy = t02 / ((e + pe) * ut);
-            let ut = (1.0 + ux * ux + uy * uy).sqrt();
+        let e = (t00 - m * v).max(VOID).min(1e10);
+        let pe = p(e);
+        let vs2 = dpde(e);
+        let g = (1.0 - v * v).sqrt();
+        // let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
+        let ux = g * t01 / (e + pe);
+        let uy = g * t02 / (e + pe);
+        let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
-            let mut utpi = [
-                [utpi00, utpi01, utpi02],
-                [utpi01, utpi11, utpi12],
-                [utpi02, utpi12, utpi22],
-            ];
-            // utpi[0][0] = utpi[1][1] + utpi[2][2] + utpi33; // traceless
+        let pi11 = utpi11 / ut;
+        let pi12 = utpi12 / ut;
+        let pi22 = utpi22 / ut;
+        let pi01 = (ux * pi11 + uy * pi12) / ut;
+        let pi02 = (ux * pi12 + uy * pi22) / ut;
+        let pi00 = (ux * pi01 + uy * pi02) / ut;
+        let pi33 = (pi00 - pi01 - pi02) / (t * t); // TODO check division by t*t
 
-            let m = Matrix3::from_fn(|j, i| utpi[j][i]);
-            let eigs = m.symmetric_eigenvalues();
-            let smallest = [eigs[0], eigs[1], eigs[2], utpi33]
-                .into_iter()
-                .min_by(f64::total_cmp)
-                .unwrap()
-                / ut;
+        let m = matrix![
+            pi11, pi12, 0.0;
+            pi12, pi22, 0.0;
+            0.0, 0.0, pi33;
+        ];
+        let eigs = m.symmetric_eigenvalues();
+        let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
 
-            let epe = e + pe;
-            if epe + smallest < 0.0 {
-                // check that viscosity does not make pressure negative
-                let m = -epe / smallest * 0.99;
-                for j in 0..3 {
-                    for i in 0..3 {
-                        utpi[j][i] *= m;
-                    }
-                }
-                utpi33 *= m;
-            }
+        let epe = e + pe;
+        // check that viscosity does not make pressure negative
+        let mut r = if epe + smallest < 0.0 {
+            -epe / smallest * 0.999
+        } else {
+            1.0
+        };
 
-            let vs = [
-                t00 * t,
-                t01 * t,
-                t02 * t,
-                utpi[0][0],
-                utpi[0][1],
-                utpi[0][2],
-                utpi[1][1],
-                utpi[1][2],
-                utpi[2][2],
-                utpi33,
-            ];
+        while (t00 + r * pi00).powi(2) < (t01 + r * pi01).powi(2) + (t02 + r * pi02).powi(2) {
+            r *= 0.99;
+        }
 
-            let trans = [
-                e,
-                pe,
-                vs2,
-                ut,
-                ux,
-                uy,
-                utpi[0][0] / ut,
-                utpi[0][1] / ut,
-                utpi[0][2] / ut,
-                utpi[1][1] / ut,
-                utpi[1][2] / ut,
-                utpi[2][2] / ut,
-                utpi33 / ut,
-            ];
-            (vs, trans)
-        },
-    )
+        let vs = [
+            t00 * t,
+            t01 * t,
+            t02 * t,
+            r * pi11 * ut,
+            r * pi12 * ut,
+            r * pi22 * ut,
+        ];
+
+        let trans = [
+            e,
+            pe,
+            vs2,
+            ut,
+            ux,
+            uy,
+            r * pi00,
+            r * pi01,
+            r * pi02,
+            r * pi11,
+            r * pi12,
+            r * pi22,
+            r * pi33,
+        ];
+        (vs, trans)
+    })
 }
 
 fn eigenvaluesx(_t: f64, [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _]: [f64; 13]) -> f64 {
@@ -124,53 +118,41 @@ fn eigenvaluesy(
 
 pub fn fitutpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33]: [f64; 13],
-) -> [f64; 10] {
+    [e, pe, _, ut, ux, uy, _pi00, _pi01, _pi02, pi11, pi12, pi22, _pi33]: [f64; 13],
+) -> [f64; 6] {
     [
         t * ((e + pe) * ut * ut - pe), // no pi in Ttt because it is substracted in the flux
         t * ((e + pe) * ut * ux),
         t * ((e + pe) * ut * uy),
-        ut * pi00,
-        ut * pi01,
-        ut * pi02,
         ut * pi11,
         ut * pi12,
         ut * pi22,
-        ut * pi33,
     ]
 }
 fn fxuxpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33]: [f64; 13],
-) -> [f64; 10] {
+    [e, pe, _, ut, ux, uy, _pi00, pi01, _pi02, pi11, pi12, pi22, _pi33]: [f64; 13],
+) -> [f64; 6] {
     [
         t * ((e + pe) * ux * ut + pi01),
         t * ((e + pe) * ux * ux + pe + pi11),
         t * ((e + pe) * ux * uy + pi12),
-        ux * pi00,
-        ux * pi01,
-        ux * pi02,
         ux * pi11,
         ux * pi12,
         ux * pi22,
-        ux * pi33,
     ]
 }
 fn fyuypi(
     t: f64,
-    [e, pe, _, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33]: [f64; 13],
-) -> [f64; 10] {
+    [e, pe, _, ut, ux, uy, _pi00, _pi01, pi02, pi11, pi12, pi22, _pi33]: [f64; 13],
+) -> [f64; 6] {
     [
         t * ((e + pe) * uy * ut + pi02),
         t * ((e + pe) * uy * ux + pi12),
         t * ((e + pe) * uy * uy + pe + pi22),
-        uy * pi00,
-        uy * pi01,
-        uy * pi02,
         uy * pi11,
         uy * pi12,
         uy * pi22,
-        uy * pi33,
     ]
 }
 
@@ -187,19 +169,19 @@ pub enum Coordinate {
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[f64; 10]; V]; V]; 2],
-    [otrs, trs]: [&[[[f64; 13]; V]; V]; 2],
-    constraints: Constraint<10, 13>,
+    [_ov, vs]: [&[[[f64; F_SHEAR_2D]; V]; V]; 2],
+    [otrs, trs]: [&[[[f64; C_SHEAR_2D]; V]; V]; 2],
+    constraints: Constraint<F_SHEAR_2D, C_SHEAR_2D>,
     bound: &[Boundary; 2],
     pos: [i32; 2],
     dx: f64,
     [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
-    (etaovers, temperature, tempcut): &(f64, Eos, f64),
-) -> [f64; 10] {
+    &((etas_min, etas_slope, etas_crv), temperature, tempcut): &((f64, f64, f64), Eos, f64),
+) -> [f64; F_SHEAR_2D] {
     let theta = 1.1;
 
-    let pre = &|_t: f64, mut vs: [f64; 10]| {
+    let pre = &|_t: f64, mut vs: [f64; 6]| {
         let t00 = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -208,7 +190,7 @@ fn flux<const V: usize>(
         vs[0] = m;
         vs
     };
-    let post = &|_t: f64, mut vs: [f64; 10]| {
+    let post = &|_t: f64, mut vs: [f64; 6]| {
         let m = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -257,7 +239,7 @@ fn flux<const V: usize>(
     let x = bound[0](pos[0], V);
     let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33] =
         otrs[y][x];
-    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33] = trs[y][x];
+    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33] = trs[y][x];
     let pi = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
 
     let u = [ut, ux, uy];
@@ -288,13 +270,17 @@ fn flux<const V: usize>(
     let temp = temperature(e);
     let mev = temp * HBARC;
     let s = (e + pe) / temp;
+    let tc = 154.0;
+    let etaovers = (etas_min + etas_slope * (mev - tc) * (mev / tc).powf(etas_crv)).max(etas_min);
     let mut eta = etaovers * s;
-    let taupi = 3.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
-    if mev < *tempcut {
+    let taupi_regularization = 10.0; // WARNING: without a large foctor, it does not work
+    let taupi = taupi_regularization * 4.0 / 3.0 * eta / ((e + pe) * (1.0 - dpde)) + 1e-100; // the 1e-100 is in case etaovers=0
+
+    if mev < tempcut {
         eta = 0.0;
     }
 
-    let mut spi = [0.0f64; 7];
+    let mut spi = [0.0f64; 6];
     {
         let mut i = 0;
         for a in 0..3 {
@@ -313,30 +299,23 @@ fn flux<const V: usize>(
                 i += 1;
             }
         }
-        let g33 = -1.0; // instead of -1.0 / (t * t) because it is the 'tilde' one
-        let pi33_ns = eta * 2.0 * g33 * (u[0] / t - dcuc / 3.0);
-        spi[6] = -(pi33 - pi33_ns) / taupi - 1.0 / 3.0 * pi33 * dcuc - pi33 * u[0] / t;
     }
 
-    let s00 = pe + pi33;
+    let s00 = pe + t * t * pi33;
     [
         -dxf[0] - dyf[0] - dtpi[0] - s00,
         -dxf[1] - dyf[1] - dtpi[1],
         -dxf[2] - dyf[2] - dtpi[2],
-        -dxf[3] - dyf[3] + spi[0],
-        -dxf[4] - dyf[4] + spi[1],
-        -dxf[5] - dyf[5] + spi[2],
-        -dxf[6] - dyf[6] + spi[3],
-        -dxf[7] - dyf[7] + spi[4],
-        -dxf[8] - dyf[8] + spi[5],
-        -dxf[9] - dyf[9] + spi[6],
+        -dxf[3] - dyf[3] + spi[3],
+        -dxf[4] - dyf[4] + spi[4],
+        -dxf[5] - dyf[5] + spi[5],
     ]
 }
 
 pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
     t: f64,
-    _vs: &[[[f64; 10]; VX]; VY],
-    tran: &[[[f64; 13]; VX]; VY],
+    _vs: &[[[f64; F_SHEAR_2D]; VX]; VY],
+    tran: &[[[f64; C_SHEAR_2D]; VX]; VY],
 ) -> Vec<f64> {
     let mut mt11 = 0.0;
     let mut mt22 = 0.0;
@@ -366,30 +345,27 @@ pub fn shear2d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     temperature: Eos,
-    init: Init2D<10>,
-    etaovers: f64,
+    init: Init2D<F_SHEAR_2D>,
+    etaovers: (f64, f64, f64),
     shear_temp_cut: f64,
     freezeout_temp_mev: f64,
 ) -> Option<(
-    ([[[f64; 10]; V]; V], [[[f64; 13]; V]; V]),
+    ([[[f64; F_SHEAR_2D]; V]; V], [[[f64; C_SHEAR_2D]; V]; V]),
     f64,
     usize,
     usize,
 )> {
     let constraints = gen_constraints(er, &p, &dpde);
-    let mut vs = [[[0.0; 10]; V]; V];
+    let mut vs = [[[0.0; 6]; V]; V];
     let mut trs = [[[0.0; 13]; V]; V];
     let names = (
-        [
-            "tt00", "tt01", "tt02", "utpi00", "utpi01", "utpi02", "utpi11", "utpi12", "utpi22",
-            "utpi33",
-        ],
+        ["tt00", "tt01", "tt02", "utpi11", "utpi12", "utpi22"],
         [
             "e", "pe", "dpde", "ut", "ux", "uy", "pi00", "pi01", "pi02", "pi11", "pi12", "pi22",
             "pi33",
         ],
     );
-    let k = [[[[0.0; 10]; V]; V]; S];
+    let k = [[[[0.0; 6]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     let mut max_e = 0.0;
     for j in 0..V {
@@ -441,7 +417,7 @@ pub fn shear2d<const V: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let observables: [Observable<10, 13, V, V>; 1] =
+    let observables: [Observable<F_SHEAR_2D, C_SHEAR_2D, V, V>; 1] =
         [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
 
     let temp = shear_temp_cut / HBARC;
@@ -449,7 +425,7 @@ pub fn shear2d<const V: usize, const S: usize>(
         1e-10,
         temp,
         |e| temperature(e) - temp,
-        |e| e.max(0.0).min(1000.0),
+        |e| e.max(0.0).min(1e10),
     );
 
     run(

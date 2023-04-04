@@ -43,10 +43,14 @@ enum Hydro {
     },
     Shear {
         #[arg(short, long, default_value_t = 0.08)]
-        etaovers: f64,
-        #[arg(long, default_value_t = 70.0)]
+        etaovers_min: f64,
+        #[arg(short, long, default_value_t = 1.23)]
+        etaovers_slope: f64,
+        #[arg(short, long, default_value_t = -0.09)]
+        etaovers_crv: f64,
+        #[arg(long, default_value_t = 20.0)]
         tempcut: f64,
-        #[arg(long, default_value_t = 155.0)]
+        #[arg(long, default_value_t = 148.0)]
         freezeout: f64,
         #[command(subcommand)]
         command: ToSimulate,
@@ -133,29 +137,34 @@ fn run<const CELLS: usize>(args: Cli) {
                     }
                 },
                 Hydro::Shear {
-                    etaovers,
+                    etaovers_min,
+                    etaovers_slope,
+                    etaovers_crv,
                     tempcut,
                     freezeout,
                     command,
-                } => match command {
-                    ToSimulate::Benchmark {
-                        dtmin,
-                        dtmax,
-                        nb_trento,
-                    } => {
-                        let dtmax = dtmax.unwrap_or(dx * 0.1);
-                        checkdt(dtmin, dtmax);
-                        shear::run_2d::<CELLS>(
-                            t0, tend, l, dtmin, dtmax, etaovers, tempcut, freezeout, nb_trento,
-                        );
+                } => {
+                    let etaovers = (etaovers_min, etaovers_slope, etaovers_crv);
+                    match command {
+                        ToSimulate::Benchmark {
+                            dtmin,
+                            dtmax,
+                            nb_trento,
+                        } => {
+                            let dtmax = dtmax.unwrap_or(dx * 0.1);
+                            checkdt(dtmin, dtmax);
+                            shear::run_2d::<CELLS>(
+                                t0, tend, l, dtmin, dtmax, etaovers, tempcut, freezeout, nb_trento,
+                            );
+                        }
+                        ToSimulate::Trento { dt, nb_trento } => {
+                            let dt = dt.unwrap_or(dx * 0.1);
+                            shear::run_trento_2d::<CELLS>(
+                                t0, tend, l, dt, etaovers, tempcut, freezeout, nb_trento,
+                            );
+                        }
                     }
-                    ToSimulate::Trento { dt, nb_trento } => {
-                        let dt = dt.unwrap_or(dx * 0.1);
-                        shear::run_trento_2d::<CELLS>(
-                            t0, tend, l, dt, etaovers, tempcut, freezeout, nb_trento,
-                        );
-                    }
-                },
+                }
             }
         }
     }

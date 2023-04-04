@@ -11,7 +11,7 @@ num = 10
 pn = int(1+np.log10(num-1))
 half_size = 10 # fm
 b = 3 # fm
-n = 16
+norm = 20
 tau_fs = 0.5 # fm
 for c in sys.argv[1:]:
     dx = 2*half_size / float(c)
@@ -24,7 +24,7 @@ for c in sys.argv[1:]:
             os.makedirs(dir)
         trento_cmd = \
             "trento Pb Pb --random-seed {r} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
-            .format(r=random_seed, sig=sig, b=b, l=half_size, dx=dx, n=n, num=num, dir=dir)
+            .format(r=random_seed, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
         trento = os.popen(trento_cmd)
         output = trento.read()
         print("Trento:\n{}".format(output))
