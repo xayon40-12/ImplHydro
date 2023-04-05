@@ -22,6 +22,10 @@ for c in sys.argv[1:]:
         except FileExistsError:
             shutil.rmtree(dir)
             os.makedirs(dir)
+
+        # run trento
+        # git: Duke-QCD/frzout
+
         trento_cmd = \
             "trento Pb Pb --random-seed {r} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
             .format(r=random_seed, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
@@ -29,7 +33,8 @@ for c in sys.argv[1:]:
         output = trento.read()
         print("Trento:\n{}".format(output))
 
-        # free streaming
+        # run free streaming
+        # git: Duke-QCD/freestream
         for i in range(num):
             name = ("{}/{:0<"+str(pn)+"}.dat").format(dir,i)
             print(name)

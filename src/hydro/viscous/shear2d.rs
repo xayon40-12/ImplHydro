@@ -356,12 +356,12 @@ pub fn shear2d<const V: usize, const S: usize>(
     usize,
     usize,
 )> {
+    let cv = |v: f64| v.max(0.0).min(1.0);
+    let eps = 1e-10;
+    let gamma_max: f64 = 20.0;
+    let v_max = (1.0 - 1.0 / gamma_max.powi(2)).sqrt();
     let extract_v = move |t00: f64, m: f64| {
         let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
-        let cv = |v: f64| v.max(0.0).min(1.0);
-        let eps = 1e-10;
-        let gamma_max: f64 = 20.0;
-        let v_max = (1.0 - 1.0 / gamma_max.powi(2)).sqrt();
         let v = newton(eps, 0.5, |v| sv(v) - v, cv).min(v_max);
 
         v
