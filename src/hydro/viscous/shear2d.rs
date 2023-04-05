@@ -19,6 +19,7 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     _temp: Eos<'a>,
+    extract_v: impl Fn(f64, f64) -> f64 + Sync + 'a,
 ) -> Box<dyn Fn(f64, [f64; 6], [f64; 13]) -> ([f64; 6], [f64; 13]) + 'a + Sync> {
     Box::new(
         move |t, [tt00, tt01, tt02, utpi11, utpi12, utpi22], _otrs| {
@@ -29,20 +30,7 @@ fn gen_constraints<'a>(
             let m = (t01 * t01 + t02 * t02).sqrt();
             let t00 = t00.max(m * (1.0 + 1e-15));
 
-            let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
-            let eps = 1e-10;
-            let mut v = newton(eps, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
-
-            // set maximum allowed gamma
-            let gamma_max = 20.0f64;
-            if (1.0 - v * v) * gamma_max.powi(2) < 1.0 {
-                v = (1.0 - 1.0 / gamma_max.powi(2)).sqrt();
-                // let e = (t00 - m * v).max(VOID).min(1e10);
-                // let t = temp(e) * HBARC;
-                // if t > 20.0 {
-                //     println!("T: {:e}", t);
-                // }
-            }
+            let v = extract_v(t00, m);
 
             let e = (t00 - m * v).max(VOID).min(1e10);
             let pe = p(e);
@@ -368,7 +356,52 @@ pub fn shear2d<const V: usize, const S: usize>(
     usize,
     usize,
 )> {
-    let constraints = gen_constraints(er, &p, &dpde, temperature);
+    let extract_v = move |t00: f64, m: f64| {
+        let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
+        let cv = |v: f64| v.max(0.0).min(1.0);
+        let eps = 1e-10;
+        let gamma_max: f64 = 20.0;
+        let v_max = (1.0 - 1.0 / gamma_max.powi(2)).sqrt();
+        let v = newton(eps, 0.5, |v| sv(v) - v, cv).min(v_max);
+
+        v
+    };
+
+    let use_table = false;
+
+    let constraints = if use_table {
+        println!("gen table");
+        const N: usize = 200;
+        let mut v_table = [[0.0f64; N]; N];
+        for j in 1..N {
+            for i in 1..N {
+                let t00 = (N - 1 - i) as f64 / i as f64;
+                let m = (N - 1 - j) as f64 / j as f64;
+                let v = extract_v(t00, m);
+                v_table[j][i] = v;
+            }
+        }
+        println!("done table");
+
+        let from_v_table = move |t00: f64, m: f64| {
+            let a = (N - 1) as f64 * 1.0 / (1.0 + t00);
+            let b = (N - 1) as f64 * 1.0 / (1.0 + m);
+            let i = (a.floor() as usize).min(N - 2);
+            let j = (b.floor() as usize).min(N - 2);
+            let v00 = v_table[j][i];
+            let v10 = v_table[j + 1][i];
+            let v01 = v_table[j][i + 1];
+            let v11 = v_table[j + 1][i + 1];
+            let j0 = v00 + (v10 - v00) * (b - j as f64);
+            let j1 = v01 + (v11 - v01) * (b - j as f64);
+            let i0 = j0 + (j1 - j0) * (a - i as f64);
+            i0
+        };
+        gen_constraints(er, &p, &dpde, temperature, from_v_table)
+    } else {
+        gen_constraints(er, &p, &dpde, temperature, extract_v)
+    };
+
     let mut vs = [[[0.0; 6]; V]; V];
     let mut trs = [[[0.0; 13]; V]; V];
     let names = (

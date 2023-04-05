@@ -174,8 +174,6 @@ pub fn save<
     Ok(())
 }
 
-pub fn save_surface() {}
-
 pub fn run<
     Opt: Clone + Sync,
     const F: usize,
@@ -287,7 +285,7 @@ pub fn run<
         }
     };
     save(&context, cost, tsteps, nbiter, fails);
-    let m = 1e-14;
+    let m = 1e-13;
     let r = 1e10;
     while context.t < context.tend - m {
         let mut d = next_save.min(context.tend) - context.t;
