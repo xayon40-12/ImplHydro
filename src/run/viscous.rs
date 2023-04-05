@@ -1,10 +1,10 @@
 use crate::{
     hydro::{
-        eos::wb,
+        eos::{hotqcd, wb, EOSs},
         utils::{converge, prepare_trento_freestream},
         viscous::init_from_freestream_2d,
         viscous::viscous2d::viscous2d,
-        Eos, HydroOutput, C_SHEAR_2D, FREESTREAM_2D, F_SHEAR_2D,
+        Eos, HydroOutput, C_BOTH_2D, FREESTREAM_2D, F_BOTH_2D,
     },
     solver::time::schemes::*,
 };
@@ -21,10 +21,14 @@ fn hydro2d<const V: usize, const S: usize>(
     freezeout_temp_mev: f64,
     r: Scheme<S>,
     init_s: ([[[f64; FREESTREAM_2D]; V]; V], usize),
-) -> HydroOutput<V, V, F_SHEAR_2D, C_SHEAR_2D> {
+) -> HydroOutput<V, V, F_BOTH_2D, C_BOTH_2D> {
     let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
-    let (p, dpde, temp): (Eos, Eos, Eos) = (&wb::p, &wb::dpde, &wb::T);
+    let eos = EOSs::HotQCD;
+    let (p, dpde, temp): (Eos, Eos, Eos) = match eos {
+        EOSs::WB => (&wb::p, &wb::dpde, &wb::T),
+        EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::T),
+    };
     println!("{}", name);
     // let init = init_from_entropy_density_2d(t0, s, p, dpde, temp);
     let init = init_from_freestream_2d(t0, s, p, dpde);

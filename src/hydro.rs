@@ -31,9 +31,9 @@ impl Dim {
 #[derive(Debug, Clone, Copy)]
 pub enum Viscosity {
     Ideal,
-    Bulk(f64, f64),              // (bulk,energycut)
-    Shear((f64, f64, f64), f64), // ((eta/s_min, eta/s_slope, eta/s_crv),energycut)
-    Both(f64, f64, f64),         // (bulk,shear,energycut)
+    Bulk(f64, f64),                              // (bulk,energycut)
+    Shear((f64, f64, f64), f64),                 // ((eta/s_min, eta/s_slope, eta/s_crv),energycut)
+    Both((f64, f64, f64), (f64, f64, f64), f64), // ((eta/s_min, eta/s_slope, eta/s_crv),(zeta/s_max,zeta/s_width,zeta/s_peak),energycut)
 }
 
 impl Viscosity {
@@ -72,20 +72,24 @@ pub const FREESTREAM_2D: usize = 11;
 pub const F_IDEAL_1D: usize = Viscosity::Ideal.nb_fields(Dim::D1.value());
 pub const F_BULK_1D: usize = Viscosity::Bulk(0.0, 0.0).nb_fields(Dim::D1.value());
 pub const F_SHEAR_1D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D1.value());
-pub const F_BOTH_1D: usize = Viscosity::Both(0.0, 0.0, 0.0).nb_fields(Dim::D1.value());
+pub const F_BOTH_1D: usize =
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D1.value());
 pub const F_IDEAL_2D: usize = Viscosity::Ideal.nb_fields(Dim::D2.value());
 pub const F_BULK_2D: usize = Viscosity::Bulk(0.0, 0.0).nb_fields(Dim::D2.value());
 pub const F_SHEAR_2D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D2.value());
-pub const F_BOTH_2D: usize = Viscosity::Both(0.0, 0.0, 0.0).nb_fields(Dim::D2.value());
+pub const F_BOTH_2D: usize =
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D2.value());
 
 pub const C_IDEAL_1D: usize = Viscosity::Ideal.nb_transforms(Dim::D1.value());
 pub const C_BULK_1D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D1.value());
 pub const C_SHEAR_1D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D1.value());
-pub const C_BOTH_1D: usize = Viscosity::Both(0.0, 0.0, 0.0).nb_transforms(Dim::D1.value());
+pub const C_BOTH_1D: usize =
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D1.value());
 pub const C_IDEAL_2D: usize = Viscosity::Ideal.nb_transforms(Dim::D2.value());
 pub const C_BULK_2D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D2.value());
 pub const C_SHEAR_2D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value());
-pub const C_BOTH_2D: usize = Viscosity::Both(0.0, 0.0, 0.0).nb_transforms(Dim::D2.value());
+pub const C_BOTH_2D: usize =
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value());
 
 pub mod ideal_gas {
     pub fn p(e: f64) -> f64 {

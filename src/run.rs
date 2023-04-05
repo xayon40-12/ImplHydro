@@ -1,2 +1,2 @@
 pub mod ideal;
-pub mod shear;
+pub mod viscous;

@@ -153,9 +153,9 @@ pub fn save<
                 min, slope, crv, energycut
             )
         }
-        Viscosity::Both(zeta, etaovers, energycut) => format!(
-            "Both\nzeta: {:e}\netaovers: {:e}\nenergycut: {:e}",
-            zeta, etaovers, energycut
+        Viscosity::Both((e_min, e_slope, e_crv), (z_max, z_width, z_peak), energycut) => format!(
+            "Both\netaovers: ({:e},{:e},{:e})\nzetaovers: ({:e},{:e},{:e})\nenergycut: {:e}",
+            e_min, e_slope, e_crv, z_max, z_width, z_peak, energycut
         ),
     };
     let variables = ["x", "y", "iter"]

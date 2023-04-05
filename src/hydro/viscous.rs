@@ -3,7 +3,7 @@ use crate::{
     solver::time::newton::newton,
 };
 
-use super::{FREESTREAM_2D, F_SHEAR_2D};
+use super::{FREESTREAM_2D, F_BOTH_2D};
 
 pub mod viscous2d;
 
@@ -13,7 +13,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     temperature: Eos<'a>,
-) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_SHEAR_2D] + 'a> {
+) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i];
 
@@ -37,6 +37,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
             0.0,
             0.0,
             0.0,
+            0.0,
         ];
         viscous2d::fitutpi(t0, vars)
     })
@@ -47,7 +48,7 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
     trs: [[[f64; FREESTREAM_2D]; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
-) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_SHEAR_2D] + 'a> {
+) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let e = trs[j][i][0].max(VOID);
         let ut = trs[j][i][1];
@@ -69,6 +70,7 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
             ut,
             ux,
             uy,
+            0.0,
             0.0,
             0.0,
             0.0,

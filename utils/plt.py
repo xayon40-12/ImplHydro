@@ -129,10 +129,10 @@ for d in os.listdir(dir):
             visc = (info["etaovers"])
             cut = info["energycut"]
         case "Bulk":
-            visc = (info["zeta"])
+            visc = (info["zetaovers"])
             cut = info["energycut"]
         case "Both":
-            visc = (info["zeta"],info["etaovers"])
+            visc = (info["etaovers"],info["zetaovers"])
             cut = info["energycut"]
     info["visc"] = visc
     cut = CUT # do not consider energycut when viscosity is disabled
@@ -221,7 +221,7 @@ def info2name(info, scheme=True):
         case "Bulk":
             visc = "Bulk({})".format(info["zeta"])
         case "Both":
-            visc = "Both({},{})".format(info["zeta"],info["etaovers"])
+            visc = "Both({},{})".format(info["etaovers"],info["zetaovers"])
     if scheme:
         return "{}_{}{}_{}_{}_{}_{}_{}_{}_{:.4e}".format(info["dim"],info["name"],info["case"],visc,info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
     else:

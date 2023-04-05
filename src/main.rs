@@ -1,5 +1,5 @@
 use clap::{command, Parser, Subcommand};
-use implhydro::run::{ideal, shear};
+use implhydro::run::{ideal, viscous};
 use std::thread;
 
 #[derive(Parser, Debug)]
@@ -163,14 +163,14 @@ fn run<const CELLS: usize>(args: Cli) {
                         } => {
                             let dtmax = dtmax.unwrap_or(dx * 0.1);
                             checkdt(dtmin, dtmax);
-                            shear::run_2d::<CELLS>(
+                            viscous::run_2d::<CELLS>(
                                 t0, tend, l, dtmin, dtmax, etaovers, zetaovers, tempcut, freezeout,
                                 nb_trento,
                             );
                         }
                         ToSimulate::Trento { dt, nb_trento } => {
                             let dt = dt.unwrap_or(dx * 0.1);
-                            shear::run_trento_2d::<CELLS>(
+                            viscous::run_trento_2d::<CELLS>(
                                 t0, tend, l, dt, etaovers, zetaovers, tempcut, freezeout, nb_trento,
                             );
                         }
@@ -182,6 +182,15 @@ fn run<const CELLS: usize>(args: Cli) {
 }
 
 fn main() {
+    // for i in 0..100 {
+    //     let e = 1000.0 * 2.0f64.powi(-i);
+    //     let pe = implhydro::hydro::eos::hotqcd::p(e);
+    //     let t = implhydro::hydro::eos::hotqcd::T(e);
+    //     let s = (e + pe) / t;
+    //     println!("{:e} {:e} {:e} {:e}", e, pe, t, s);
+    // }
+    // return;
+
     const STACK_SIZE: usize = 64 * 1024 * 1024; // if you want to run 2D simulation with more than 200x200 cells, you will need to increase the stack size
     thread::Builder::new()
         .stack_size(STACK_SIZE)
