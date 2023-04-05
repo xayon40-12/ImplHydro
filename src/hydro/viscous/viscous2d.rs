@@ -335,7 +335,7 @@ pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
 }
 
 // viscous hydro is in Milne coordinates
-pub fn shear2d<const V: usize, const S: usize>(
+pub fn viscous2d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
     er: f64,
@@ -348,6 +348,7 @@ pub fn shear2d<const V: usize, const S: usize>(
     temperature: Eos,
     init: Init2D<F_SHEAR_2D>,
     etaovers: (f64, f64, f64),
+    _zetaovers: (f64, f64, f64),
     shear_temp_cut: f64,
     freezeout_temp_mev: f64,
 ) -> Option<(

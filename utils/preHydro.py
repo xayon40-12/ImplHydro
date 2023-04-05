@@ -11,8 +11,17 @@ num = 10
 pn = int(1+np.log10(num-1))
 half_size = 10 # fm
 b = 3 # fm
-norm = 20000/197 # fm^-1
-tau_fs = 0.5 # fm
+
+# coefficients from "PHYSICAL REVIEW C 101, 024911 (2020)"
+p = 0.002
+sigmafluct = 0.90
+rcp = 0.88
+nc = 6
+wc = 0.53
+dmin = 1.12
+norm = 20/0.197 # fm^-1
+tau_fs = 0.48 # fm
+
 for c in sys.argv[1:]:
     dx = 2*half_size / float(c)
     for sig in [4.23, 6.4, 7.32]:
@@ -27,14 +36,15 @@ for c in sys.argv[1:]:
         # git: Duke-QCD/frzout
 
         trento_cmd = \
-            "trento Pb Pb --random-seed {r} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
-            .format(r=random_seed, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
+            "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
+            .format(r=random_seed, p=p, k=sigmafluct, w=rcp, m=nc, v=wc, d=dmin, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
         trento = os.popen(trento_cmd)
         output = trento.read()
         print("Trento:\n{}".format(output))
 
         # run free streaming
         # git: Duke-QCD/freestream
+        print("freestream")
         for i in range(num):
             name = ("{}/{:0<"+str(pn)+"}.dat").format(dir,i)
             print(name)

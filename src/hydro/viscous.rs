@@ -5,7 +5,7 @@ use crate::{
 
 use super::{FREESTREAM_2D, F_SHEAR_2D};
 
-pub mod shear2d;
+pub mod viscous2d;
 
 pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     t0: f64,
@@ -38,7 +38,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
             0.0,
             0.0,
         ];
-        shear2d::fitutpi(t0, vars)
+        viscous2d::fitutpi(t0, vars)
     })
 }
 
@@ -86,6 +86,6 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
             // bulk,
         ];
         // println!("vars: {:?}", vars);
-        shear2d::fitutpi(t0, vars)
+        viscous2d::fitutpi(t0, vars)
     })
 }
