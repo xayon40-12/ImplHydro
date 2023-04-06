@@ -60,7 +60,7 @@ fn gen_constraints<'a>(
             let pi01 = (ux * pi11 + uy * pi12) / ut;
             let pi02 = (ux * pi12 + uy * pi22) / ut;
             let pi00 = (ux * pi01 + uy * pi02) / ut;
-            let pi33 = (pi00 - pi01 - pi02) / (t * t); // TODO check division by t*t
+            let pi33 = (pi00 - pi01 - pi02) / (t * t);
 
             let m = matrix![
                 pi11, pi12, 0.0;

@@ -185,7 +185,7 @@ def compare(i, cut, vss, wss):
             count += 1
             a = vs[i]
             b = ws[i]
-            err = abs(a-b)/max(abs(a),abs(b))
+            err = abs(a-b)/(max(abs(a),abs(b))+1e-100)
             maxerr = max(err,maxerr)
             meanerr += err
     if count>0:
@@ -243,7 +243,7 @@ def convall(l, cnds):
         fig2, ax2 = plt.subplots(figsize=(8,5))
         def setlabel(ax):
             ax.set_xlabel(dtcost)
-            ax.set_ylabel(r"$\Delta\epsilon$")
+            ax.set_ylabel(r"$|\Delta_\mathrm{ref}|$")
         for ax in axs:
             setlabel(ax)
         setlabel(ax2)
@@ -390,13 +390,13 @@ def plot1d(l, nds):
 
         fig,axs = plt.subplots(2, 1, figsize=(8,9), sharex=True)
         if "Riemann" in name:
-            axin = axs[0].inset_axes([0.03, 0.05, 0.3, 0.5])
-            axin.set_xticklabels([])
-            axin.set_yticklabels([])
+            axin = axs[0].inset_axes([0.045, 0.08, 0.3, 0.5])
+            axin.tick_params(labelsize=9)
+            axin.locator_params(nbins=2)
             # if not "Void" in name:
             axinv = axs[0].inset_axes([0.55, 0.45, 0.4, 0.5])
-            axinv.set_xticklabels([])
-            axinv.set_yticklabels([])
+            axinv.tick_params(labelsize=9)
+            axinv.locator_params(nbins=2)
         l = 0
         for dxn in nds:
             (dx,n) = dxn
@@ -509,7 +509,7 @@ def plot1d(l, nds):
         handles = [line("black",lstyles2[0]),line("black",lstyles1[0])]+handles
         labels = [r"$\Delta x = 0.2$ fm", r"$\Delta x = 0.1$ fm"]+labels
         axs[1].legend(handles, labels) #, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
-        axs[1].set_ylabel(r"$\Delta\epsilon$")
+        axs[1].set_ylabel(r"$\Delta_\mathrm{exact}$")
         # axs[2].set_ylabel("cost")
         axs[len(axs)-1].set_xlabel("$x/t$")
         plt.subplots_adjust(wspace=0,hspace=0)
@@ -577,8 +577,13 @@ def plot1d(l, nds):
                 # if "Riemann" in name:
                     # axs[j][i].legend(labelcolor="white", facecolor=(0.1,0.1,0.3))
                     # axs[j][i].legend([], [], labelcolor="white", facecolor=(0.1,0.1,0.3))
-                axs[j][i].text(0.73, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", transform=axs[j][i].transAxes, fontsize=22)
-                axs[j][i].text(0.03, 0.1, r"$\Delta t = \Delta x/"+str(dx/dt)+"$ fm", color="white", transform=axs[j][i].transAxes, fontsize=22)
+                axs[j][i].text(0.03, 0.25, r"$\Delta x = "+str(dx)+"$", color="white", transform=axs[j][i].transAxes, fontsize=22)
+                pow2 = int(np.log2(0.1*dx/dt))
+                if pow2 > 0:
+                    pow2 = r"/2^{"+str(pow2)+"}"
+                else:
+                    pow2 = ""
+                axs[j][i].text(0.03, 0.1, r"$\Delta t/\Delta x = 0.1"+pow2+"$", color="white", transform=axs[j][i].transAxes, fontsize=22)
         
         patchs = [Patch(color=im.cmap(im.norm(i)), label=str(i)) for i in np.unique(colors)]
         # axs[0][0].legend(handles=patchs, loc="upper left")
@@ -631,6 +636,7 @@ def plot2d(l, datadts):
         fig, axs = plt.subplots(nb,num, figsize=(2+num*4, nb*5), sharey=True) #, sharex=True)
         if not hasattr(axs[0], "__len__"):
             axs = [axs]
+        colors = []
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
             # global greft
             # if greft[case][t] is None:
@@ -674,37 +680,42 @@ def plot2d(l, datadts):
             r = x[0][-1]
             d = y[0][0]
             u = y[-1][0]
-            # all = [("e", z),("vy",zvy), ("err ref",zerrref), ("vx", zvx)]
-            all = [("e", z)]
+            # all = [(r"$\epsilon$", z),("vy",zvy), ("err ref",zerrref), ("vx", zvx)]
+            all = [(r"$\epsilon$", z)]
             if "Gubser" in info["name"]:
-                all += [(r"$\Delta\epsilon$", zerr)]
+                all += [(r"$\Delta_\mathrm{exact}$", zerr)]
             if "FixPoint" in info["integration"]:
-                all += [("iter", ziter)]
+                all += [("iterations", ziter)]
             for (i, (n, z)) in zip(range(nb),all):
-                if n == "iter":
-                    im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
+                if n == "iterations":
+                    imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=1, vmax=3)
+                    colors += list(np.unique(z))
                 else:
                     im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
                 axs[i][id].xaxis.tick_top()
                 axs[i][id].xaxis.set_label_position('top') 
                 if i == 0:
-                    axs[i][id].set_xlabel("$x$ (fm)")
+                    axs[i][id].set_xlabel("t = {:.2} fm\n$x$ (fm)".format(t))
                 if i>0:
                     axs[i][id].tick_params(axis='x', which='both', labelbottom=False, labeltop=False)
                 if id == 0:
-                    axs[i][id].set_ylabel("$y$ (fm)")
-                divider = make_axes_locatable(axs[i][id])
-                cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
-                fig.add_axes(cax)
-                cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
-                cbar.formatter.set_powerlimits((0, 0))
-                cbar.formatter.set_useMathText(True)
-                cbar.update_ticks()
-                cbar.set_label("{} (t = {:.2} fm)".format(n, t), labelpad=-60)
+                    axs[i][id].set_ylabel("{}\n$y$ (fm)".format(n))
+
+                if n != "iterations":
+                    divider = make_axes_locatable(axs[i][id])
+                    cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
+                    fig.add_axes(cax)
+                    cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+                    cbar.formatter.set_powerlimits((0, 0))
+                    cbar.formatter.set_useMathText(True)
+                    cbar.update_ticks()
+                    # cbar.set_label(n, labelpad=-60)
 
         ax = axs[nb-1][0]
-        ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", #, bbox={"facecolor": "white", "pad": 10},
-            transform=ax.transAxes, fontsize=22)
+        patchs = [Patch(color=imit.cmap(imit.norm(i)), label=str(i)) for i in np.unique(colors)]
+        ax.legend(handles=patchs, loc="upper left", labelcolor="white", facecolor=(0.3,0.3,0.6))
+        ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", transform=ax.transAxes, fontsize=22)
+        # plt.title(r"$\Delta x = "+str(dx)+"$ fm")
         plt.subplots_adjust(wspace=0)
         plt.savefig("figures/many_best_e_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
