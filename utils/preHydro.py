@@ -19,7 +19,7 @@ rcp = 0.88
 nc = 6
 wc = 0.53
 dmin = 1.12
-norm = 20/0.197 # fm^-1
+norm = 20/0.1973 # fm^-1
 tau_fs = 0.48 # fm
 
 for c in sys.argv[1:]:

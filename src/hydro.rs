@@ -11,7 +11,7 @@ pub type Init1D<'a, const F: usize> = &'a dyn Fn(usize, f64) -> [f64; F];
 pub type Init2D<'a, const F: usize> = &'a dyn Fn((usize, usize), (f64, f64)) -> [f64; F];
 
 pub const VOID: f64 = 1e-100;
-pub const HBARC: f64 = 197.3;
+pub const HBARC: f64 = 0.1973; // GeV.fm
 
 #[derive(Debug, Clone, Copy)]
 pub enum Dim {

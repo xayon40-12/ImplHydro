@@ -41,22 +41,22 @@ enum Hydro {
         #[command(subcommand)]
         command: ToSimulate,
     },
-    Shear {
+    Viscous {
         #[arg(short, long, default_value_t = 0.08)]
         etaovers_min: f64,
-        #[arg(short, long, default_value_t = 1.23e-3)] // MeV^-1
+        #[arg(short, long, default_value_t = 1.23)] // GeV^-1
         etaovers_slope: f64,
         #[arg(short, long, default_value_t = -0.09)]
         etaovers_crv: f64,
         #[arg(short, long, default_value_t = 0.026)]
         zetaovers_max: f64,
-        #[arg(short, long, default_value_t = 35.0)] // MeV
+        #[arg(short, long, default_value_t = 0.035)] // GeV
         zetaovers_width: f64,
-        #[arg(short, long, default_value_t = 174.0)] // MeV
+        #[arg(short, long, default_value_t = 0.174)] // GeV
         zetaovers_peak: f64,
-        #[arg(long, default_value_t = 20.0)]
+        #[arg(long, default_value_t = 0.020)] // GeV
         tempcut: f64,
-        #[arg(long, default_value_t = 148.0)]
+        #[arg(long, default_value_t = 0.148)] // GeV
         freezeout: f64,
         #[command(subcommand)]
         command: ToSimulate,
@@ -119,8 +119,8 @@ fn run<const CELLS: usize>(args: Cli) {
                     }
                     ToSimulate::Trento { .. } => panic!("No 1D Trento case available."),
                 },
-                Hydro::Shear { .. } => match command {
-                    _ => panic!("No 1D shear case available."),
+                Hydro::Viscous { .. } => match command {
+                    _ => panic!("No 1D viscous case available."),
                 },
             }
         }
@@ -142,7 +142,7 @@ fn run<const CELLS: usize>(args: Cli) {
                         ideal::run_trento_2d::<CELLS>(t0, tend, l, dt, nb_trento);
                     }
                 },
-                Hydro::Shear {
+                Hydro::Viscous {
                     etaovers_min,
                     etaovers_slope,
                     etaovers_crv,

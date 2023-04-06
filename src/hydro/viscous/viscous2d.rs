@@ -43,13 +43,13 @@ fn gen_constraints<'a>(
             let epe = e + pe;
             // check that bulk viscosity does not make pressure negative
             let ppi = if epe + g * utppi < 0.0 {
-                -epe * 0.999999
+                -epe * 0.999
             } else {
                 g * utppi
             };
 
-            let mut ux = g * t01 / (e + pe + ppi);
-            let mut uy = g * t02 / (e + pe + ppi);
+            let mut ux = g * t01 / (e + pe);
+            let mut uy = g * t02 / (e + pe);
             let m2 = ux * ux + uy * uy;
             let gamma_max: f64 = 20.0;
             if m2 > gamma_max.powi(2) - 1.0 {
@@ -118,11 +118,8 @@ fn gen_constraints<'a>(
     )
 }
 
-fn eigenvaluesx(
-    _t: f64,
-    [e, pe, dpde, ut, ux, _, _, _, _, _, _, _, _, ppi]: [f64; C_BOTH_2D],
-) -> f64 {
-    let vs2 = dpde + ppi / (e + pe + ppi);
+fn eigenvaluesx(_t: f64, [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_2D]) -> f64 {
+    let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
@@ -167,7 +164,7 @@ fn fxuxpi(
         ux * pi11,
         ux * pi12,
         ux * pi22,
-        ut * ppi,
+        ux * ppi,
     ]
 }
 fn fyuypi(
@@ -182,7 +179,7 @@ fn fyuypi(
         uy * pi11,
         uy * pi12,
         uy * pi22,
-        ut * ppi,
+        uy * ppi,
     ]
 }
 
@@ -311,11 +308,11 @@ fn flux<const V: usize>(
     }
 
     let temp = temperature(e);
-    let mev = temp * HBARC;
+    let gev = temp * HBARC;
     let s = (e + pe) / temp;
-    let tc = 154.0; // MeV
+    let tc = 0.154; // GeV
 
-    let vmev = mev.max(tc); // viscous temperature blocked at tc
+    let vmev = gev.max(tc); // viscous temperature blocked at tc
     let etaovers = etas_min + etas_slope * (vmev - tc) * (vmev / tc).powf(etas_crv);
     let mut eta = etaovers * s;
     let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
@@ -324,7 +321,9 @@ fn flux<const V: usize>(
     let mut zeta = zetaovers * s;
     let tauppi = 5.0 * zeta / (e + pe) + 1e-100;
 
-    if mev < tempcut {
+    // eta = 0.0;
+    zeta = 0.0;
+    if gev < tempcut {
         eta = 0.0;
         zeta = 0.0;
     }
@@ -490,7 +489,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
         1e-10,
         freezeout_temp,
         |e| temperature(e) - freezeout_temp,
-        |e| e.max(0.0).min(1000.0),
+        |e| e.max(0.0).min(1e10),
     );
 
     let context = Context {

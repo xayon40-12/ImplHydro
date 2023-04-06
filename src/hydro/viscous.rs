@@ -21,7 +21,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
             1e-10,
             s,
             |e| (e + p(e)) / temperature(e) - s,
-            |e| e.max(VOID).min(1e4),
+            |e| e.max(VOID).min(1e10),
         );
         let vars = [
             e,
