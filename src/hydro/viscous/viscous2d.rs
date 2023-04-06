@@ -40,14 +40,6 @@ fn gen_constraints<'a>(
             let g = (1.0 - v * v).sqrt();
 
             let pe = p(e);
-            let epe = e + pe;
-            // check that bulk viscosity does not make pressure negative
-            let ppi = if epe + g * utppi < 0.0 {
-                -epe * 0.999
-            } else {
-                g * utppi
-            };
-
             let mut ux = g * t01 / (e + pe);
             let mut uy = g * t02 / (e + pe);
             let m2 = ux * ux + uy * uy;
@@ -58,6 +50,22 @@ fn gen_constraints<'a>(
                 uy *= r;
             }
             let ut = (1.0 + ux * ux + uy * uy).sqrt();
+
+            // check that bulk viscosity does not make pressure negative
+            let epe = e + pe;
+            let ppi = g * utppi;
+            let mut rp = if epe + ppi < 0.0 {
+                -epe / ppi * 0.999
+            } else {
+                1.0
+            };
+            let d = [1.0 - ut * ut, -1.0 - ut * ux, -1.0 - ut * uy];
+            while (t00 - rp * ppi * d[0]).powi(2)
+                < (t01 - rp * ppi * d[1]).powi(2) + (t02 - rp * ppi * d[2]).powi(2)
+            {
+                rp *= 0.99;
+            }
+            let ppi = rp * ppi;
 
             let pi11 = utpi11 / ut;
             let pi12 = utpi12 / ut;
@@ -321,8 +329,8 @@ fn flux<const V: usize>(
     let mut zeta = zetaovers * s;
     let tauppi = 5.0 * zeta / (e + pe) + 1e-100;
 
-    // eta = 0.0;
-    zeta = 0.0;
+    eta = 0.0;
+    // zeta = 0.0;
     if gev < tempcut {
         eta = 0.0;
         zeta = 0.0;
@@ -403,7 +411,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
     shear_temp_cut: f64,
-    freezeout_temp_mev: f64,
+    freezeout_temp: f64,
 ) -> Option<(
     ([[[f64; F_BOTH_2D]; V]; V], [[[f64; C_BOTH_2D]; V]; V]),
     f64,
@@ -484,11 +492,11 @@ pub fn viscous2d<const V: usize, const S: usize>(
     // println!("T({}): {}, s: {}", max_e, t * HBARC, s);
     // return None;
 
-    let freezeout_temp = freezeout_temp_mev / HBARC;
+    let freezeout_temp_fm = freezeout_temp / HBARC;
     let freezeout_energy = newton(
         1e-10,
-        freezeout_temp,
-        |e| temperature(e) - freezeout_temp,
+        freezeout_temp_fm,
+        |e| temperature(e) - freezeout_temp_fm,
         |e| e.max(0.0).min(1e10),
     );
 
@@ -520,11 +528,11 @@ pub fn viscous2d<const V: usize, const S: usize>(
     let observables: [Observable<F_BOTH_2D, C_BOTH_2D, V, V>; 1] =
         [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
 
-    let temp = shear_temp_cut / HBARC;
+    let temp_fm = shear_temp_cut / HBARC;
     let ecut = newton(
         1e-10,
-        temp,
-        |e| temperature(e) - temp,
+        temp_fm,
+        |e| temperature(e) - temp_fm,
         |e| e.max(0.0).min(1e10),
     );
 
