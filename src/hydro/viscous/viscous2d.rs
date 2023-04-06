@@ -45,19 +45,13 @@ fn gen_constraints<'a>(
             let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
             // check that bulk viscosity does not make pressure negative
-            let epe = e + pe;
             let ppi = g * utppi;
-            let mut rp = if epe + ppi < 0.0 {
+            let epe = e + pe;
+            let rp = if epe + ppi < 0.0 {
                 -epe / ppi * 0.999
             } else {
                 1.0
             };
-            let d = [1.0 - ut * ut, -1.0 - ut * ux, -1.0 - ut * uy];
-            while (t00 - rp * ppi * d[0]).powi(2)
-                < (t01 - rp * ppi * d[1]).powi(2) + (t02 - rp * ppi * d[2]).powi(2)
-            {
-                rp *= 0.99;
-            }
             let ppi = rp * ppi;
 
             let pi11 = utpi11 / ut;
@@ -78,23 +72,26 @@ fn gen_constraints<'a>(
 
             // check that shear viscosity does not make pressure negative
             let epeppi = epe + ppi;
-            let mut r = if epeppi + smallest < 0.0 {
+            let r = if epeppi + smallest < 0.0 {
                 -epeppi / smallest * 0.999
             } else {
                 1.0
             };
-
-            while (t00 + r * pi00).powi(2) < (t01 + r * pi01).powi(2) + (t02 + r * pi02).powi(2) {
-                r *= 0.99;
-            }
+            let pi11 = r * pi11;
+            let pi12 = r * pi12;
+            let pi22 = r * pi22;
+            let pi01 = r * pi01;
+            let pi02 = r * pi02;
+            let pi00 = r * pi00;
+            let pi33 = r * pi33;
 
             let vs = [
                 t00 * t,
                 t01 * t,
                 t02 * t,
-                r * pi11 * ut,
-                r * pi12 * ut,
-                r * pi22 * ut,
+                pi11 * ut,
+                pi12 * ut,
+                pi22 * ut,
                 ppi * ut,
             ];
 
@@ -105,13 +102,13 @@ fn gen_constraints<'a>(
                 ut,
                 ux,
                 uy,
-                r * pi00,
-                r * pi01,
-                r * pi02,
-                r * pi11,
-                r * pi12,
-                r * pi22,
-                r * pi33,
+                pi00,
+                pi01,
+                pi02,
+                pi11,
+                pi12,
+                pi22,
+                pi33,
                 ppi,
             ];
             (vs, trans)
@@ -320,7 +317,7 @@ fn flux<const V: usize>(
 
     let zetaovers = (zetas_max) / (1.0 + ((vmev - zetas_peak) / zetas_width).powi(2));
     let mut zeta = zetaovers * s;
-    let tauppi = taupi;
+    let tauppi = taupi; // use shear relaxation time for bulk
 
     if gev < tempcut {
         eta = 0.0;
