@@ -40,15 +40,8 @@ fn gen_constraints<'a>(
             let g = (1.0 - v * v).sqrt();
 
             let pe = p(e);
-            let mut ux = g * t01 / (e + pe);
-            let mut uy = g * t02 / (e + pe);
-            let m2 = ux * ux + uy * uy;
-            let gamma_max: f64 = 20.0;
-            if m2 > gamma_max.powi(2) - 1.0 {
-                let r = ((gamma_max.powi(2) - 1.0) / m2).sqrt();
-                ux *= r;
-                uy *= r;
-            }
+            let ux = g * t01 / (e + pe);
+            let uy = g * t02 / (e + pe);
             let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
             // check that bulk viscosity does not make pressure negative
@@ -327,10 +320,8 @@ fn flux<const V: usize>(
 
     let zetaovers = (zetas_max) / (1.0 + ((vmev - zetas_peak) / zetas_width).powi(2));
     let mut zeta = zetaovers * s;
-    let tauppi = 5.0 * zeta / (e + pe) + 1e-100;
+    let tauppi = taupi;
 
-    eta = 0.0;
-    // zeta = 0.0;
     if gev < tempcut {
         eta = 0.0;
         zeta = 0.0;

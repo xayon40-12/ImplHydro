@@ -18,7 +18,7 @@ fn hydro2d<const V: usize, const S: usize>(
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
     tempcut: f64,
-    freezeout_temp_mev: f64,
+    freezeout_temp_gev: f64,
     r: Scheme<S>,
     init_s: ([[[f64; FREESTREAM_2D]; V]; V], usize),
 ) -> HydroOutput<V, V, F_BOTH_2D, C_BOTH_2D> {
@@ -47,7 +47,7 @@ fn hydro2d<const V: usize, const S: usize>(
         etaovers,
         zetaovers,
         tempcut,
-        freezeout_temp_mev,
+        freezeout_temp_gev,
     )
 }
 
@@ -96,7 +96,7 @@ pub fn run_2d<const V: usize>(
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
     tempcut: f64,
-    freezeout_temp_mev: f64,
+    freezeout_temp_gev: f64,
     nb_trento: usize,
 ) {
     run_convergence_2d::<V, 1>(
@@ -108,7 +108,7 @@ pub fn run_2d<const V: usize>(
         etaovers,
         zetaovers,
         tempcut,
-        freezeout_temp_mev,
+        freezeout_temp_gev,
         gauss_legendre_1(Some((0, 1e-3))),
         nb_trento,
     );
@@ -121,7 +121,7 @@ pub fn run_2d<const V: usize>(
         etaovers,
         zetaovers,
         tempcut,
-        freezeout_temp_mev,
+        freezeout_temp_gev,
         heun(),
         nb_trento,
     );
@@ -134,7 +134,7 @@ pub fn run_trento_2d<const V: usize>(
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
     tempcut: f64,
-    freezeout_temp_mev: f64,
+    freezeout_temp_gev: f64,
     nb_trento: usize,
 ) {
     let trentos = prepare_trento_freestream::<V>(nb_trento);
@@ -153,7 +153,7 @@ pub fn run_trento_2d<const V: usize>(
             etaovers,
             zetaovers,
             tempcut,
-            freezeout_temp_mev,
+            freezeout_temp_gev,
             gl1,
             trento,
         );
@@ -166,7 +166,7 @@ pub fn run_trento_2d<const V: usize>(
             etaovers,
             zetaovers,
             tempcut,
-            freezeout_temp_mev,
+            freezeout_temp_gev,
             heun,
             trento,
         );
