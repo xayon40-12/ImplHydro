@@ -10,17 +10,15 @@ use crate::solver::{
 use crate::hydro::{solve_v, Eos, Init1D, VOID};
 
 fn gen_constraints<'a>(
-    er: f64,
+    _er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
 ) -> Box<dyn Fn(f64, [f64; 2], [f64; 5]) -> ([f64; 2], [f64; 5]) + 'a + Sync> {
-    Box::new(move |_t, [t00, t01], otrs| {
-        let oe = otrs[0];
+    Box::new(move |_t, [t00, t01], _otrs| {
         let m = t01.abs();
         let t00 = t00.max(m * (1.0 + 1e-15));
         let sv = solve_v(t00, m, p);
-        let v0 = m / (t00 + p(oe));
-        let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+        let v = newton(1e-10, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
         let e = (t00 - m * v).max(VOID);
         let pe = p(e);
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);

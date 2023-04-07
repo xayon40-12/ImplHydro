@@ -10,7 +10,7 @@ use crate::solver::{
 use crate::hydro::{solve_v, Eos, Init2D, VOID};
 
 fn gen_constraints<'a>(
-    er: f64,
+    _er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
     coord: &Coordinate,
@@ -19,8 +19,7 @@ fn gen_constraints<'a>(
         Coordinate::Cartesian => |_| 1.0,
         Coordinate::Milne => |t| t,
     };
-    Box::new(move |t, [t00, t01, t02], otrs| {
-        let oe = otrs[0];
+    Box::new(move |t, [t00, t01, t02], _otrs| {
         let t = st(t);
         let t00 = t00 / t;
         let t01 = t01 / t;
@@ -28,8 +27,7 @@ fn gen_constraints<'a>(
         let m = (t01 * t01 + t02 * t02).sqrt();
         let t00 = t00.max(m * (1.0 + 1e-15));
         let sv = solve_v(t00, m, p);
-        let v0 = m / (t00 + p(oe));
-        let v = newton(er, v0, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
+        let v = newton(1e-10, 0.5, |v| sv(v) - v, |v| v.max(0.0).min(1.0));
         let e = (t00 - m * v).max(VOID);
         let pe = p(e);
         let ut = ((t00 + pe) / (e + pe)).sqrt().max(1.0);
