@@ -61,12 +61,12 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     zetaovers: (f64, f64, f64),
     tempcut: f64,
     freezeout_temp_mev: f64,
-    r: Scheme<S>,
+    r: impl Fn(f64) -> Scheme<S>,
     nb_trento: usize,
 ) {
     let trentos = prepare_trento_freestream::<V>(nb_trento);
     let dx = l / V as f64;
-    println!("{}", r.name);
+    println!("{}", r(0.0).name);
     let erpow = 2;
     for i in 0..nb_trento {
         let trento = (trentos[i], i);
@@ -81,7 +81,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
                 zetaovers,
                 tempcut,
                 freezeout_temp_mev,
-                r,
+                r(dt),
                 trento,
             )
         });
@@ -109,7 +109,8 @@ pub fn run_2d<const V: usize>(
         zetaovers,
         tempcut,
         freezeout_temp_gev,
-        gauss_legendre_1(Some((0, 1e-3))),
+        |_| gauss_legendre_1(Some(1e3)),
+        // |dt| gauss_legendre_1(Some((0, dt * 0.1))),
         nb_trento,
     );
     run_convergence_2d::<V, 2>(
@@ -122,7 +123,7 @@ pub fn run_2d<const V: usize>(
         zetaovers,
         tempcut,
         freezeout_temp_gev,
-        heun(),
+        |_| heun(),
         nb_trento,
     );
 }
@@ -138,7 +139,8 @@ pub fn run_trento_2d<const V: usize>(
     nb_trento: usize,
 ) {
     let trentos = prepare_trento_freestream::<V>(nb_trento);
-    let gl1 = gauss_legendre_1(Some((0, 1e-3)));
+    // let gl1 = gauss_legendre_1(Some((0, dt*0.1)));
+    let gl1 = gauss_legendre_1(Some(1e3));
     let heun = heun();
     let dx = l / V as f64;
     let er = dt * dt;
@@ -157,18 +159,18 @@ pub fn run_trento_2d<const V: usize>(
             gl1,
             trento,
         );
-        hydro2d::<V, 2>(
-            t0,
-            tend,
-            dx,
-            dt,
-            er,
-            etaovers,
-            zetaovers,
-            tempcut,
-            freezeout_temp_gev,
-            heun,
-            trento,
-        );
+        // hydro2d::<V, 2>(
+        //     t0,
+        //     tend,
+        //     dx,
+        //     dt,
+        //     er,
+        //     etaovers,
+        //     zetaovers,
+        //     tempcut,
+        //     freezeout_temp_gev,
+        //     heun,
+        //     trento,
+        // );
     }
 }

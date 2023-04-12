@@ -28,7 +28,7 @@ enum Dim {
     Dim2 {
         #[arg(long, default_value_t = 0.48)]
         t0: f64,
-        #[arg(long, default_value_t = 15.0)]
+        #[arg(long, default_value_t = 10.0)]
         tend: f64,
         #[command(subcommand)]
         command: Hydro,
@@ -191,7 +191,7 @@ fn main() {
     // }
     // return;
 
-    const STACK_SIZE: usize = 64 * 1024 * 1024; // if you want to run 2D simulation with more than 200x200 cells, you will need to increase the stack size
+    const STACK_SIZE: usize = 128 * 1024 * 1024; // if you want to run 2D simulation with more than 200x200 cells, you will need to increase the stack size
     thread::Builder::new()
         .stack_size(STACK_SIZE)
         .spawn(big_stack)

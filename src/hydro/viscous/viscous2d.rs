@@ -19,36 +19,62 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     _temp: Eos<'a>,
-    extract_v: impl Fn(f64, f64) -> f64 + Sync + 'a,
 ) -> Box<
     dyn Fn(f64, [f64; F_BOTH_2D], [f64; C_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_BOTH_2D])
         + 'a
         + Sync,
 > {
     Box::new(
-        move |t, [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi], _otrs| {
+        move |t, cur @ [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi], _otrs| {
             // let oe = otrs[0].max(VOID);
             let t00 = tt00 / t;
-            let t01 = tt01 / t;
-            let t02 = tt02 / t;
+            let mut t01 = tt01 / t;
+            let mut t02 = tt02 / t;
             let m = (t01 * t01 + t02 * t02).sqrt();
+            if t00 < m {
+                let r = t00 / m * (1.0 - 1e-10);
+                t01 *= r;
+                t02 *= r;
+            }
             let t00 = t00.max(m * (1.0 + 1e-15));
 
-            let v = extract_v(t00, m);
+            // let sv = |v: f64| {
+            //     let g = (1.0 - v * v).sqrt();
+            //     let pi00 = g * utpi00;
+            //     let pi01 = g * utpi01;
+            //     let pi02 = g * utpi02;
+            //     let t00 = t00 - pi00;
+            //     let t01 = t01 - pi01;
+            //     let t02 = t02 - pi02;
+            //     let m = (t01 * t01 + t02 * t02).sqrt();
+            //     let t00 = t00.max(m * (1.0 + 1e-15));
+            //     m / (t00 + p((t00 - m * v).max(VOID)) + (1.0 - v * v).sqrt() * utppi)
+            // };
+            let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
+            let cv = |v: f64| v.max(0.0).min(1.0);
+            let v = newton(1e-10, 0.5, |v| sv(v) - v, cv);
 
-            let e = (t00 - m * v).max(VOID).min(1e10);
+            let e = (t00 - m * v).max(VOID).min(1e7);
             let g = (1.0 - v * v).sqrt();
 
             let pe = p(e);
-            let ux = g * t01 / (e + pe);
-            let uy = g * t02 / (e + pe);
+            let mut ux = g * t01 / (e + pe);
+            let mut uy = g * t02 / (e + pe);
+            let gamma_max2 = 20.0f64.powi(2);
+            // let v_max = (1.0 - 1.0 / gamma_max.powi(2)).sqrt();
+            let uu = ux * ux + uy * uy;
+            if 1.0 + uu > gamma_max2 {
+                let r = ((gamma_max2 - 1.0) / uu).sqrt() * 0.999;
+                ux *= r;
+                uy *= r;
+            }
             let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
             // check that bulk viscosity does not make pressure negative
             let ppi = g * utppi;
             let epe = e + pe;
             let rp = if epe + ppi < 0.0 {
-                -epe / ppi * 0.999
+                -epe / ppi * (1.0 - 1e-10)
             } else {
                 1.0
             };
@@ -73,7 +99,7 @@ fn gen_constraints<'a>(
             // check that shear viscosity does not make pressure negative
             let epeppi = epe + ppi;
             let r = if epeppi + smallest < 0.0 {
-                -epeppi / smallest * 0.999
+                -epeppi / smallest * (1.0 - 1e-10)
             } else {
                 1.0
             };
@@ -111,6 +137,14 @@ fn gen_constraints<'a>(
                 pi33,
                 ppi,
             ];
+
+            if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
+                panic!(
+                    "\n\nNaN in constraint\n{:?}\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
+                    _otrs, cur, g, v, vs, trans
+                );
+            }
+
             (vs, trans)
         },
     )
@@ -319,6 +353,7 @@ fn flux<const V: usize>(
     let mut zeta = zetaovers * s;
     let tauppi = taupi; // use shear relaxation time for bulk
 
+    // zeta = 0.0;
     if gev < tempcut {
         eta = 0.0;
         zeta = 0.0;
@@ -406,51 +441,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
     usize,
     usize,
 )> {
-    let cv = |v: f64| v.max(0.0).min(1.0);
-    let eps = 1e-10;
-    let gamma_max: f64 = 20.0;
-    let v_max = (1.0 - 1.0 / gamma_max.powi(2)).sqrt();
-    let extract_v = move |t00: f64, m: f64| {
-        let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
-        let v = newton(eps, 0.5, |v| sv(v) - v, cv).min(v_max);
-
-        v
-    };
-
-    let use_table = false;
-
-    let constraints = if use_table {
-        println!("gen table");
-        const N: usize = 200;
-        let mut v_table = [[0.0f64; N]; N];
-        for j in 1..N {
-            for i in 1..N {
-                let t00 = (N - 1 - i) as f64 / i as f64;
-                let m = (N - 1 - j) as f64 / j as f64;
-                let v = extract_v(t00, m);
-                v_table[j][i] = v;
-            }
-        }
-        println!("done table");
-
-        let from_v_table = move |t00: f64, m: f64| {
-            let a = (N - 1) as f64 * 1.0 / (1.0 + t00);
-            let b = (N - 1) as f64 * 1.0 / (1.0 + m);
-            let i = (a.floor() as usize).min(N - 2);
-            let j = (b.floor() as usize).min(N - 2);
-            let v00 = v_table[j][i];
-            let v10 = v_table[j + 1][i];
-            let v01 = v_table[j][i + 1];
-            let v11 = v_table[j + 1][i + 1];
-            let j0 = v00 + (v10 - v00) * (b - j as f64);
-            let j1 = v01 + (v11 - v01) * (b - j as f64);
-            let i0 = j0 + (j1 - j0) * (a - i as f64);
-            i0
-        };
-        gen_constraints(er, &p, &dpde, temperature, from_v_table)
-    } else {
-        gen_constraints(er, &p, &dpde, temperature, extract_v)
-    };
+    let constraints = gen_constraints(er, &p, &dpde, temperature);
 
     let mut vs = [[[0.0; F_BOTH_2D]; V]; V];
     let mut trs = [[[0.0; C_BOTH_2D]; V]; V];

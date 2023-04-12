@@ -39,8 +39,9 @@ pub fn fixpoint<
         dpde: _,
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
-    err_ref_p: Option<(usize, f64)>,
+    err_c: Option<f64>,
 ) -> Option<(f64, [[usize; VX]; VY], usize)> {
+    let err_c = err_c.unwrap_or(1.0);
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
     let mut iserr = true;
@@ -67,6 +68,9 @@ pub fn fixpoint<
             dt *= divdt;
             iter = 0;
             *k = ko;
+            fu = *k;
+            vdtk = [[[0.0f64; F]; VX]; VY];
+            trdtk = [[[0.0f64; C]; VX]; VY];
             errs = [[true; VX]; VY];
         }
         for s in 0..S {
@@ -99,33 +103,38 @@ pub fn fixpoint<
             });
         }
 
-        let err_ref: Box<dyn Fn(usize, usize) -> f64 + Sync> = if let Some((_f, mi)) = err_ref_p {
-            // let trs = &trs;
-            // let m = trs.iter().fold(0.0, |acc: f64, v| {
-            //     acc.max(v.iter().fold(0.0, |acc, v| acc.max(v[f])))
-            // });
-            // Box::new(move |x, y| (trs[y][x][f] / m).powi(2)) // due to '/m', the reference is in <=1, WARNING taking the square might be problematic
-            // Box::new(move |x, y| (trs[y][x][f] / m).powi(2).max(mi))
-            Box::new(move |_, _| mi)
-        } else {
-            Box::new(|_, _| 1.0)
-        };
-
+        let ms: Vec<f64> = fu
+            .iter()
+            .map(|f| {
+                f.iter()
+                    .flat_map(|f| f.iter())
+                    .flat_map(|f| f.iter())
+                    .map(|v| v.abs())
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+            })
+            .collect();
+        println!("\nt: {}\ndt: {}\nms: {:?}\n", t, dt, ms);
         pfor2d2(&mut errs, &mut nbiter, &|(Coord { x, y }, errs, nbiter)| {
             if *errs {
                 *errs = false;
                 *nbiter += 1;
                 for s in 0..S {
                     for f in 0..F {
-                        let e = (fu[s][y][x][f] - k[s][y][x][f]).abs();
+                        let fuf = fu[s][y][x][f];
+                        let kf = k[s][y][x][f];
+                        let e = (fuf - kf).abs(); // TODO consider using: / (1e-15+ms[s]);
                         if e.is_nan() {
-                            panic!("NaN");
+                            panic!(
+                                "\n\nNaN encountered in fixpoint iteration.\nfields: {:?}\n\n",
+                                fu[s][y][x]
+                            );
                         }
-                        *errs |= e * err_ref(x, y) > *er || e.is_nan(); // |f(k)-k| * cutoff > dt^p
-                                                                        // *errs |= e * err_ref(x, y)
-                                                                        //     > (wb::T(trs[y][x][f]).max(20.0 / 200.0).powi(2) * *er)
-                                                                        //     || e.is_nan();
-                                                                        // |f(k)-k| * cutoff > dt^p
+                        if e > 1e10 {
+                            println!("big e: {}", e);
+                        }
+                        *errs |= e > err_c * *er || e.is_nan(); // |f(k)-k| * cutoff > dt^p
+                                                                // *errs |= e > 1e-2 || e.is_nan();
                     }
                 }
             }
@@ -139,10 +148,16 @@ pub fn fixpoint<
         *k = fu;
         let mut tmperrs = [[false; VX]; VY];
         pfor2d(&mut tmperrs, &|(Coord { x, y }, tmperrs)| {
+            let mut update = |dx, dy| {
+                *tmperrs |= errs[boundary[1](y as i32 + dy, VY)][boundary[0](x as i32 + dx, VX)]
+            };
             for dy in -sizey..=sizey {
-                for dx in -sizex..=sizex {
-                    *tmperrs |=
-                        errs[boundary[1](y as i32 + dy, VY)][boundary[0](x as i32 + dx, VX)];
+                if dy == 0 {
+                    for dx in -sizex..=sizex {
+                        update(dx, dy);
+                    }
+                } else {
+                    update(0, dy);
                 }
             }
         });
