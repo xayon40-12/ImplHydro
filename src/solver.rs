@@ -288,8 +288,8 @@ pub fn run<
     let m = 1e-13;
     let r = 1e10;
     while context.t < context.tend - m {
-        let mut d = next_save.min(context.tend) - context.t;
-        context.dt = context.dt.min(context.tend - context.t);
+        let mut d = next_save - context.t;
+        // context.dt = context.dt.min(context.tend - context.t);
         if d <= 2.0 * context.dt {
             let mut tmp_ctx = context.clone();
             while d > tmp_ctx.t * m {
@@ -306,7 +306,7 @@ pub fn run<
             tmp_ctx.t = (tmp_ctx.t * r).round() / r; // round time for saving
             save(&tmp_ctx, cost, tsteps, nbiter, fails);
             current_save = next_save;
-            next_save = current_save + save_every;
+            next_save = current_save + save_every.min(context.tend - context.t);
         }
         tsteps += 1;
         let res = match integration {
@@ -328,11 +328,11 @@ pub fn run<
             return None;
         }
     }
-    let d = next_save.min(context.tend) - context.t;
-    if d < context.t * m && context.t <= context.tend * (1.0 + m) {
-        context.t = (context.t * r).round() / r; // round time for saving
-        save(&context, cost, tsteps, nbiter, fails);
-    }
+    // let d = next_save.min(context.tend) - context.t;
+    // if d < context.t * m && context.t <= context.tend * (1.0 + m) {
+    //     context.t = (context.t * r).round() / r; // round time for saving
+    //     save(&context, cost, tsteps, nbiter, fails);
+    // }
     let elapsed = now.elapsed().as_secs_f64();
     eprintln!("Elapsed: {:.4}", elapsed);
     Some((context.vstrs, context.t, cost as usize, tsteps))

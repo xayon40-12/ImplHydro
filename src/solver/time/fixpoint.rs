@@ -114,7 +114,7 @@ pub fn fixpoint<
                     .unwrap()
             })
             .collect();
-        println!("\nt: {}\ndt: {}\nms: {:?}\n", t, dt, ms);
+        // println!("\nt: {}\ndt: {}\nms: {:?}\n", t, dt, ms);
         pfor2d2(&mut errs, &mut nbiter, &|(Coord { x, y }, errs, nbiter)| {
             if *errs {
                 *errs = false;
@@ -123,15 +123,13 @@ pub fn fixpoint<
                     for f in 0..F {
                         let fuf = fu[s][y][x][f];
                         let kf = k[s][y][x][f];
-                        let e = (fuf - kf).abs(); // TODO consider using: / (1e-15+ms[s]);
+                        // let e = (fuf - kf).abs(); // TODO consider using: / (1e-15+ms[s]);
+                        let e = (fuf - kf).abs() / (1e-15 + ms[s]);
                         if e.is_nan() {
                             panic!(
                                 "\n\nNaN encountered in fixpoint iteration.\nfields: {:?}\n\n",
                                 fu[s][y][x]
                             );
-                        }
-                        if e > 1e10 {
-                            println!("big e: {}", e);
                         }
                         *errs |= e > err_c * *er || e.is_nan(); // |f(k)-k| * cutoff > dt^p
                                                                 // *errs |= e > 1e-2 || e.is_nan();

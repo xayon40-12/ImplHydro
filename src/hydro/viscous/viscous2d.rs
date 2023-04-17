@@ -330,6 +330,16 @@ fn flux<const V: usize>(
         (t * (pi02 - ppi * delta[0][2]) - ot * (opi02 - oppi * odelta[0][2])) / cdt,
     ];
     let du = [dtu, dxu, dyu];
+    // let mut du = [dtu, dxu, dyu];
+    // let max_div = 1e2; // TODO think about this cut
+    // for j in 0..3 {
+    //     for i in 0..3 {
+    //         let a = du[j][i].abs();
+    //         if a > max_div {
+    //             du[j][i] = du[j][i].signum() * max_div;
+    //         }
+    //     }
+    // }
     let mut ddu = [0.0f64; 3];
     let mut dcuc = u[0] / t;
     for j in 0..3 {
@@ -337,6 +347,11 @@ fn flux<const V: usize>(
         for i in 0..3 {
             ddu[j] += u[i] * du[i][j];
         }
+        // let a = ddu[j].abs();
+        // if j > 0 && a * t > 500.0 {
+        //     println!("{:?}: {:?}", t, a * t);
+        //     ddu[j] = ddu[j].signum() * 500.0;
+        // }
     }
 
     let temp = temperature(e);

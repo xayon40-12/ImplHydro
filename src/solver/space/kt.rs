@@ -111,5 +111,20 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
         sdres[n] = (sdh[1][n] - sdh[0][n]) / (2.0 * dx);
     }
 
+    // let m = res
+    //     .iter()
+    //     .map(|v| v.abs())
+    //     .max_by(|a, b| a.total_cmp(b))
+    //     .unwrap();
+    // let msd = sdres
+    //     .iter()
+    //     .map(|v| v.abs())
+    //     .max_by(|a, b| a.total_cmp(b))
+    //     .unwrap();
+    // let mm = 160.0;
+    // if m > mm || msd > mm {
+    //     println!("{:e} {:e}", m, msd);
+    // }
+
     (res, sdres)
 }
