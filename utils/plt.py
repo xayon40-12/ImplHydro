@@ -242,7 +242,10 @@ def convall(l, cnds):
         fig.subplots_adjust(wspace=0,hspace=0)
         fig2, ax2 = plt.subplots(figsize=(8,5))
         def setlabel(ax):
-            ax.set_xlabel(dtcost)
+            name = dtcost
+            if dtcost == "cost":
+                name = r"$n_\mathrm{KT}$"
+            ax.set_xlabel(name)
             ax.set_ylabel(r"$|\Delta_\mathrm{ref}|$")
         for ax in axs:
             setlabel(ax)
@@ -285,6 +288,7 @@ def convall(l, cnds):
                         else:
                             schemetype = "Explicit"
                         c = convergence(ds0,refs[s1])
+                        c = np.array(list(filter(lambda v: v[4]+1e-14>=0.1*dx*2**-6, c)), dtype=object) # use dt=0.1dx*2**-6 as reference
                         al = alpha
                         s = 30
                         sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,4]]
@@ -390,12 +394,12 @@ def plot1d(l, nds):
 
         fig,axs = plt.subplots(2, 1, figsize=(8,9), sharex=True)
         if "Riemann" in name:
-            axin = axs[0].inset_axes([0.045, 0.08, 0.3, 0.5])
-            axin.tick_params(labelsize=9)
+            axin = axs[0].inset_axes([0.06, 0.09, 0.29, 0.47])
+            axin.tick_params(labelsize=14)
             axin.locator_params(nbins=2)
             # if not "Void" in name:
             axinv = axs[0].inset_axes([0.55, 0.45, 0.4, 0.5])
-            axinv.tick_params(labelsize=9)
+            axinv.tick_params(labelsize=14)
             axinv.locator_params(nbins=2)
         l = 0
         for dxn in nds:
@@ -404,12 +408,12 @@ def plot1d(l, nds):
         x = np.linspace(-l,l,1000)
         if not "Gubser" in name:
             x = x/(t-t0)
-        ycontinuum = [e(x) for x in x]
-        continuum ,= axs[0].plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
+        yexact = [e(x) for x in x]
+        exact ,= axs[0].plot(x,yexact, color="black", label="exact", linewidth=1)
         if "Riemann" in name:
-            axin.plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
+            axin.plot(x,yexact, color="black", label="exact", linewidth=1)
             # if not "Void" in name:
-            axinv.plot(x,ycontinuum, color="black", label="continuum", linewidth=1)
+            axinv.plot(x,yexact, color="black", label="exact", linewidth=1)
         for dxn in sorted(nds,key=lambda x: x[1]):
             (dx,n) = dxn
             datas = nds[dxn]
@@ -424,7 +428,7 @@ def plot1d(l, nds):
             x = x[nl:nr]
             if not "Gubser" in name:
                 x = x/(t-t0)
-            ycontinuum = [e(x) for x in x]
+            yexact = [e(x) for x in x]
 
             if "Gubser" in name:
                 yref = diagonal(ref[:,vid["e"]])
@@ -467,7 +471,7 @@ def plot1d(l, nds):
                 yut = yut[nl:nr]
                 yux = yux[nl:nr]
                 yvx = yux/yut
-                yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,ycontinuum)]
+                yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,yexact)]
         
                 numerics ,= axs[0].plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
                 if "Riemann" in name:
@@ -475,7 +479,7 @@ def plot1d(l, nds):
                     # if not "Void" in name:
                     axinv.plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
 
-                errcontinuum ,= axs[1].plot(x,yerr, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+                errexact ,= axs[1].plot(x,yerr, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
                 # pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
                 # iterations ,= axs[2].plot(x,iter, '.', label=schemetype)
                 # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
@@ -633,10 +637,27 @@ def plot2d(l, datadts):
             nb += 1
         if "FixPoint" in info["integration"]:
             nb += 1
-        fig, axs = plt.subplots(nb,num, figsize=(2+num*4, nb*5), sharey=True) #, sharex=True)
+        fig, axs = plt.subplots(nb,num, figsize=(2+num*4, nb*5)) #sharey = True, sharex=True)
         if not hasattr(axs[0], "__len__"):
             axs = [axs]
         colors = []
+        ma = 1e-100
+        mi = 1e100
+        for (id, (t,data,diff)) in zip(range(num),datats[nums]):
+            mdata = mask(data,vid,cut)
+            n = einfo["nx"]
+            x = mdata[:,vid["x"]]
+            y = mdata[:,vid["y"]]
+            z = mdata[:,vid["e"]]
+            nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
+            nr = n-1-nl
+            x = np.reshape(x, (n,n))[nl:nr,nl:nr].reshape((-1))
+            y = np.reshape(y, (n,n))[nl:nr,nl:nr].reshape((-1))
+            z = np.reshape(z, (n,n))[nl:nr,nl:nr].reshape((-1))
+            zgubser = np.array([gubser(x,y,t) for (x,y) in zip(x,y)])
+            zerr = np.array([(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)])
+            mi = min(mi,zerr.min())
+            ma = max(ma,zerr.max())
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
             # global greft
             # if greft[case][t] is None:
@@ -690,31 +711,41 @@ def plot2d(l, datadts):
                 if n == "iterations":
                     imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=1, vmax=3)
                     colors += list(np.unique(z))
+                elif n == r"$\Delta_\mathrm{exact}$":
+                    im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=mi, vmax=ma)
                 else:
-                    im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
-                axs[i][id].xaxis.tick_top()
-                axs[i][id].xaxis.set_label_position('top') 
+                    im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower")
+
+                axs[i][id].yaxis.tick_right()
                 if i == 0:
-                    axs[i][id].set_xlabel("t = {:.2} fm\n$x$ (fm)".format(t))
-                if i>0:
-                    axs[i][id].tick_params(axis='x', which='both', labelbottom=False, labeltop=False)
+                    axs[i][id].xaxis.set_label_position('top') 
+                    axs[i][id].set_xlabel("t = {:.2} fm".format(t))
+                if i == nb-1:
+                    axs[i][id].set_xlabel("$x$ (fm)")
+                if id == num-1:
+                    axs[i][id].yaxis.set_label_position('right')
+                    axs[i][id].set_ylabel("$y$ (fm)")
                 if id == 0:
-                    axs[i][id].set_ylabel("{}\n$y$ (fm)".format(n))
+                    axs[i][id].set_ylabel(n)
+                if i<nb-1:
+                    axs[i][id].tick_params(axis='x', which='both', labelbottom=False)
+                if id<num-1:
+                    axs[i][id].tick_params(axis='y', which='both', labelright=False)
 
                 if n != "iterations":
                     divider = make_axes_locatable(axs[i][id])
                     cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
                     fig.add_axes(cax)
                     cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
-                    cbar.formatter.set_powerlimits((0, 0))
-                    cbar.formatter.set_useMathText(True)
-                    cbar.update_ticks()
+                    # cbar.formatter.set_powerlimits((0, 0))
+                    # cbar.formatter.set_useMathText(True)
+                    # cbar.update_ticks()
                     # cbar.set_label(n, labelpad=-60)
 
         ax = axs[nb-1][0]
-        patchs = [Patch(color=imit.cmap(imit.norm(i)), label=str(i)) for i in np.unique(colors)]
+        patchs = [Patch(color=imit.cmap(imit.norm(i)), label=str(int(i))) for i in np.unique(colors)]
         ax.legend(handles=patchs, loc="upper left", labelcolor="white", facecolor=(0.3,0.3,0.6))
-        ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", transform=ax.transAxes, fontsize=22)
+        # ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", transform=ax.transAxes, fontsize=22)
         # plt.title(r"$\Delta x = "+str(dx)+"$ fm")
         plt.subplots_adjust(wspace=0)
         plt.savefig("figures/many_best_e_{}.pdf".format(info2name(info)), dpi=100)
