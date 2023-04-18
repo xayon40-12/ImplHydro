@@ -734,7 +734,11 @@ def plot2d(l, datadts):
 
                 if n != "iterations":
                     divider = make_axes_locatable(axs[i][id])
-                    cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
+                    p = list(divider.get_position())
+                    p[1] -= p[3]*0.09
+                    p[3] *= 0.05
+                    cax = fig.add_axes(p)
+                    # cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
                     fig.add_axes(cax)
                     cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
                     # cbar.formatter.set_powerlimits((0, 0))
