@@ -46,32 +46,43 @@ pub fn fixpoint<
     *dto = maxdt.min(*dto);
     let mut iserr = true;
     let ko = *k;
+    let mut tmpk = *k;
     let mut fu = *k;
+    let mut tmpfu = *k;
     let mut vdtk = [[[0.0f64; F]; VX]; VY];
     let mut trdtk = [[[0.0f64; C]; VX]; VY];
     let mut errs = [[true; VX]; VY];
     let mut nbiter = [[0usize; VX]; VY];
-    let mut dt = *dto;
+    let dt = *dto;
+    // let mut dt = *dto;
     let mut iter = 0;
-    let mut failed = 1;
+    let mut failed = 1usize;
     let maxiter = 10;
     let maxfailed = 30;
-    let divdt: f64 = 0.5;
+    // let divdt: f64 = 0.5;
+    let mut maxe = 1e50f64;
+    let mut omaxe = maxe;
+    let mut reset_ffka = 1.0;
     while iserr {
         iter += 1;
-        if iter > failed * maxiter {
+        if iter > failed * maxiter || maxe > 1e50 {
             eprintln!("fail {}", failed);
             failed += 1;
-            if failed >= maxfailed {
-                return None;
-            }
-            dt *= divdt;
+            // dt *= divdt;
+            // fka = 1.0;
+            reset_ffka *= 0.5;
+            maxe = 1e50;
+            omaxe = maxe;
             iter = 0;
             *k = ko;
             fu = *k;
+            tmpfu = fu;
             vdtk = [[[0.0f64; F]; VX]; VY];
             trdtk = [[[0.0f64; C]; VX]; VY];
             errs = [[true; VX]; VY];
+            if failed >= maxfailed {
+                return None;
+            }
         }
         for s in 0..S {
             let c = a[s].iter().fold(0.0, |acc, r| acc + r);
@@ -81,7 +92,7 @@ pub fn fixpoint<
                 for f in 0..F {
                     vdtk[f] = vs[y][x][f];
                     for s1 in 0..S {
-                        vdtk[f] += dt * a[s][s1] * fu[s1][y][x][f];
+                        vdtk[f] += dt * a[s][s1] * k[s1][y][x][f];
                     }
                     (*vdtk, *trdtk) = constraints(ct, *vdtk, *trdtk);
                 }
@@ -103,18 +114,6 @@ pub fn fixpoint<
             });
         }
 
-        let ms: Vec<f64> = fu
-            .iter()
-            .map(|f| {
-                f.iter()
-                    .flat_map(|f| f.iter())
-                    .flat_map(|f| f.iter())
-                    .map(|v| v.abs())
-                    .max_by(|a, b| a.total_cmp(b))
-                    .unwrap()
-            })
-            .collect();
-        // println!("\nt: {}\ndt: {}\nms: {:?}\n", t, dt, ms);
         pfor2d2(&mut errs, &mut nbiter, &|(Coord { x, y }, errs, nbiter)| {
             if *errs {
                 *errs = false;
@@ -123,8 +122,7 @@ pub fn fixpoint<
                     for f in 0..F {
                         let fuf = fu[s][y][x][f];
                         let kf = k[s][y][x][f];
-                        // let e = (fuf - kf).abs(); // TODO consider using: / (1e-15+ms[s]);
-                        let e = (fuf - kf).abs() / (1e-15 + ms[s]);
+                        let e = (fuf - kf).abs();
                         if e.is_nan() {
                             panic!(
                                 "\n\nNaN encountered in fixpoint iteration.\nfields: {:?}\n\n",
@@ -143,7 +141,55 @@ pub fn fixpoint<
             .flat_map(|e| e.par_iter())
             .map(|v| *v)
             .reduce(|| false, |acc, a| acc || a);
-        *k = fu;
+
+        maxe = 0.0;
+        for s in 0..S {
+            for j in 0..VY {
+                for i in 0..VX {
+                    for f in 0..F {
+                        let kk = k[s][j][i][f];
+                        let ff = fu[s][j][i][f];
+                        let m = (kk - ff).abs();
+                        maxe = maxe.max(m);
+                    }
+                }
+            }
+        }
+
+        let enable_fka = true;
+        let mut ffka = reset_ffka;
+        if maxe >= omaxe && enable_fka {
+            *k = tmpk;
+            fu = tmpfu;
+            ffka = 0.5 * omaxe / maxe;
+        } else {
+            tmpfu = fu;
+            tmpk = *k;
+            omaxe = maxe;
+        }
+        for s in 0..S {
+            for j in 0..VY {
+                for i in 0..VX {
+                    for f in 0..F {
+                        let kk = k[s][j][i][f];
+                        let ff = fu[s][j][i][f];
+                        k[s][j][i][f] = kk + ffka * (ff - kk);
+                    }
+                }
+            }
+        }
+        let debug = true;
+        if debug {
+            println!(
+                "t: {:e}, ffka: {:e}, max: {:e}, omax: {:e}, lim: {:e}",
+                t,
+                ffka,
+                maxe,
+                omaxe,
+                err_c * *er
+            );
+        }
+
         let mut tmperrs = [[false; VX]; VY];
         pfor2d(&mut tmperrs, &|(Coord { x, y }, tmperrs)| {
             let mut update = |dx, dy| {

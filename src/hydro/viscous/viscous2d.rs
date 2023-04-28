@@ -18,7 +18,7 @@ fn gen_constraints<'a>(
     _er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
-    _temp: Eos<'a>,
+    temp: Eos<'a>,
 ) -> Box<
     dyn Fn(f64, [f64; F_BOTH_2D], [f64; C_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_BOTH_2D])
         + 'a
@@ -28,14 +28,14 @@ fn gen_constraints<'a>(
         move |t, cur @ [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi], _otrs| {
             // let oe = otrs[0].max(VOID);
             let t00 = tt00 / t;
-            let mut t01 = tt01 / t;
-            let mut t02 = tt02 / t;
+            let t01 = tt01 / t;
+            let t02 = tt02 / t;
             let m = (t01 * t01 + t02 * t02).sqrt();
-            if t00 < m {
-                let r = t00 / m * (1.0 - 1e-10);
-                t01 *= r;
-                t02 *= r;
-            }
+            // if t00 < m {
+            //     let r = t00 / m * (1.0 - 1e-10);
+            //     t01 *= r;
+            //     t02 *= r;
+            // }
             let t00 = t00.max(m * (1.0 + 1e-15));
 
             // let sv = |v: f64| {
@@ -52,100 +52,115 @@ fn gen_constraints<'a>(
             // };
             let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
             let cv = |v: f64| v.max(0.0).min(1.0);
-            let v = newton(1e-10, 0.5, |v| sv(v) - v, cv);
-
-            let e = (t00 - m * v).max(VOID).min(1e7);
-            let g = (1.0 - v * v).sqrt();
-
-            let pe = p(e);
-            let mut ux = g * t01 / (e + pe);
-            let mut uy = g * t02 / (e + pe);
             let gamma_max2 = 20.0f64.powi(2);
-            // let v_max = (1.0 - 1.0 / gamma_max.powi(2)).sqrt();
-            let uu = ux * ux + uy * uy;
-            if 1.0 + uu > gamma_max2 {
-                let r = ((gamma_max2 - 1.0) / uu).sqrt() * 0.999;
-                ux *= r;
-                uy *= r;
-            }
-            let ut = (1.0 + ux * ux + uy * uy).sqrt();
+            let v_max = (1.0 - 1.0 / gamma_max2).sqrt();
+            let v = newton(1e-10, 0.5, |v| sv(v) - v, cv).min(v_max);
 
-            // check that bulk viscosity does not make pressure negative
-            let ppi = g * utppi;
-            let epe = e + pe;
-            let rp = if epe + ppi < 0.0 {
-                -epe / ppi * (1.0 - 1e-10)
+            let e = (t00 - m * v).max(VOID).min(1e10);
+
+            let gev = temp(e) * HBARC;
+            let bellow_kinetic = 1e-3; // kinetic freezeout is of the order 100 MeV, so 1 MeV if much bellow.
+            if gev < bellow_kinetic {
+                // if temperature is much smaller than kninetic freezeout, there are no interactions anymore and thus the cell is considered as vacuum.
+                let vs = [0.0; F_BOTH_2D];
+                let mut trans = [0.0; C_BOTH_2D];
+                trans[0] = VOID;
+                trans[1] = p(VOID);
+                trans[2] = dpde(VOID);
+                trans[3] = 1.0;
+
+                (vs, trans)
             } else {
-                1.0
-            };
-            let ppi = rp * ppi;
+                let g = (1.0 - v * v).sqrt();
 
-            let pi11 = utpi11 / ut;
-            let pi12 = utpi12 / ut;
-            let pi22 = utpi22 / ut;
-            let pi01 = (ux * pi11 + uy * pi12) / ut;
-            let pi02 = (ux * pi12 + uy * pi22) / ut;
-            let pi00 = (ux * pi01 + uy * pi02) / ut;
-            let pi33 = (pi00 - pi01 - pi02) / (t * t);
+                let pe = p(e);
+                let ux = g * t01 / (e + pe);
+                let uy = g * t02 / (e + pe);
+                // let uu = ux * ux + uy * uy;
+                // if 1.0 + uu > gamma_max2 {
+                //     let r = ((gamma_max2 - 1.0) / uu).sqrt() * 0.999;
+                //     ux *= r;
+                //     uy *= r;
+                // }
+                let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
-            let m = matrix![
-                pi11, pi12, 0.0;
-                pi12, pi22, 0.0;
-                0.0, 0.0, pi33;
-            ];
-            let eigs = m.symmetric_eigenvalues();
-            let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
+                // check that bulk viscosity does not make pressure negative
+                let ppi = g * utppi;
+                let epe = e + pe;
+                let rp = if epe + ppi < 0.0 {
+                    -epe / ppi * (1.0 - 1e-10)
+                } else {
+                    1.0
+                };
+                let ppi = rp * ppi;
 
-            // check that shear viscosity does not make pressure negative
-            let epeppi = epe + ppi;
-            let r = if epeppi + smallest < 0.0 {
-                -epeppi / smallest * (1.0 - 1e-10)
-            } else {
-                1.0
-            };
-            let pi11 = r * pi11;
-            let pi12 = r * pi12;
-            let pi22 = r * pi22;
-            let pi01 = r * pi01;
-            let pi02 = r * pi02;
-            let pi00 = r * pi00;
-            let pi33 = r * pi33;
+                let pi11 = utpi11 / ut;
+                let pi12 = utpi12 / ut;
+                let pi22 = utpi22 / ut;
+                let pi01 = (ux * pi11 + uy * pi12) / ut;
+                let pi02 = (ux * pi12 + uy * pi22) / ut;
+                let pi00 = (ux * pi01 + uy * pi02) / ut;
+                let pi33 = (pi00 - pi01 - pi02) / (t * t);
 
-            let vs = [
-                t00 * t,
-                t01 * t,
-                t02 * t,
-                pi11 * ut,
-                pi12 * ut,
-                pi22 * ut,
-                ppi * ut,
-            ];
+                let m = matrix![
+                    pi11, pi12, 0.0;
+                    pi12, pi22, 0.0;
+                    0.0, 0.0, pi33;
+                ];
+                let eigs = m.symmetric_eigenvalues();
+                let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
 
-            let trans = [
-                e,
-                pe,
-                dpde(e),
-                ut,
-                ux,
-                uy,
-                pi00,
-                pi01,
-                pi02,
-                pi11,
-                pi12,
-                pi22,
-                pi33,
-                ppi,
-            ];
+                // check that shear viscosity does not make pressure negative
+                let epeppi = epe + ppi;
+                let r = if epeppi + smallest < 0.0 {
+                    -epeppi / smallest * (1.0 - 1e-10)
+                } else {
+                    1.0
+                };
+                let pi11 = r * pi11;
+                let pi12 = r * pi12;
+                let pi22 = r * pi22;
+                let pi01 = r * pi01;
+                let pi02 = r * pi02;
+                let pi00 = r * pi00;
+                let pi33 = r * pi33;
 
-            if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
-                panic!(
-                    "\n\nNaN in constraint\n{:?}\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
-                    _otrs, cur, g, v, vs, trans
-                );
+                let vs = [
+                    t00 * t,
+                    t01 * t,
+                    t02 * t,
+                    pi11 * ut,
+                    pi12 * ut,
+                    pi22 * ut,
+                    ppi * ut,
+                ];
+
+                let trans = [
+                    e,
+                    pe,
+                    dpde(e),
+                    ut,
+                    ux,
+                    uy,
+                    pi00,
+                    pi01,
+                    pi02,
+                    pi11,
+                    pi12,
+                    pi22,
+                    pi33,
+                    ppi,
+                ];
+
+                if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
+                    panic!(
+                        "\n\nNaN in constraint\n{:?}\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
+                        _otrs, cur, g, v, vs, trans
+                    );
+                }
+
+                (vs, trans)
             }
-
-            (vs, trans)
         },
     )
 }
@@ -368,7 +383,6 @@ fn flux<const V: usize>(
     let mut zeta = zetaovers * s;
     let tauppi = taupi; // use shear relaxation time for bulk
 
-    // zeta = 0.0;
     if gev < tempcut {
         eta = 0.0;
         zeta = 0.0;
@@ -390,6 +404,7 @@ fn flux<const V: usize>(
                     - (0..3)
                         .map(|i| (u[a] * pimn[b][i] + u[b] * pimn[a][i]) * ddu[i] * g[i][i])
                         .sum::<f64>();
+
                 spi[i] = -(pimn[a][b] - pi_ns) / taupi + ipi;
                 i += 1;
             }

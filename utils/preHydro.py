@@ -9,7 +9,7 @@ import numpy as np
 random_seed = 1
 num = 10
 pn = int(1+np.log10(num-1))
-half_size = 10 # fm
+half_size = 20 # fm
 
 # coefficients from "PHYSICAL REVIEW C 101, 024911 (2020)"
 p = 0.002
@@ -24,7 +24,7 @@ tau_fs = 0.48 # fm
 # handle arguments
 cells, args = [], []
 for arg in sys.argv[1:]:
-    (args if arg.startwith("-") else cells).append(arg)
+    (args if arg.startswith("-") else cells).append(arg)
 
 sigs = [6.4]
 bs = [3]

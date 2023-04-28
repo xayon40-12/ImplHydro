@@ -43,9 +43,10 @@ for arg in sys.argv:
         if arg in larg:
             act()
 
-CUT = 1e-6
+CUT = 1e-8
 
-crop = 9
+# crop = 9
+crop = 19
 defaultfromref = 1
 
 e0 = 10
@@ -157,7 +158,7 @@ for d in os.listdir(dir):
     # it means that explicit failed
     expl_fail = sum(e) > sum(e0)
     # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
-    impl_fail = fails > 0 and maxdt>dx/10
+    impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
     if rejectfails and (expl_fail or impl_fail): 
         continue # skip explicit or implicit that failed
     m = e>cut
@@ -631,7 +632,7 @@ def plot2d(l, datadts):
     if many:
         num = 5
         nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
-        # nb = 4
+        # nb = 5
         nb = 1
         if "Gubser" in info["name"]:
             nb += 1
@@ -672,6 +673,10 @@ def plot2d(l, datadts):
             zref = ref[:,vid["e"]]
             ziter = mdata[:,vid["iter"]]
             # print(name, case, scheme, dt, n, ziter.sum())
+            # zpi00 = mdata[:,vid["pi00"]]
+            # zpi11 = mdata[:,vid["pi11"]]
+            # zpi12 = mdata[:,vid["pi12"]]
+            # zpi22 = mdata[:,vid["pi22"]]
             zut = mdata[:,vid["ut"]]
             zux = mdata[:,vid["ux"]]
             zvx = zux/zut
@@ -697,11 +702,17 @@ def plot2d(l, datadts):
             zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
             zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
             zvy = np.reshape(zvy, (n,n))[nl:nr,nl:nr]
+            zut = np.reshape(zut, (n,n))[nl:nr,nl:nr]
+            # zpi00 = np.reshape(zpi00, (n,n))[nl:nr,nl:nr]
+            # zpi11 = np.reshape(zpi11, (n,n))[nl:nr,nl:nr]
+            # zpi12 = np.reshape(zpi12, (n,n))[nl:nr,nl:nr]
+            # zpi22 = np.reshape(zpi22, (n,n))[nl:nr,nl:nr]
             l = x[0][0]
             r = x[0][-1]
             d = y[0][0]
             u = y[-1][0]
             # all = [(r"$\epsilon$", z),("vy",zvy), ("err ref",zerrref), ("vx", zvx)]
+            # all = [(r"$\epsilon$", z),(r"pi00", zpi00),(r"pi11", zpi11),(r"pi12", zpi12),(r"pi22", zpi22)]
             all = [(r"$\epsilon$", z)]
             if "Gubser" in info["name"]:
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]
@@ -709,7 +720,7 @@ def plot2d(l, datadts):
                 all += [("iterations", ziter)]
             for (i, (n, z)) in zip(range(nb),all):
                 if n == "iterations":
-                    imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=1, vmax=3)
+                    imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=1, vmax=3) #, vmax=6)
                     colors += list(np.unique(z))
                 elif n == r"$\Delta_\mathrm{exact}$":
                     im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=mi, vmax=ma)
@@ -719,7 +730,7 @@ def plot2d(l, datadts):
                 axs[i][id].yaxis.tick_right()
                 if i == 0:
                     axs[i][id].xaxis.set_label_position('top') 
-                    axs[i][id].set_xlabel("t = {:.2} fm".format(t))
+                    axs[i][id].set_xlabel(r"$\tau$ = {:.2} fm".format(t))
                 if i == nb-1:
                     axs[i][id].set_xlabel("$x$ (fm)")
                 if id == num-1:
@@ -751,7 +762,7 @@ def plot2d(l, datadts):
         ax.legend(handles=patchs, loc="upper left", labelcolor="white", facecolor=(0.3,0.3,0.6))
         # ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", transform=ax.transAxes, fontsize=22)
         # plt.title(r"$\Delta x = "+str(dx)+"$ fm")
-        plt.subplots_adjust(wspace=0)
+        # plt.subplots_adjust(wspace=0)
         plt.savefig("figures/many_best_e_{}.pdf".format(info2name(info)), dpi=100)
         plt.close()
     
@@ -905,5 +916,5 @@ except FileExistsError:
     None
     
 alldata(6, datas, convall)
-alldata(7, datas, plotall1D)
 alldata(9, datas, plotall2D)
+alldata(7, datas, plotall1D)

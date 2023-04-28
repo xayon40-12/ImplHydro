@@ -306,7 +306,7 @@ pub fn run<
             tmp_ctx.t = (tmp_ctx.t * r).round() / r; // round time for saving
             save(&tmp_ctx, cost, tsteps, nbiter, fails);
             current_save = next_save;
-            next_save = current_save + save_every.min(context.tend - context.t);
+            next_save = (current_save + save_every).min(context.tend);
         }
         tsteps += 1;
         let res = match integration {

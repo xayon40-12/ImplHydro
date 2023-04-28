@@ -8,7 +8,7 @@ struct Cli {
     #[arg(short, long, default_value_t = 100)]
     cells: usize,
 
-    #[arg(short, long, default_value_t = 20.0)]
+    #[arg(short, long, default_value_t = 40.0)]
     physical_length: f64,
 
     #[command(subcommand)]
@@ -185,9 +185,9 @@ fn main() {
     // for i in 0..100 {
     //     let e = 1000.0 * 2.0f64.powi(-i);
     //     let pe = implhydro::hydro::eos::hotqcd::p(e);
-    //     let t = implhydro::hydro::eos::hotqcd::T(e);
+    //     let t = implhydro::hydro::eos::hotqcd::T(e) * 197.3;
     //     let s = (e + pe) / t;
-    //     println!("{:e} {:e} {:e} {:e}", e, pe, t, s);
+    //     println!("{:e} fm-4\t{:e} fm-4\t{:e} MeV\t{:e} fm-3", e, pe, t, s);
     // }
     // return;
 
