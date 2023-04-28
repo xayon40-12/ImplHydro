@@ -7,6 +7,11 @@ use crate::solver::{
 
 use super::schemes::Scheme;
 
+#[derive(Clone)]
+pub struct FixCTX {
+    pub fka: f64,
+}
+
 pub fn fixpoint<
     Opt: Clone + Sync,
     const F: usize,
@@ -40,6 +45,7 @@ pub fn fixpoint<
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
     err_c: Option<f64>,
+    ctx: &mut FixCTX,
 ) -> Option<(f64, [[usize; VX]; VY], usize)> {
     let err_c = err_c.unwrap_or(1.0);
     let [sizex, sizey] = *local_interaction;
@@ -54,23 +60,20 @@ pub fn fixpoint<
     let mut errs = [[true; VX]; VY];
     let mut nbiter = [[0usize; VX]; VY];
     let dt = *dto;
-    // let mut dt = *dto;
     let mut iter = 0;
     let mut failed = 1usize;
     let maxiter = 10;
     let maxfailed = 30;
-    // let divdt: f64 = 0.5;
     let mut maxe = 1e50f64;
     let mut omaxe = maxe;
     let mut reset_ffka = 1.0;
+    ctx.fka = reset_ffka;
     while iserr {
         iter += 1;
         if iter > failed * maxiter || maxe > 1e50 {
             eprintln!("fail {}", failed);
             failed += 1;
-            // dt *= divdt;
-            // fka = 1.0;
-            reset_ffka *= 0.5;
+            reset_ffka *= 0.9;
             maxe = 1e50;
             omaxe = maxe;
             iter = 0;
@@ -161,7 +164,7 @@ pub fn fixpoint<
         if maxe >= omaxe && enable_fka {
             *k = tmpk;
             fu = tmpfu;
-            ffka = 0.5 * omaxe / maxe;
+            ffka = 0.9 * omaxe / maxe;
         } else {
             tmpfu = fu;
             tmpk = *k;
@@ -178,10 +181,11 @@ pub fn fixpoint<
                 }
             }
         }
-        let debug = true;
+        let debug = false;
+        // let debug = true;
         if debug {
             println!(
-                "t: {:e}, ffka: {:e}, max: {:e}, omax: {:e}, lim: {:e}",
+                "t: {:.3e}, ffka: {:.3e}, max: {:.3e}, omax: {:.3e}, lim: {:.3e}",
                 t,
                 ffka,
                 maxe,
@@ -227,6 +231,7 @@ pub fn fixpoint<
     *ot = *t;
     *t += dt;
     *dto = maxdt.min(dt * 1.1);
+    ctx.fka *= 1.1;
     for vy in 0..VY {
         for vx in 0..VX {
             let tmp = vs[vy][vx];

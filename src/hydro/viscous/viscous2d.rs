@@ -59,7 +59,7 @@ fn gen_constraints<'a>(
             let e = (t00 - m * v).max(VOID).min(1e10);
 
             let gev = temp(e) * HBARC;
-            let bellow_kinetic = 1e-3; // kinetic freezeout is of the order 100 MeV, so 1 MeV if much bellow.
+            let bellow_kinetic = 1e-4;
             if gev < bellow_kinetic {
                 // if temperature is much smaller than kninetic freezeout, there are no interactions anymore and thus the cell is considered as vacuum.
                 let vs = [0.0; F_BOTH_2D];

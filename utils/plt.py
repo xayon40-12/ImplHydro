@@ -644,21 +644,27 @@ def plot2d(l, datadts):
         colors = []
         ma = 1e-100
         mi = 1e100
+        zitermax = 1e-100
+        zitermin = 1e100
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
             mdata = mask(data,vid,cut)
             n = einfo["nx"]
             x = mdata[:,vid["x"]]
             y = mdata[:,vid["y"]]
             z = mdata[:,vid["e"]]
+            ziter = mdata[:,vid["iter"]]
             nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
             nr = n-1-nl
             x = np.reshape(x, (n,n))[nl:nr,nl:nr].reshape((-1))
             y = np.reshape(y, (n,n))[nl:nr,nl:nr].reshape((-1))
             z = np.reshape(z, (n,n))[nl:nr,nl:nr].reshape((-1))
+            ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
             zgubser = np.array([gubser(x,y,t) for (x,y) in zip(x,y)])
             zerr = np.array([(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)])
             mi = min(mi,zerr.min())
             ma = max(ma,zerr.max())
+            zitermin = min(zitermin, ziter.min())
+            zitermax = max(zitermax, ziter.max())
         for (id, (t,data,diff)) in zip(range(num),datats[nums]):
             # global greft
             # if greft[case][t] is None:
@@ -720,7 +726,7 @@ def plot2d(l, datadts):
                 all += [("iterations", ziter)]
             for (i, (n, z)) in zip(range(nb),all):
                 if n == "iterations":
-                    imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=1, vmax=3) #, vmax=6)
+                    imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=zitermin, vmax=zitermax)
                     colors += list(np.unique(z))
                 elif n == r"$\Delta_\mathrm{exact}$":
                     im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=mi, vmax=ma)
