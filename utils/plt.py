@@ -445,45 +445,46 @@ def plot1d(l, nds):
                 if n == 100:
                     linestyle = ls2
                     # col = lighten(col)
-                (sinfo, data, diff) = datas[scheme][dt]
-                vid = sinfo["ID"]
-                cut = sinfo["CUT"]
-                if "FixPoint" in sinfo["integration"]:
-                    schemetype = "Implicit"
-                else:
-                    schemetype = "Explicit"
-                nbStages = 2
-                if scheme == "GL1":
-                    nbStages = 1
-                data = mask(data,vid,cut)
-                if "Gubser" in name:
-                    iter = diagonal(data[:,vid["iter"]])
-                    y = diagonal(data[:,vid["e"]])
-                    yut = diagonal(data[:,vid["ut"]])
-                    yux = diagonal(data[:,vid["ux"]])
-                else:
-                    iter = data[:,vid["iter"]]
-                    y = data[:,vid["e"]]
-                    yut = data[:,vid["ut"]]
-                    yux = data[:,vid["ux"]]
-                iter = iter[nl:nr]
-                cost = iter*nbStages
-                y = y[nl:nr]
-                yut = yut[nl:nr]
-                yux = yux[nl:nr]
-                yvx = yux/yut
-                yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,yexact)]
+                if dt in datas[scheme]:
+                    (sinfo, data, diff) = datas[scheme][dt]
+                    vid = sinfo["ID"]
+                    cut = sinfo["CUT"]
+                    if "FixPoint" in sinfo["integration"]:
+                        schemetype = "Implicit"
+                    else:
+                        schemetype = "Explicit"
+                    nbStages = 2
+                    if scheme == "GL1":
+                        nbStages = 1
+                    data = mask(data,vid,cut)
+                    if "Gubser" in name:
+                        iter = diagonal(data[:,vid["iter"]])
+                        y = diagonal(data[:,vid["e"]])
+                        yut = diagonal(data[:,vid["ut"]])
+                        yux = diagonal(data[:,vid["ux"]])
+                    else:
+                        iter = data[:,vid["iter"]]
+                        y = data[:,vid["e"]]
+                        yut = data[:,vid["ut"]]
+                        yux = data[:,vid["ux"]]
+                    iter = iter[nl:nr]
+                    cost = iter*nbStages
+                    y = y[nl:nr]
+                    yut = yut[nl:nr]
+                    yux = yux[nl:nr]
+                    yvx = yux/yut
+                    yerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(y,yexact)]
         
-                numerics ,= axs[0].plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
-                if "Riemann" in name:
-                    axin.plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
-                    # if not "Void" in name:
-                    axinv.plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+                    numerics ,= axs[0].plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+                    if "Riemann" in name:
+                        axin.plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+                        # if not "Void" in name:
+                        axinv.plot(x,y, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
 
-                errexact ,= axs[1].plot(x,yerr, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
-                # pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
-                # iterations ,= axs[2].plot(x,iter, '.', label=schemetype)
-                # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
+                    errexact ,= axs[1].plot(x,yerr, label=schemetype, color=col, linestyle=linestyle, linewidth=3 )
+                    # pltcost ,= axs[2].plot(x,cost, '.', label=schemetype)
+                    # iterations ,= axs[2].plot(x,iter, '.', label=schemetype)
+                    # numericsvx ,= axs[3].plot(x,yvx, label=schemetype, linestyle=linestyle, linewidth=3 )
 
         if "Riemann" in name:
             axin.set_xlim(-0.75, -0.5)

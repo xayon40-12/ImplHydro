@@ -20,7 +20,7 @@ enum Dim {
     Dim1 {
         #[arg(long, default_value_t = 0.0)]
         t0: f64,
-        #[arg(long, default_value_t = 7.5)]
+        #[arg(long, default_value_t = 15.0)]
         tend: f64,
         #[command(subcommand)]
         command: Hydro,

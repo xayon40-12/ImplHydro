@@ -262,7 +262,7 @@ pub fn run<
     let now = Instant::now();
 
     let integration = context.r.integration;
-    let save_every = 0.1f64; //.max(context.maxdt);
+    let save_every = 0.1f64.max(context.maxdt);
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
     let mut nbiter = [[1usize; VX]; VY];
@@ -292,7 +292,7 @@ pub fn run<
     let r = 1e10;
     let mut fixctx = FixCTX { fka: 1.0 };
     let enable_save = true;
-    while context.t < context.tend - m {
+    while context.t < context.tend + m {
         let mut d = next_save - context.t;
         // context.dt = context.dt.min(context.tend - context.t);
         if d <= 2.0 * context.dt && enable_save {
@@ -314,7 +314,7 @@ pub fn run<
                         return None;
                     }
                 }
-                d = next_save.min(tmp_ctx.tend) - tmp_ctx.t;
+                d = next_save - tmp_ctx.t;
             }
             tmp_ctx.t = (tmp_ctx.t * r).round() / r; // round time for saving
             save(&tmp_ctx, cost, tsteps, nbiter, fails);

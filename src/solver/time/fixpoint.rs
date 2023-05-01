@@ -167,6 +167,7 @@ pub fn fixpoint<
             }
         }
 
+        // let enable_fka = false;
         let enable_fka = true;
         let mut ffka = reset_ffka;
         if maxe >= omaxe && enable_fka {
