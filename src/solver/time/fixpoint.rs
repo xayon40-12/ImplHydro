@@ -66,13 +66,21 @@ pub fn fixpoint<
     let maxfailed = 30;
     let mut maxe = 1e50f64;
     let mut omaxe = maxe;
+    // let mut reset_ffka = ctx.fka;
     let mut reset_ffka = 1.0;
-    ctx.fka = reset_ffka;
+    // let fkafact = 0.99f64;
     while iserr {
         iter += 1;
-        if iter > failed * maxiter || maxe > 1e50 {
+        // let mul = 1 + (reset_ffka.ln() / fkafact.ln()) as usize;
+        // println!("mul: {}, fka: {:.3e}", mul, reset_ffka);
+        let mul = failed;
+        if iter > mul * maxiter || maxe > 1e50 {
             eprintln!("fail {}", failed);
             failed += 1;
+            // if reset_ffka > fkafact {
+            //     reset_ffka = fkafact;
+            // }
+            // reset_ffka *= reset_ffka;
             reset_ffka *= 0.9;
             maxe = 1e50;
             omaxe = maxe;
@@ -231,7 +239,11 @@ pub fn fixpoint<
     *ot = *t;
     *t += dt;
     *dto = maxdt.min(dt * 1.1);
-    ctx.fka *= 1.1;
+    ctx.fka = if failed == 1 {
+        reset_ffka.sqrt()
+    } else {
+        reset_ffka
+    };
     for vy in 0..VY {
         for vx in 0..VX {
             let tmp = vs[vy][vx];

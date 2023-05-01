@@ -109,7 +109,7 @@ pub fn run_2d<const V: usize>(
         zetaovers,
         tempcut,
         freezeout_temp_gev,
-        |_| gauss_legendre_1(Some(1e2)),
+        |_| gauss_legendre_1(Some(1e3)),
         // |dt| gauss_legendre_1(Some((0, dt * 0.1))),
         nb_trento,
     );
@@ -140,7 +140,7 @@ pub fn run_trento_2d<const V: usize>(
 ) {
     let trentos = prepare_trento_freestream::<V>(nb_trento);
     // let gl1 = gauss_legendre_1(Some((0, dt*0.1)));
-    let gl1 = gauss_legendre_1(Some(1e2));
+    let gl1 = gauss_legendre_1(Some(1e3));
     let heun = heun();
     let dx = l / V as f64;
     let er = dt * dt;

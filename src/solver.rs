@@ -291,22 +291,28 @@ pub fn run<
     let m = 1e-13;
     let r = 1e10;
     let mut fixctx = FixCTX { fka: 1.0 };
+    let enable_save = true;
     while context.t < context.tend - m {
         let mut d = next_save - context.t;
         // context.dt = context.dt.min(context.tend - context.t);
-        if d <= 2.0 * context.dt {
+        if d <= 2.0 * context.dt && enable_save {
             let mut tmp_ctx = context.clone();
             let mut tmp_fixctx = fixctx.clone();
             while d > tmp_ctx.t * m {
                 let n = if d <= tmp_ctx.dt { 1 } else { 2 };
                 for _ in 0..n {
                     tmp_ctx.dt = d / n as f64;
-                    match integration {
+                    let res = match integration {
                         Integration::Explicit => explicit(&mut tmp_ctx),
                         Integration::FixPoint(err_ref_p) => {
                             fixpoint(&mut tmp_ctx, err_ref_p, &mut tmp_fixctx)
                         }
                     };
+                    if res.is_none() {
+                        eprintln!("Integration failed, abort current run.");
+                        eprintln!("");
+                        return None;
+                    }
                 }
                 d = next_save.min(tmp_ctx.tend) - tmp_ctx.t;
             }

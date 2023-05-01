@@ -43,7 +43,7 @@ for arg in sys.argv:
         if arg in larg:
             act()
 
-CUT = 1e-8
+CUT = 1e-6
 
 # crop = 9
 crop = 19
