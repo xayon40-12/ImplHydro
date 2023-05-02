@@ -529,7 +529,7 @@ def plot1d(l, nds):
     for scheme in ["GL1"]: 
         fig,axs = plt.subplots(2, 2, figsize=(18,7), sharex=True, sharey=True)
         colors = []
-        for j, dxn in zip(range(2),nds):
+        for j, dxn in zip(range(2), sorted(nds,key=lambda x: x[1])):
             (dx,n) = dxn
             datas = nds[dxn]
             dts = list(filter(lambda dt: abs(dt-dx/10) < 1e-5 or abs(dt-dx/80) < 1e-5, datas[schemes[0]]))
