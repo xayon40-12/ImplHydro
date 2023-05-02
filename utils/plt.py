@@ -415,8 +415,10 @@ def plot1d(l, nds):
             axin.plot(x,yexact, color="black", label="exact", linewidth=1)
             # if not "Void" in name:
             axinv.plot(x,yexact, color="black", label="exact", linewidth=1)
+        dxs = []
         for dxn in sorted(nds,key=lambda x: x[1]):
             (dx,n) = dxn
+            dxs.append(dx)
             datas = nds[dxn]
             (info,ref,diffref) = datas[schemes[0]][mindt]
             vid = info["ID"]
@@ -513,7 +515,8 @@ def plot1d(l, nds):
                 handles += [p]
                 labels += [l]
         handles = [line("black",lstyles2[0]),line("black",lstyles1[0])]+handles
-        labels = [r"$\Delta x = 0.2$ fm", r"$\Delta x = 0.1$ fm"]+labels
+        dxs.sort()
+        labels = [r"$\Delta x = {}$ fm".format(dxs[1]), r"$\Delta x = {}$ fm".format(dxs[0])]+labels
         axs[1].legend(handles, labels) #, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
         axs[1].set_ylabel(r"$\Delta_\mathrm{exact}$")
         # axs[2].set_ylabel("cost")
