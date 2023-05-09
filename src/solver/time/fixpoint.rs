@@ -12,6 +12,9 @@ pub struct FixCTX {
     pub fka: f64,
 }
 
+pub type ErrThr<'a, const F: usize, const C: usize, const VX: usize, const VY: usize> =
+    &'a dyn Fn(f64, &[[[f64; F]; VX]; VY], &[[[f64; C]; VX]; VY]) -> f64;
+
 pub fn fixpoint<
     Opt: Clone + Sync,
     const F: usize,
@@ -34,7 +37,6 @@ pub fn fixpoint<
         dt: dto,
         dx,
         maxdt,
-        er,
         t,
         ot,
         t0: _,
@@ -44,10 +46,9 @@ pub fn fixpoint<
         dpde: _,
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
-    err_c: Option<f64>,
+    err_thr: ErrThr<F, C, VX, VY>,
     ctx: &mut FixCTX,
 ) -> Option<(f64, [[usize; VX]; VY], usize)> {
-    let err_c = err_c.unwrap_or(1.0);
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
     let mut iserr = true;
@@ -125,6 +126,7 @@ pub fn fixpoint<
             });
         }
 
+        let er = err_thr(*t, &vs, &trs);
         pfor2d2(&mut errs, &mut nbiter, &|(Coord { x, y }, errs, nbiter)| {
             if *errs {
                 *errs = false;
@@ -140,8 +142,8 @@ pub fn fixpoint<
                                 fu[s][y][x]
                             );
                         }
-                        *errs |= e > err_c * *er || e.is_nan(); // |f(k)-k| * cutoff > dt^p
-                                                                // *errs |= e > 1e-2 || e.is_nan();
+                        *errs |= e > er || e.is_nan(); // |f(k)-k| * cutoff > dt^p
+                                                       // *errs |= e > 1e-2 || e.is_nan();
                     }
                 }
             }
@@ -167,8 +169,8 @@ pub fn fixpoint<
             }
         }
 
-        // let enable_fka = false;
-        let enable_fka = true;
+        let enable_fka = false; // disabling this is more stable for large dt
+                                // let enable_fka = true;
         let mut ffka = reset_ffka;
         if maxe >= omaxe && enable_fka {
             *k = tmpk;
@@ -195,11 +197,7 @@ pub fn fixpoint<
         if debug {
             println!(
                 "t: {:.3e}, ffka: {:.3e}, max: {:.3e}, omax: {:.3e}, lim: {:.3e}",
-                t,
-                ffka,
-                maxe,
-                omaxe,
-                err_c * *er
+                t, ffka, maxe, omaxe, er
             );
         }
 

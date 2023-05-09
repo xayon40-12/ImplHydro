@@ -5,7 +5,7 @@ use super::{time::schemes::Scheme, Constraint};
 #[derive(Debug, Clone, Copy)]
 pub enum Integration {
     Explicit,
-    FixPoint(Option<f64>), // takes a possible constant to multiply to dt^p for error checking in the iterative solver
+    FixPoint,
 }
 
 pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
@@ -46,7 +46,6 @@ pub struct Context<
     pub dt: f64,
     pub dx: f64,
     pub maxdt: f64,
-    pub er: f64,
     pub t: f64,
     pub ot: f64,
     pub t0: f64,

@@ -27,7 +27,6 @@ pub fn explicit<
         dt,
         dx,
         maxdt,
-        er: _,
         ot,
         t,
         t0: _,

@@ -1,16 +1,18 @@
-use crate::solver::{
-    context::{Boundary, Context},
-    run,
-    space::{kt::kt, Dir, Eigenvalues},
-    time::{newton::newton, schemes::Scheme},
-    utils::{ghost, zero, zeros},
-    Constraint,
+use crate::{
+    hydro::{C_IDEAL_1D, F_IDEAL_1D},
+    solver::{
+        context::{Boundary, Context},
+        run,
+        space::{kt::kt, Dir, Eigenvalues},
+        time::{newton::newton, schemes::Scheme},
+        utils::{ghost, zero, zeros},
+        Constraint,
+    },
 };
 
 use crate::hydro::{solve_v, Eos, Init1D, VOID};
 
 fn gen_constraints<'a>(
-    _er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
 ) -> Box<dyn Fn(f64, [f64; 2], [f64; 5]) -> ([f64; 2], [f64; 5]) + 'a + Sync> {
@@ -97,7 +99,6 @@ fn flux<const V: usize>(
 pub fn ideal1d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
-    er: f64,
     t: f64,
     tend: f64,
     dx: f64,
@@ -105,8 +106,13 @@ pub fn ideal1d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init1D<2>,
-) -> Option<(([[[f64; 2]; V]; 1], [[[f64; 5]; V]; 1]), f64, usize, usize)> {
-    let constraints = gen_constraints(er, p, dpde);
+) -> Option<(
+    ([[[f64; F_IDEAL_1D]; V]; 1], [[[f64; C_IDEAL_1D]; V]; 1]),
+    f64,
+    usize,
+    usize,
+)> {
+    let constraints = gen_constraints(p, dpde);
     let mut vs = [[[0.0; 2]; V]];
     let mut trs = [[[0.0; 5]; V]];
     let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);
@@ -132,7 +138,6 @@ pub fn ideal1d<const V: usize, const S: usize>(
         dt: 1e10,
         dx,
         maxdt,
-        er,
         t,
         ot: t - 1.0,
         t0: t,
@@ -142,5 +147,21 @@ pub fn ideal1d<const V: usize, const S: usize>(
         dpde,
         freezeout_energy: None,
     };
-    run(context, name, crate::hydro::Viscosity::Ideal, &names, &[])
+
+    let e = 1e-3;
+    let err_thr =
+        |_t: f64, _vs: &[[[f64; F_IDEAL_1D]; V]; 1], _trs: &[[[f64; C_IDEAL_1D]; V]; 1]| {
+            let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * 1) as f64;
+            let k = m / maxdt;
+            k * e * (maxdt / dx).powi(r.order)
+        };
+
+    run(
+        context,
+        name,
+        crate::hydro::Viscosity::Ideal,
+        &names,
+        &[],
+        &err_thr,
+    )
 }

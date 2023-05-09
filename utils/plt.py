@@ -43,7 +43,7 @@ for arg in sys.argv:
         if arg in larg:
             act()
 
-CUT = 1e-6
+CUT = 1e-4
 
 # crop = 9
 crop = 19
@@ -156,13 +156,18 @@ for d in os.listdir(dir):
     e = data[:,vid["e"]]
     # if the total energy sum(e) is bigger at the end time than the initial time, 
     # it means that explicit failed
-    expl_fail = sum(e) > sum(e0)
+    expl_fail = sum(e) > 10*sum(e0)
     # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
     impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
     if rejectfails and (expl_fail or impl_fail): 
         continue # skip explicit or implicit that failed
-    m = e>cut
-    err = abs(e.sum()-e[m].sum())/e.sum()
+
+    err = 1
+    cut = 1
+    while err > 1e-6: # find the energy cut such that a relative 1e-6 of the total energy is discarded. This is done to discard the erroneous cell due to numerical diffusion in the vacuum
+        cut *= 0.5
+        err = abs(e.sum()-e[e>cut].sum())/e.sum()
+    info["CUT"] = cut
     meanvoidratio += err
     maxvoidratio = max(maxvoidratio, err)
     countvoidratio += 1
@@ -712,7 +717,10 @@ def plot2d(l, datadts):
             zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
             zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
             zvy = np.reshape(zvy, (n,n))[nl:nr,nl:nr]
+            zux = np.reshape(zux, (n,n))[nl:nr,nl:nr]
+            zuy = np.reshape(zuy, (n,n))[nl:nr,nl:nr]
             zut = np.reshape(zut, (n,n))[nl:nr,nl:nr]
+            zur = np.sqrt(zux*zux+zuy*zuy)
             # zpi00 = np.reshape(zpi00, (n,n))[nl:nr,nl:nr]
             # zpi11 = np.reshape(zpi11, (n,n))[nl:nr,nl:nr]
             # zpi12 = np.reshape(zpi12, (n,n))[nl:nr,nl:nr]
@@ -722,6 +730,7 @@ def plot2d(l, datadts):
             d = y[0][0]
             u = y[-1][0]
             # all = [(r"$\epsilon$", z),("vy",zvy), ("err ref",zerrref), ("vx", zvx)]
+            # all = [(r"$\epsilon$", z), ("ur", zur), ("ut", zut)]
             # all = [(r"$\epsilon$", z),(r"pi00", zpi00),(r"pi11", zpi11),(r"pi12", zpi12),(r"pi22", zpi22)]
             all = [(r"$\epsilon$", z)]
             if "Gubser" in info["name"]:

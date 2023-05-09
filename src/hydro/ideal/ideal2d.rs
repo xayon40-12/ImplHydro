@@ -1,16 +1,18 @@
-use crate::solver::{
-    context::{Boundary, Context},
-    run,
-    space::{kt::kt, Dir, Eigenvalues},
-    time::{newton::newton, schemes::Scheme},
-    utils::{ghost, zeros},
-    Constraint, Observable,
+use crate::{
+    hydro::{C_IDEAL_2D, F_IDEAL_2D},
+    solver::{
+        context::{Boundary, Context},
+        run,
+        space::{kt::kt, Dir, Eigenvalues},
+        time::{newton::newton, schemes::Scheme},
+        utils::{ghost, zeros},
+        Constraint, Observable,
+    },
 };
 
 use crate::hydro::{solve_v, Eos, Init2D, VOID};
 
 fn gen_constraints<'a>(
-    _er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
     coord: &Coordinate,
@@ -186,7 +188,6 @@ pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
 pub fn ideal2d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
-    er: f64,
     t: f64,
     tend: f64,
     dx: f64,
@@ -194,9 +195,14 @@ pub fn ideal2d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init2D<3>,
-) -> Option<(([[[f64; 3]; V]; V], [[[f64; 6]; V]; V]), f64, usize, usize)> {
+) -> Option<(
+    ([[[f64; F_IDEAL_2D]; V]; V], [[[f64; C_IDEAL_2D]; V]; V]),
+    f64,
+    usize,
+    usize,
+)> {
     let coord = Coordinate::Milne;
-    let constraints = gen_constraints(er, &p, &dpde, &coord);
+    let constraints = gen_constraints(&p, &dpde, &coord);
     let mut vs = [[[0.0; 3]; V]; V];
     let mut trs = [[[0.0; 6]; V]; V];
 
@@ -233,7 +239,6 @@ pub fn ideal2d<const V: usize, const S: usize>(
         dt: 1e10,
         dx,
         maxdt,
-        er,
         t,
         ot: t - 1.0,
         t0: t,
@@ -244,6 +249,14 @@ pub fn ideal2d<const V: usize, const S: usize>(
         freezeout_energy: None,
     };
 
+    let e = 1e0;
+    let err_thr =
+        |_t: f64, _vs: &[[[f64; F_IDEAL_2D]; V]; V], _trs: &[[[f64; C_IDEAL_2D]; V]; V]| {
+            let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
+            let k = m / maxdt;
+            k * e * (maxdt / dx).powi(r.order)
+        };
+
     let observables: [Observable<3, 6, V, V>; 1] =
         [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
 
@@ -253,5 +266,6 @@ pub fn ideal2d<const V: usize, const S: usize>(
         crate::hydro::Viscosity::Ideal,
         &names,
         &observables,
+        &err_thr,
     )
 }

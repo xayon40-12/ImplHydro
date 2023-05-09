@@ -31,34 +31,23 @@ pub fn compare<const VX: usize, const VY: usize, const F: usize>(
 pub fn converge<const VX: usize, const VY: usize, const F: usize, const C: usize>(
     mut dt: f64,
     dtmin: f64,
-    erpow: i32,
-    fun: impl Fn(f64, f64) -> HydroOutput<VX, VY, F, C>,
+    fun: impl Fn(f64) -> HydroOutput<VX, VY, F, C>,
 ) -> Option<()> {
-    let mut ermin = dtmin.powi(erpow);
     let dtmul = 0.5;
-    if ermin < 1e-15 {
-        eprintln!(
-            "dtmin^{}<1e-15 in converge, might not converge, set to 1e-15 for safety.",
-            erpow
-        );
-        ermin = 1e-15;
-    }
-    let mut er = dt.powi(erpow);
-    let mut f = fun(dt, er)?.0;
+    let mut f = fun(dt)?.0;
     println!("error convergence:");
     let update = |dt: f64| {
         let dt = dt * dtmul;
-        let er = dt.powi(erpow);
-        (dt, er)
+        dt
     };
-    (dt, er) = update(dt);
+    dt = update(dt);
 
-    while er > ermin {
-        let f2 = fun(dt, er)?.0;
+    while dt > dtmin {
+        let f2 = fun(dt)?.0;
         let (ma, av) = compare(0, &f.0, &f2.0);
-        println!("er: {:.3e}, max: {:.3e}, average: {:.3e}", er, ma, av);
+        println!("dt: {:.3e}, max: {:.3e}, average: {:.3e}", dt, ma, av);
         f = f2;
-        (dt, er) = update(dt);
+        dt = update(dt);
     }
     println!("");
 

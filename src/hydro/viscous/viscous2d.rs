@@ -15,7 +15,6 @@ use crate::hydro::{Eos, Init2D, VOID};
 use nalgebra::matrix;
 
 fn gen_constraints<'a>(
-    _er: f64,
     p: Eos<'a>,
     dpde: Eos<'a>,
     temp: Eos<'a>,
@@ -452,7 +451,6 @@ pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
 pub fn viscous2d<const V: usize, const S: usize>(
     name: &str,
     maxdt: f64,
-    er: f64,
     t: f64,
     tend: f64,
     dx: f64,
@@ -471,7 +469,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
     usize,
     usize,
 )> {
-    let constraints = gen_constraints(er, &p, &dpde, temperature);
+    let constraints = gen_constraints(&p, &dpde, temperature);
 
     let mut vs = [[[0.0; F_BOTH_2D]; V]; V];
     let mut trs = [[[0.0; C_BOTH_2D]; V]; V];
@@ -523,7 +521,6 @@ pub fn viscous2d<const V: usize, const S: usize>(
         dt: 1e10,
         dx,
         maxdt,
-        er,
         t,
         ot: t - 1.0,
         t0: t,
@@ -532,6 +529,13 @@ pub fn viscous2d<const V: usize, const S: usize>(
         p,
         dpde,
         freezeout_energy: Some(freezeout_energy),
+    };
+
+    let e = 1e0;
+    let err_thr = |_t: f64, _vs: &[[[f64; F_BOTH_2D]; V]; V], _trs: &[[[f64; C_BOTH_2D]; V]; V]| {
+        let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
+        let k = m / maxdt;
+        k * e * (maxdt / dx).powi(r.order)
     };
 
     let observables: [Observable<F_BOTH_2D, C_BOTH_2D, V, V>; 1] =
@@ -551,5 +555,6 @@ pub fn viscous2d<const V: usize, const S: usize>(
         Viscosity::Both(etaovers, zetaovers, ecut),
         &names,
         &observables,
+        &err_thr,
     )
 }

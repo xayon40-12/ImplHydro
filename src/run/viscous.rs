@@ -14,7 +14,6 @@ fn hydro2d<const V: usize, const S: usize>(
     tend: f64,
     dx: f64,
     maxdt: f64,
-    er: f64,
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
     tempcut: f64,
@@ -35,7 +34,6 @@ fn hydro2d<const V: usize, const S: usize>(
     viscous2d::<V, S>(
         &name,
         maxdt,
-        er,
         t0,
         tend,
         dx,
@@ -67,16 +65,14 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     let trentos = prepare_trento_freestream::<V>(nb_trento);
     let dx = l / V as f64;
     println!("{}", r(0.0).name);
-    let erpow = 2;
     for i in 0..nb_trento {
         let trento = (trentos[i], i);
-        converge(dtmax, dtmin, erpow, |dt, er| {
+        converge(dtmax, dtmin, |dt| {
             hydro2d::<V, S>(
                 t0,
                 tend,
                 dx,
                 dt,
-                er,
                 etaovers,
                 zetaovers,
                 tempcut,
@@ -109,7 +105,7 @@ pub fn run_2d<const V: usize>(
         zetaovers,
         tempcut,
         freezeout_temp_gev,
-        |_| gauss_legendre_1(Some(1e3)),
+        |_| gauss_legendre_1(),
         // |dt| gauss_legendre_1(Some((0, dt * 0.1))),
         nb_trento,
     );
@@ -140,10 +136,9 @@ pub fn run_trento_2d<const V: usize>(
 ) {
     let trentos = prepare_trento_freestream::<V>(nb_trento);
     // let gl1 = gauss_legendre_1(Some((0, dt*0.1)));
-    let gl1 = gauss_legendre_1(Some(1e3));
+    let gl1 = gauss_legendre_1();
     let heun = heun();
     let dx = l / V as f64;
-    let er = dt * dt;
     for i in 0..nb_trento {
         let trento = (trentos[i], i);
         hydro2d::<V, 1>(
@@ -151,7 +146,6 @@ pub fn run_trento_2d<const V: usize>(
             tend,
             dx,
             dt,
-            er,
             etaovers,
             zetaovers,
             tempcut,
@@ -164,7 +158,6 @@ pub fn run_trento_2d<const V: usize>(
             tend,
             dx,
             dt,
-            er,
             etaovers,
             zetaovers,
             tempcut,

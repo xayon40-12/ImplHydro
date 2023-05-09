@@ -5,6 +5,8 @@ use crate::{
     solver::time::fixpoint::FixCTX,
 };
 
+use self::time::fixpoint::ErrThr;
+
 pub mod context;
 pub mod space;
 pub mod time;
@@ -190,6 +192,7 @@ pub fn run<
     viscosity: Viscosity,
     names: &([&str; F], [&str; C]),
     observables: &[Observable<F, C, VX, VY>],
+    err_thr: ErrThr<F, C, VX, VY>,
 ) -> Option<(
     ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]),
     f64,
@@ -304,9 +307,7 @@ pub fn run<
                     tmp_ctx.dt = d / n as f64;
                     let res = match integration {
                         Integration::Explicit => explicit(&mut tmp_ctx),
-                        Integration::FixPoint(err_ref_p) => {
-                            fixpoint(&mut tmp_ctx, err_ref_p, &mut tmp_fixctx)
-                        }
+                        Integration::FixPoint => fixpoint(&mut tmp_ctx, err_thr, &mut tmp_fixctx),
                     };
                     if res.is_none() {
                         eprintln!("Integration failed, abort current run.");
@@ -324,7 +325,7 @@ pub fn run<
         tsteps += 1;
         let res = match integration {
             Integration::Explicit => explicit(&mut context),
-            Integration::FixPoint(err_ref_p) => fixpoint(&mut context, err_ref_p, &mut fixctx),
+            Integration::FixPoint => fixpoint(&mut context, err_thr, &mut fixctx),
         };
         if let Some((c, nbi, nbf)) = res {
             cost += c;
