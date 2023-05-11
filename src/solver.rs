@@ -17,6 +17,18 @@ use {
     time::{explicit::explicit, fixpoint::fixpoint},
 };
 
+use custom_derive::custom_derive;
+use enum_derive::{enum_derive_util, EnumDisplay, EnumFromStr};
+
+custom_derive! {
+    #[derive(Debug, Clone, Copy, EnumDisplay, EnumFromStr)]
+    pub enum Solver {
+        Both,
+        Implicit,
+        Explicit,
+    }
+}
+
 pub type Constraint<'a, const F: usize, const C: usize> =
     &'a (dyn Fn(f64, [f64; F], [f64; C]) -> ([f64; F], [f64; C]) + Sync); // takes the new [f64; C] and the old [f64; C]
 pub type Transform<'a, const F: usize> = &'a (dyn Fn(f64, [f64; F]) -> [f64; F] + Sync);

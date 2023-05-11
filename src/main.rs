@@ -1,5 +1,6 @@
 use clap::{command, Parser, Subcommand};
 use implhydro::run::{ideal, viscous};
+use implhydro::solver::Solver;
 use std::thread;
 
 #[derive(Parser, Debug)]
@@ -10,6 +11,9 @@ struct Cli {
 
     #[arg(short, long, default_value_t = 40.0)]
     physical_length: f64,
+
+    #[arg(short, long, default_value_t = Solver::Implicit)]
+    solver_type: Solver,
 
     #[command(subcommand)]
     command: Dim,
@@ -103,6 +107,7 @@ fn run<const CELLS: usize>(args: Cli) {
         }
     };
     let dx = l / CELLS as f64;
+    let solver = args.solver_type;
     match args.command {
         Dim::Dim1 { t0, tend, command } => {
             checkt(t0, tend);
@@ -115,7 +120,7 @@ fn run<const CELLS: usize>(args: Cli) {
                     } => {
                         let dtmax = dtmax.unwrap_or(dx * 0.1);
                         checkdt(dtmin, dtmax);
-                        ideal::run_1d::<CELLS>(t0, tend, l, dtmin, dtmax);
+                        ideal::run_1d::<CELLS>(solver, t0, tend, l, dtmin, dtmax);
                     }
                     ToSimulate::Trento { .. } => panic!("No 1D Trento case available."),
                 },
@@ -135,11 +140,11 @@ fn run<const CELLS: usize>(args: Cli) {
                     } => {
                         let dtmax = dtmax.unwrap_or(dx * 0.1);
                         checkdt(dtmin, dtmax);
-                        ideal::run_2d::<CELLS>(t0, tend, l, dtmin, dtmax, nb_trento);
+                        ideal::run_2d::<CELLS>(solver, t0, tend, l, dtmin, dtmax, nb_trento);
                     }
                     ToSimulate::Trento { dt, nb_trento } => {
                         let dt = dt.unwrap_or(dx * 0.1);
-                        ideal::run_trento_2d::<CELLS>(t0, tend, l, dt, nb_trento);
+                        ideal::run_trento_2d::<CELLS>(solver, t0, tend, l, dt, nb_trento);
                     }
                 },
                 Hydro::Viscous {
@@ -164,14 +169,15 @@ fn run<const CELLS: usize>(args: Cli) {
                             let dtmax = dtmax.unwrap_or(dx * 0.1);
                             checkdt(dtmin, dtmax);
                             viscous::run_2d::<CELLS>(
-                                t0, tend, l, dtmin, dtmax, etaovers, zetaovers, tempcut, freezeout,
-                                nb_trento,
+                                solver, t0, tend, l, dtmin, dtmax, etaovers, zetaovers, tempcut,
+                                freezeout, nb_trento,
                             );
                         }
                         ToSimulate::Trento { dt, nb_trento } => {
                             let dt = dt.unwrap_or(dx * 0.1);
                             viscous::run_trento_2d::<CELLS>(
-                                t0, tend, l, dt, etaovers, zetaovers, tempcut, freezeout, nb_trento,
+                                solver, t0, tend, l, dt, etaovers, zetaovers, tempcut, freezeout,
+                                nb_trento,
                             );
                         }
                     }

@@ -47,48 +47,36 @@ pub fn fixpoint<
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
     err_thr: ErrThr<F, C, VX, VY>,
-    ctx: &mut FixCTX,
+    _ctx: &mut FixCTX,
 ) -> Option<(f64, [[usize; VX]; VY], usize)> {
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
     let mut iserr = true;
     let ko = *k;
-    let mut tmpk = *k;
     let mut fu = *k;
-    let mut tmpfu = *k;
     let mut vdtk = [[[0.0f64; F]; VX]; VY];
     let mut trdtk = [[[0.0f64; C]; VX]; VY];
     let mut errs = [[true; VX]; VY];
     let mut nbiter = [[0usize; VX]; VY];
     let dt = *dto;
-    let mut iter = 0;
     let mut failed = 1usize;
-    let maxiter = 10;
     let maxfailed = 30;
     let mut maxe = 1e50f64;
-    let mut omaxe = maxe;
-    // let mut reset_ffka = ctx.fka;
-    let mut reset_ffka = 1.0;
-    // let fkafact = 0.99f64;
+    let mut omaxe;
+    // let mut ffka = ctx.fka;
+    let mut ffka = 1.0;
+    let mut maxe_count = 0;
+    let mut iter = 0;
     while iserr {
         iter += 1;
-        // let mul = 1 + (reset_ffka.ln() / fkafact.ln()) as usize;
-        // println!("mul: {}, fka: {:.3e}", mul, reset_ffka);
-        let mul = failed;
-        if iter > mul * maxiter || maxe > 1e50 {
+        if iter > 1000 || maxe_count > 4 {
             eprintln!("fail {}", failed);
             failed += 1;
-            // if reset_ffka > fkafact {
-            //     reset_ffka = fkafact;
-            // }
-            // reset_ffka *= reset_ffka;
-            reset_ffka *= 0.9;
+            ffka *= 0.9;
+            // ffka *= (*dx / dt).min(0.5);
             maxe = 1e50;
-            omaxe = maxe;
-            iter = 0;
             *k = ko;
             fu = *k;
-            tmpfu = fu;
             vdtk = [[[0.0f64; F]; VX]; VY];
             trdtk = [[[0.0f64; C]; VX]; VY];
             errs = [[true; VX]; VY];
@@ -155,6 +143,7 @@ pub fn fixpoint<
             .map(|v| *v)
             .reduce(|| false, |acc, a| acc || a);
 
+        omaxe = maxe;
         maxe = 0.0;
         for s in 0..S {
             for j in 0..VY {
@@ -162,36 +151,19 @@ pub fn fixpoint<
                     for f in 0..F {
                         let kk = k[s][j][i][f];
                         let ff = fu[s][j][i][f];
-                        let m = (kk - ff).abs();
-                        maxe = maxe.max(m);
+                        let d = ff - kk;
+                        maxe = maxe.max(d.abs());
+                        k[s][j][i][f] = kk + ffka * d;
                     }
                 }
             }
+        }
+        if maxe >= omaxe {
+            maxe_count += 1;
+        } else {
+            maxe_count = 0;
         }
 
-        let enable_fka = false; // disabling this is more stable for large dt
-                                // let enable_fka = true;
-        let mut ffka = reset_ffka;
-        if maxe >= omaxe && enable_fka {
-            *k = tmpk;
-            fu = tmpfu;
-            ffka = 0.9 * omaxe / maxe;
-        } else {
-            tmpfu = fu;
-            tmpk = *k;
-            omaxe = maxe;
-        }
-        for s in 0..S {
-            for j in 0..VY {
-                for i in 0..VX {
-                    for f in 0..F {
-                        let kk = k[s][j][i][f];
-                        let ff = fu[s][j][i][f];
-                        k[s][j][i][f] = kk + ffka * (ff - kk);
-                    }
-                }
-            }
-        }
         let debug = false;
         // let debug = true;
         if debug {
@@ -238,11 +210,7 @@ pub fn fixpoint<
     *ot = *t;
     *t += dt;
     *dto = maxdt.min(dt * 1.1);
-    ctx.fka = if failed == 1 {
-        reset_ffka.sqrt()
-    } else {
-        reset_ffka
-    };
+    // ctx.fka = if failed == 1 { ffka.sqrt() } else { ffka };
     for vy in 0..VY {
         for vx in 0..VX {
             let tmp = vs[vy][vx];

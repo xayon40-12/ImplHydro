@@ -6,7 +6,7 @@ use crate::{
         viscous::viscous2d::viscous2d,
         Eos, HydroOutput, C_BOTH_2D, FREESTREAM_2D, F_BOTH_2D,
     },
-    solver::time::schemes::*,
+    solver::{time::schemes::*, Solver},
 };
 
 fn hydro2d<const V: usize, const S: usize>(
@@ -84,6 +84,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     }
 }
 pub fn run_2d<const V: usize>(
+    solver: Solver,
     t0: f64,
     tend: f64,
     l: f64,
@@ -95,35 +96,52 @@ pub fn run_2d<const V: usize>(
     freezeout_temp_gev: f64,
     nb_trento: usize,
 ) {
-    run_convergence_2d::<V, 1>(
-        t0,
-        tend,
-        l,
-        dtmin,
-        dtmax,
-        etaovers,
-        zetaovers,
-        tempcut,
-        freezeout_temp_gev,
-        |_| gauss_legendre_1(),
-        // |dt| gauss_legendre_1(Some((0, dt * 0.1))),
-        nb_trento,
-    );
-    run_convergence_2d::<V, 2>(
-        t0,
-        tend,
-        l,
-        dtmin,
-        dtmax,
-        etaovers,
-        zetaovers,
-        tempcut,
-        freezeout_temp_gev,
-        |_| heun(),
-        nb_trento,
-    );
+    let do_gl1 = || {
+        run_convergence_2d::<V, 1>(
+            t0,
+            tend,
+            l,
+            dtmin,
+            dtmax,
+            etaovers,
+            zetaovers,
+            tempcut,
+            freezeout_temp_gev,
+            |_| gauss_legendre_1(),
+            // |dt| gauss_legendre_1(Some((0, dt * 0.1))),
+            nb_trento,
+        )
+    };
+    let do_heun = || {
+        run_convergence_2d::<V, 2>(
+            t0,
+            tend,
+            l,
+            dtmin,
+            dtmax,
+            etaovers,
+            zetaovers,
+            tempcut,
+            freezeout_temp_gev,
+            |_| heun(),
+            nb_trento,
+        )
+    };
+    match solver {
+        Solver::Both => {
+            do_gl1();
+            do_heun();
+        }
+        Solver::Implicit => {
+            do_gl1();
+        }
+        Solver::Explicit => {
+            do_heun();
+        }
+    }
 }
 pub fn run_trento_2d<const V: usize>(
+    solver: Solver,
     t0: f64,
     tend: f64,
     l: f64,
@@ -139,8 +157,7 @@ pub fn run_trento_2d<const V: usize>(
     let gl1 = gauss_legendre_1();
     let heun = heun();
     let dx = l / V as f64;
-    for i in 0..nb_trento {
-        let trento = (trentos[i], i);
+    let do_gl1 = |trento| {
         hydro2d::<V, 1>(
             t0,
             tend,
@@ -153,6 +170,8 @@ pub fn run_trento_2d<const V: usize>(
             gl1,
             trento,
         );
+    };
+    let do_heun = |trento| {
         hydro2d::<V, 2>(
             t0,
             tend,
@@ -165,5 +184,20 @@ pub fn run_trento_2d<const V: usize>(
             heun,
             trento,
         );
+    };
+    for i in 0..nb_trento {
+        let trento = (trentos[i], i);
+        match solver {
+            Solver::Both => {
+                do_gl1(trento);
+                do_heun(trento);
+            }
+            Solver::Implicit => {
+                do_gl1(trento);
+            }
+            Solver::Explicit => {
+                do_heun(trento);
+            }
+        }
     }
 }

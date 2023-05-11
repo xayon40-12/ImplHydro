@@ -8,7 +8,7 @@ use crate::{
         utils::{converge, prepare_trento},
         Eos, HydroOutput, C_IDEAL_1D, C_IDEAL_2D, F_IDEAL_1D, F_IDEAL_2D,
     },
-    solver::time::schemes::*,
+    solver::{time::schemes::*, Solver},
 };
 
 fn hydro2d<const V: usize, const S: usize>(
@@ -91,11 +91,22 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
         });
     }
 }
-pub fn run_1d<const V: usize>(t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64) {
-    run_convergence_1d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1());
-    run_convergence_1d::<V, 2>(t0, tend, l, dtmin, dtmax, heun());
+pub fn run_1d<const V: usize>(solver: Solver, t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64) {
+    match solver {
+        Solver::Both => {
+            run_convergence_1d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1());
+            run_convergence_1d::<V, 2>(t0, tend, l, dtmin, dtmax, heun());
+        }
+        Solver::Implicit => {
+            run_convergence_1d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1());
+        }
+        Solver::Explicit => {
+            run_convergence_1d::<V, 2>(t0, tend, l, dtmin, dtmax, heun());
+        }
+    }
 }
 pub fn run_2d<const V: usize>(
+    solver: Solver,
     t0: f64,
     tend: f64,
     l: f64,
@@ -103,17 +114,44 @@ pub fn run_2d<const V: usize>(
     dtmax: f64,
     nb_trento: usize,
 ) {
-    run_convergence_2d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(), nb_trento);
-    run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
+    match solver {
+        Solver::Both => {
+            run_convergence_2d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(), nb_trento);
+            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
+        }
+        Solver::Implicit => {
+            run_convergence_2d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(), nb_trento);
+        }
+        Solver::Explicit => {
+            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
+        }
+    }
 }
-pub fn run_trento_2d<const V: usize>(t0: f64, tend: f64, l: f64, dt: f64, nb_trento: usize) {
+pub fn run_trento_2d<const V: usize>(
+    solver: Solver,
+    t0: f64,
+    tend: f64,
+    l: f64,
+    dt: f64,
+    nb_trento: usize,
+) {
     let trentos = prepare_trento::<V>(nb_trento);
     let gl1 = gauss_legendre_1();
     let heun = heun();
     let dx = l / V as f64;
     for i in 0..nb_trento {
         let trento = Some((trentos[i], i));
-        hydro2d::<V, 1>(t0, tend, dx, dt, gl1, trento);
-        hydro2d::<V, 2>(t0, tend, dx, dt, heun, trento);
+        match solver {
+            Solver::Both => {
+                hydro2d::<V, 1>(t0, tend, dx, dt, gl1, trento);
+                hydro2d::<V, 2>(t0, tend, dx, dt, heun, trento);
+            }
+            Solver::Implicit => {
+                hydro2d::<V, 1>(t0, tend, dx, dt, gl1, trento);
+            }
+            Solver::Explicit => {
+                hydro2d::<V, 2>(t0, tend, dx, dt, heun, trento);
+            }
+        }
     }
 }

@@ -153,7 +153,7 @@ pub fn ideal1d<const V: usize, const S: usize>(
         |_t: f64, _vs: &[[[f64; F_IDEAL_1D]; V]; 1], _trs: &[[[f64; C_IDEAL_1D]; V]; 1]| {
             let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * 1) as f64;
             let k = m / maxdt;
-            k * e * (maxdt / dx).powi(r.order)
+            e * k * (maxdt / dx).powi(r.order)
         };
 
     run(
