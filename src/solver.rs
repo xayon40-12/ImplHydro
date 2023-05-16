@@ -30,7 +30,7 @@ custom_derive! {
 }
 
 pub type Constraint<'a, const F: usize, const C: usize> =
-    &'a (dyn Fn(f64, [f64; F], [f64; C]) -> ([f64; F], [f64; C]) + Sync); // takes the new [f64; C] and the old [f64; C]
+    &'a (dyn Fn(f64, [f64; F]) -> ([f64; F], [f64; C]) + Sync);
 pub type Transform<'a, const F: usize> = &'a (dyn Fn(f64, [f64; F]) -> [f64; F] + Sync);
 pub type Observable<'a, const F: usize, const C: usize, const VX: usize, const VY: usize> = (
     &'a str,

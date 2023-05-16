@@ -8,13 +8,14 @@ pub enum Integration {
     FixPoint,
 }
 
-pub type Boundary<'a> = &'a (dyn Fn(i32, usize) -> usize + Sync);
+pub type Boundary<'a, const F: usize, const VX: usize, const VY: usize> =
+    &'a (dyn Fn([i32; 2], &[[[f64; F]; VX]; VY]) -> [f64; F] + Sync);
 pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY: usize> =
     &'a (dyn Fn(
         [&[[[f64; F]; VX]; VY]; 2],
         [&[[[f64; C]; VX]; VY]; 2],
         Constraint<F, C>,
-        &[Boundary; 2],
+        Boundary<F, VX, VY>,
         [i32; 2], // position in index [x,y]
         f64,      // dx
         [f64; 2], // [old t, current t]
@@ -35,7 +36,7 @@ pub struct Context<
 > {
     pub fun: Fun<'a, Opt, F, C, VX, VY>,
     pub constraints: Constraint<'a, F, C>,
-    pub boundary: &'a [Boundary<'a>; 2],
+    pub boundary: Boundary<'a, F, VX, VY>,
     pub post_constraints: Option<Constraint<'a, F, C>>,
     pub local_interaction: [i32; 2],
     pub vstrs: ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]),

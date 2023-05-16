@@ -18,13 +18,9 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     temp: Eos<'a>,
-) -> Box<
-    dyn Fn(f64, [f64; F_BOTH_2D], [f64; C_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_BOTH_2D])
-        + 'a
-        + Sync,
-> {
+) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_BOTH_2D]) + 'a + Sync> {
     Box::new(
-        move |t, cur @ [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi], _otrs| {
+        move |t, cur @ [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi]| {
             // let oe = otrs[0].max(VOID);
             let t00 = tt00 / t;
             let t01 = tt01 / t;
@@ -58,9 +54,9 @@ fn gen_constraints<'a>(
             let e = (t00 - m * v).max(VOID).min(1e10);
 
             let gev = temp(e) * HBARC;
-            let bellow_kinetic = 1e-200; // 1e-4;
+            // let bellow_kinetic = 1e-200;
+            let bellow_kinetic = 1e-4;
             if gev < bellow_kinetic {
-                // if e < 1e-14 {
                 // if temperature is much smaller than kninetic freezeout, there are no interactions anymore and thus the cell is considered as vacuum.
                 let vs = [0.0; F_BOTH_2D];
                 let mut trans = [0.0; C_BOTH_2D];
@@ -154,8 +150,8 @@ fn gen_constraints<'a>(
 
                 if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
                     panic!(
-                        "\n\nNaN in constraint\n{:?}\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
-                        _otrs, cur, g, v, vs, trans
+                        "\n\nNaN in constraint\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
+                        cur, g, v, vs, trans
                     );
                 }
 
@@ -247,7 +243,7 @@ fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; F_BOTH_2D]; V]; V]; 2],
     [otrs, trs]: [&[[[f64; C_BOTH_2D]; V]; V]; 2],
     constraints: Constraint<F_BOTH_2D, C_BOTH_2D>,
-    bound: &[Boundary; 2],
+    bound: Boundary<F_BOTH_2D, V, V>,
     pos: [i32; 2],
     dx: f64,
     [ot, t]: [f64; 2],
@@ -315,8 +311,8 @@ fn flux<const V: usize>(
         theta,
     );
 
-    let y = bound[1](pos[1], V);
-    let x = bound[0](pos[0], V);
+    let y = pos[1] as usize;
+    let x = pos[0] as usize;
     let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi] =
         otrs[y][x];
     let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi] = trs[y][x];
@@ -383,9 +379,9 @@ fn flux<const V: usize>(
     let mut zeta = zetaovers * s;
     let tauppi = taupi; // use shear relaxation time for bulk
 
-    const NB_EM: usize = 3;
-    let tau_relax_em = taupi;
-    let mut relax_em = [0.0f64; NB_EM];
+    // const NB_EM: usize = 3;
+    // let tau_relax_em = taupi;
+    // let mut relax_em = [0.0f64; NB_EM];
 
     if gev < tempcut {
         eta = 0.0;
@@ -426,9 +422,12 @@ fn flux<const V: usize>(
 
     let s00 = (pe + ppi) + t * t * pi33;
     [
-        -dxf[0] - dyf[0] - relax_em[0] - dtpi[0] - s00,
-        -dxf[1] - dyf[1] - relax_em[1] - dtpi[1],
-        -dxf[2] - dyf[2] - relax_em[2] - dtpi[2],
+        -dxf[0] - dyf[0] - dtpi[0] - s00,
+        -dxf[1] - dyf[1] - dtpi[1],
+        -dxf[2] - dyf[2] - dtpi[2],
+        // -dxf[0] - dyf[0] - relax_em[0] - dtpi[0] - s00,
+        // -dxf[1] - dyf[1] - relax_em[1] - dtpi[1],
+        // -dxf[2] - dyf[2] - relax_em[2] - dtpi[2],
         -dxf[3] - dyf[3] + spi[3],
         -dxf[4] - dyf[4] + spi[4],
         -dxf[5] - dyf[5] + spi[5],
@@ -499,7 +498,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
             let y = (j as f64 - v2) * dx;
             vs[j][i] = init((i, j), (x, y));
             trs[j][i][0] = vs[j][i][0];
-            (vs[j][i], trs[j][i]) = constraints(t, vs[j][i], trs[j][i]);
+            (vs[j][i], trs[j][i]) = constraints(t, vs[j][i]);
             max_e = trs[j][i][0].max(max_e);
         }
     }
@@ -520,7 +519,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        boundary: &[&ghost, &ghost], // TODO use better boundary
+        boundary: &ghost, // TODO use better boundary
         post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs, trs),

@@ -5,7 +5,7 @@ use crate::{
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
-        utils::{ghost, zero, zeros},
+        utils::{ghost, zeros},
         Constraint,
     },
 };
@@ -15,8 +15,8 @@ use crate::hydro::{solve_v, Eos, Init1D, VOID};
 fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
-) -> Box<dyn Fn(f64, [f64; 2], [f64; 5]) -> ([f64; 2], [f64; 5]) + 'a + Sync> {
-    Box::new(move |_t, [t00, t01], _otrs| {
+) -> Box<dyn Fn(f64, [f64; 2]) -> ([f64; 2], [f64; 5]) + 'a + Sync> {
+    Box::new(move |_t, [t00, t01]| {
         let m = t01.abs();
         let t00 = t00.max(m * (1.0 + 1e-15));
         let sv = solve_v(t00, m, p);
@@ -50,7 +50,7 @@ fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 2]; V]; 1]; 2],
     [_otrs, trs]: [&[[[f64; 5]; V]; 1]; 2],
     constraints: Constraint<2, 5>,
-    bound: &[Boundary; 2],
+    bound: Boundary<F_IDEAL_1D, V, 1>,
     pos: [i32; 2],
     dx: f64,
     [_ot, _t]: [f64; 2],
@@ -122,12 +122,12 @@ pub fn ideal1d<const V: usize, const S: usize>(
         let x = (i as f64 - v2) * dx;
         vs[0][i] = init(i, x);
         trs[0][i][0] = vs[0][i][0];
-        (vs[0][i], trs[0][i]) = constraints(t, vs[0][i], trs[0][i]);
+        (vs[0][i], trs[0][i]) = constraints(t, vs[0][i]);
     }
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        boundary: &[&ghost, &zero], // use noboundary to emulate 1D
+        boundary: &ghost, // use noboundary to emulate 1D
         post_constraints: None,
         local_interaction: [1, 0], // use a distance of 0 to emulate 1D
         ovstrs: (vs, trs),

@@ -93,7 +93,7 @@ pub fn fixpoint<
                     for s1 in 0..S {
                         vdtk[f] += dt * a[s][s1] * k[s1][y][x][f];
                     }
-                    (*vdtk, *trdtk) = constraints(ct, *vdtk, *trdtk);
+                    (*vdtk, *trdtk) = constraints(ct, *vdtk);
                 }
             });
             pfor2d(&mut fu[s], &|(Coord { x, y }, fu)| {
@@ -217,7 +217,11 @@ pub fn fixpoint<
         let mut tmperrs = [[false; VX]; VY];
         pfor2d(&mut tmperrs, &|(Coord { x, y }, tmperrs)| {
             let mut update = |dx, dy| {
-                *tmperrs |= errs[boundary[1](y as i32 + dy, VY)][boundary[0](x as i32 + dx, VX)]
+                let i = x as i32 + dx;
+                let j = y as i32 + dy;
+                if i >= 0 && i < VX as i32 && j >= 0 && j < VY as i32 {
+                    *tmperrs |= errs[j as usize][i as usize];
+                }
             };
             for dy in -sizey..=sizey {
                 if dy == 0 {
@@ -256,7 +260,7 @@ pub fn fixpoint<
     for vy in 0..VY {
         for vx in 0..VX {
             let tmp = vs[vy][vx];
-            (vs[vy][vx], trs[vy][vx]) = constraints(*t, vs[vy][vx], trs[vy][vx]);
+            (vs[vy][vx], trs[vy][vx]) = constraints(*t, vs[vy][vx]);
             for f in 0..F {
                 total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
             }
@@ -266,7 +270,7 @@ pub fn fixpoint<
         for vy in 0..VY {
             for vx in 0..VX {
                 let tmp = vs[vy][vx];
-                (vs[vy][vx], trs[vy][vx]) = post(*t, vs[vy][vx], trs[vy][vx]);
+                (vs[vy][vx], trs[vy][vx]) = post(*t, vs[vy][vx]);
                 for f in 0..F {
                     total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
                 }

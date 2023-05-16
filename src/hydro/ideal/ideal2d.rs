@@ -16,12 +16,12 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     coord: &Coordinate,
-) -> Box<dyn Fn(f64, [f64; 3], [f64; 6]) -> ([f64; 3], [f64; 6]) + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; 3]) -> ([f64; 3], [f64; 6]) + 'a + Sync> {
     let st = match coord {
         Coordinate::Cartesian => |_| 1.0,
         Coordinate::Milne => |t| t,
     };
-    Box::new(move |t, [t00, t01, t02], _otrs| {
+    Box::new(move |t, [t00, t01, t02]| {
         let t = st(t);
         let t00 = t00 / t;
         let t01 = t01 / t;
@@ -85,7 +85,7 @@ fn flux<const V: usize>(
     [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
     [_otrs, trs]: [&[[[f64; 6]; V]; V]; 2],
     constraints: Constraint<3, 6>,
-    bound: &[Boundary; 2],
+    bound: Boundary<F_IDEAL_2D, V, V>,
     pos: [i32; 2],
     dx: f64,
     [_ot, t]: [f64; 2],
@@ -155,8 +155,8 @@ fn flux<const V: usize>(
     let s: f64 = match coord {
         Coordinate::Cartesian => 0.0,
         Coordinate::Milne => {
-            let y = bound[1](pos[1], V);
-            let x = bound[0](pos[0], V);
+            let y = pos[1] as usize;
+            let x = pos[0] as usize;
             let [_e, pe, _dpde, _ut, _ux, _uy] = trs[y][x];
             pe
         }
@@ -215,7 +215,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
             let y = (j as f64 - v2) * dx;
             vs[j][i] = init((i, j), (x, y));
             trs[j][i][0] = vs[i][i][0];
-            (vs[j][i], trs[j][i]) = constraints(t, vs[j][i], trs[j][i]);
+            (vs[j][i], trs[j][i]) = constraints(t, vs[j][i]);
         }
     }
 
@@ -228,7 +228,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
+        boundary: &ghost, // use noboundary to emulate 1D
         post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs, trs),

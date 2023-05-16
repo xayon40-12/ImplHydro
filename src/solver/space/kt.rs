@@ -1,10 +1,11 @@
-use crate::solver::{context::Boundary, utils::flux_limiter, Constraint, Transform};
+use crate::solver::context::Boundary;
+use crate::solver::{utils::flux_limiter, Constraint, Transform};
 
 use super::{Dir, Eigenvalues, Flux};
 
 pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, const SD: usize>(
-    (vs, trs): (&[[[f64; F]; VX]; VY], &[[[f64; C]; VX]; VY]),
-    [boundx, boundy]: &[Boundary; 2],
+    (vs, _trs): (&[[[f64; F]; VX]; VY], &[[[f64; C]; VX]; VY]),
+    bound: Boundary<F, VX, VY>,
     [x, y]: [i32; 2],
     dir: Dir,
     t: f64,
@@ -24,20 +25,19 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             Dir::X => (l as i32 - 2, 0),
             Dir::Y => (0, l as i32 - 2),
         };
-        vals[l] = vs[boundy(y + ly, VY)][boundx(x + lx, VX)];
-        tvals[l] = trs[boundy(y + ly, VY)][boundx(x + lx, VX)];
+        (vals[l], tvals[l]) = constraints(t, bound([x + lx, y + ly], &vs));
         vals[l] = pre_flux_limiter(t, vals[l]);
     }
     let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];
-    let mut tderiv: [[f64; C]; 3] = [[0.0; C]; 3];
+    // let mut tderiv: [[f64; C]; 3] = [[0.0; C]; 3];
     let mut fj: [[f64; F]; 3] = [[0.0; F]; 3];
     for l in 0..3 {
         for f in 0..F {
             deriv[l][f] = flux_limiter(theta, vals[l][f], vals[l + 1][f], vals[l + 2][f]);
         }
-        for c in 0..C {
-            tderiv[l][c] = flux_limiter(theta, tvals[l][c], tvals[l + 1][c], tvals[l + 2][c]);
-        }
+        // for c in 0..C {
+        //     tderiv[l][c] = flux_limiter(theta, tvals[l][c], tvals[l + 1][c], tvals[l + 2][c]);
+        // }
         fj[l] = flux(t, tvals[l + 1]);
     }
     let mut upm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
@@ -49,11 +49,11 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             for f in 0..F {
                 upm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
             }
-            for c in 0..C {
-                tupm[jpm][pm][c] = tvals[1 + j][c] - s * tderiv[j][c];
-            }
+            // for c in 0..C {
+            //     tupm[jpm][pm][c] = tvals[1 + j][c] - s * tderiv[j][c];
+            // }
             upm[jpm][pm] = post_flux_limiter(t, upm[jpm][pm]);
-            (upm[jpm][pm], tupm[jpm][pm]) = constraints(t, upm[jpm][pm], tupm[jpm][pm]);
+            (upm[jpm][pm], tupm[jpm][pm]) = constraints(t, upm[jpm][pm]);
         }
     }
     let mut fpm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
