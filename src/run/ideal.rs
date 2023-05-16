@@ -120,6 +120,7 @@ pub fn run_2d<const V: usize>(
             run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
         }
         Solver::Implicit => {
+            // run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, radauiia2(), nb_trento);
             run_convergence_2d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(), nb_trento);
         }
         Solver::Explicit => {

@@ -158,7 +158,8 @@ for d in os.listdir(dir):
     # it means that explicit failed
     expl_fail = sum(e) > 10*sum(e0)
     # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
-    impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
+    # impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
+    impl_fail = fails > 0
     if rejectfails and (expl_fail or impl_fail): 
         continue # skip explicit or implicit that failed
 

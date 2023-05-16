@@ -62,19 +62,18 @@ pub fn fixpoint<
     let mut failed = 1usize;
     let maxfailed = 30;
     let mut maxe = 1e50f64;
-    let mut omaxe;
+    let mut omaxe = maxe;
     // let mut ffka = ctx.fka;
     let mut ffka = 1.0;
     let mut maxe_count = 0;
-    let mut iter = 0;
     while iserr {
-        iter += 1;
-        if iter > 1000 || maxe_count > 4 {
+        if maxe > 1e50 || maxe_count > 4 {
             eprintln!("fail {}", failed);
             failed += 1;
-            ffka *= 0.9;
-            // ffka *= (*dx / dt).min(0.5);
+            // ffka *= 0.9;
+            ffka *= (*dx / dt).min(0.5);
             maxe = 1e50;
+            omaxe = maxe;
             *k = ko;
             fu = *k;
             vdtk = [[[0.0f64; F]; VX]; VY];
@@ -143,8 +142,9 @@ pub fn fixpoint<
             .map(|v| *v)
             .reduce(|| false, |acc, a| acc || a);
 
-        omaxe = maxe;
+        // omaxe = maxe;
         maxe = 0.0;
+        let mut errr = [[0.0f64; VX]; VY];
         for s in 0..S {
             for j in 0..VY {
                 for i in 0..VX {
@@ -152,6 +152,7 @@ pub fn fixpoint<
                         let kk = k[s][j][i][f];
                         let ff = fu[s][j][i][f];
                         let d = ff - kk;
+                        errr[j][i] = errr[j][i].max(d.abs());
                         maxe = maxe.max(d.abs());
                         k[s][j][i][f] = kk + ffka * d;
                     }
@@ -162,14 +163,54 @@ pub fn fixpoint<
             maxe_count += 1;
         } else {
             maxe_count = 0;
+            omaxe = maxe;
         }
 
-        let debug = false;
-        // let debug = true;
+        // let debug = false;
+        let debug = true;
         if debug {
+            let miter = nbiter.iter().flat_map(|v| v.iter()).max().unwrap();
             println!(
-                "t: {:.3e}, ffka: {:.3e}, max: {:.3e}, omax: {:.3e}, lim: {:.3e}",
-                t, ffka, maxe, omaxe, er
+                "t: {:.3e}, ffka: {:.3e}, maxe: {:.3e}, omaxe: {:.3e}, lim: {:.3e}, miter: {}",
+                t, ffka, maxe, omaxe, er, miter
+            );
+
+            let col: Vec<char> = " .:-=+*%#@".chars().collect();
+            let mc = col.len() - 1;
+            let iter = nbiter
+                .iter()
+                .map(|v| {
+                    v.iter()
+                        .map(|v| format!("{s}{s}", s = col[v * mc / miter].to_string()))
+                        .collect::<Vec<_>>()
+                        .join("")
+                })
+                .collect::<Vec<_>>();
+            let err = errr
+                .iter()
+                .map(|v| {
+                    v.iter()
+                        .map(|v| {
+                            format!(
+                                "{s}{s}",
+                                s = col[(((v - er) * (mc - 1) as f64) / (maxe - er).max(1e-100)
+                                    + 1.0)
+                                    .max(0.0) as usize]
+                                    .to_string()
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("")
+                })
+                .collect::<Vec<_>>();
+
+            println!(
+                "{}",
+                iter.iter()
+                    .zip(err.iter())
+                    .map(|(a, b)| format!("{}{}", a, b))
+                    .collect::<Vec<_>>()
+                    .join("\n")
             );
         }
 
@@ -190,6 +231,7 @@ pub fn fixpoint<
         });
         errs = tmperrs;
     }
+    // println!("\nnext");
     *ovs = *vs;
     *otrs = *trs;
     let b = if let Some(b) = b { *b } else { a[S - 1] };

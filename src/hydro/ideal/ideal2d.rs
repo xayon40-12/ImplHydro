@@ -249,7 +249,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
         freezeout_energy: None,
     };
 
-    let e = 1e-4;
+    let e = 2e-4;
     let err_thr =
         |_t: f64, _vs: &[[[f64; F_IDEAL_2D]; V]; V], _trs: &[[[f64; C_IDEAL_2D]; V]; V]| {
             let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;

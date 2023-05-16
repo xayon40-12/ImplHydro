@@ -58,8 +58,9 @@ fn gen_constraints<'a>(
             let e = (t00 - m * v).max(VOID).min(1e10);
 
             let gev = temp(e) * HBARC;
-            let bellow_kinetic = 1e-4;
+            let bellow_kinetic = 1e-200; // 1e-4;
             if gev < bellow_kinetic {
+                // if e < 1e-14 {
                 // if temperature is much smaller than kninetic freezeout, there are no interactions anymore and thus the cell is considered as vacuum.
                 let vs = [0.0; F_BOTH_2D];
                 let mut trans = [0.0; C_BOTH_2D];
@@ -382,10 +383,19 @@ fn flux<const V: usize>(
     let mut zeta = zetaovers * s;
     let tauppi = taupi; // use shear relaxation time for bulk
 
+    const NB_EM: usize = 3;
+    let tau_relax_em = taupi;
+    let mut relax_em = [0.0f64; NB_EM];
+
     if gev < tempcut {
         eta = 0.0;
         zeta = 0.0;
     }
+    // if gev < tempcut {
+    //     for i in 0..NB_EM {
+    //         relax_em[i] = vs[y][x][i] / tau_relax_em;
+    //     }
+    // }
 
     let mut spi = [0.0f64; 7];
     {
@@ -416,9 +426,9 @@ fn flux<const V: usize>(
 
     let s00 = (pe + ppi) + t * t * pi33;
     [
-        -dxf[0] - dyf[0] - dtpi[0] - s00,
-        -dxf[1] - dyf[1] - dtpi[1],
-        -dxf[2] - dyf[2] - dtpi[2],
+        -dxf[0] - dyf[0] - relax_em[0] - dtpi[0] - s00,
+        -dxf[1] - dyf[1] - relax_em[1] - dtpi[1],
+        -dxf[2] - dyf[2] - relax_em[2] - dtpi[2],
         -dxf[3] - dyf[3] + spi[3],
         -dxf[4] - dyf[4] + spi[4],
         -dxf[5] - dyf[5] + spi[5],
@@ -510,7 +520,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        boundary: &[&ghost, &ghost], // use noboundary to emulate 1D
+        boundary: &[&ghost, &ghost], // TODO use better boundary
         post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs, trs),
@@ -531,9 +541,10 @@ pub fn viscous2d<const V: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 1e-3;
+    let e = 1e-1;
     let err_thr = |_t: f64, _vs: &[[[f64; F_BOTH_2D]; V]; V], _trs: &[[[f64; C_BOTH_2D]; V]; V]| {
-        let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
+        // let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
+        let m = 1.0;
         let k = m / maxdt;
         e * k * (maxdt / dx).powi(r.order)
     };
