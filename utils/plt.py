@@ -535,6 +535,22 @@ def plot1d(l, nds):
     for scheme in ["GL1"]: 
         fig,axs = plt.subplots(2, 2, figsize=(18,7), sharex=True, sharey=True)
         colors = []
+        costmax = 1e-100
+        costmin = 1e100
+        for j, dxn in zip(range(2), sorted(nds,key=lambda x: x[1])):
+            (dx,n) = dxn
+            datas = nds[dxn]
+            dts = list(filter(lambda dt: abs(dt-dx/10) < 1e-5 or abs(dt-dx/80) < 1e-5, datas[schemes[0]]))
+            for i, dt in zip(range(2),sorted(dts, reverse=True)):
+                (sinfo, data, diff) = datas[scheme][dt]
+                nbStages = 2
+                if scheme == "GL1":
+                    nbStages = 1
+                datats = np.array(sinfo["datats"], dtype=object)
+                iter = np.array([d[:,vid["iter"]] for d in datats[:,1]])
+                cost = (iter*nbStages).astype(int)
+                costmin = min(costmin, cost.min())
+                costmax = max(costmax, cost.max())
         for j, dxn in zip(range(2), sorted(nds,key=lambda x: x[1])):
             (dx,n) = dxn
             datas = nds[dxn]
@@ -572,7 +588,7 @@ def plot1d(l, nds):
                         vs = riem_vs
                     axs[j][i].plot(xx, xx/vs, linestyle="--", color="white", label="shock")
                     axs[j][i].plot(xx, -xx/cs, linestyle="-.", color="white", label="rarefaction")
-                im = axs[j][i].imshow(cost, extent=[l,r,d,u], origin="lower", label="aoeu", vmin=1, vmax=3) #, norm=CenteredNorm(0)) # , cmap="terrain"
+                im = axs[j][i].imshow(cost, extent=[l,r,d,u], origin="lower", label="aoeu", vmin=costmin, vmax=costmax) #, norm=CenteredNorm(0)) # , cmap="terrain"
                 colors += list(np.unique(cost))
                 if i == 0:
                     axs[j][i].set_ylabel("$t$ (fm)")
@@ -602,7 +618,7 @@ def plot1d(l, nds):
         
         patchs = [Patch(color=im.cmap(im.norm(i)), label=str(i)) for i in np.unique(colors)]
         # axs[0][0].legend(handles=patchs, loc="upper left")
-        axs[0][0].legend(handles=patchs, loc="upper left", labelcolor="white", facecolor=(0.3,0.3,0.6))
+        axs[1][1].legend(handles=patchs, loc="lower right", labelcolor="white", facecolor=(0.3,0.3,0.6))
         # axs[0][0].legend(handles=patchs, loc="upper left", labelcolor="white", facecolor=(0.1,0.1,0.3))
         fig.subplots_adjust(wspace=0.1,hspace=0.1)
         plt.savefig("figures/{}_{}_cost-t_{}.pdf".format(timename,scheme,info2name(sinfo)), dpi=100)
