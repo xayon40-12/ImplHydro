@@ -1,7 +1,7 @@
 use crate::{
     hydro::{Viscosity, C_BOTH_2D, F_BOTH_2D, HBARC},
     solver::{
-        context::{Boundary, Context},
+        context::{Boundary, Context, Integration},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -18,6 +18,7 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     temp: Eos<'a>,
+    _implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_BOTH_2D]) + 'a + Sync> {
     Box::new(
         move |t, cur @ [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi]| {
@@ -478,7 +479,11 @@ pub fn viscous2d<const V: usize, const S: usize>(
     usize,
     usize,
 )> {
-    let constraints = gen_constraints(&p, &dpde, temperature);
+    let implicit = match r.integration {
+        Integration::FixPoint => true,
+        Integration::Explicit => false,
+    };
+    let constraints = gen_constraints(&p, &dpde, temperature, implicit);
 
     let mut vs = [[[0.0; F_BOTH_2D]; V]; V];
     let mut trs = [[[0.0; C_BOTH_2D]; V]; V];

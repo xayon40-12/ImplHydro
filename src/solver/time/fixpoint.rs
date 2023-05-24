@@ -166,8 +166,8 @@ pub fn fixpoint<
             omaxe = maxe;
         }
 
-        // let debug = false;
-        let debug = true;
+        let debug = false;
+        // let debug = true;
         if debug {
             let miter = nbiter.iter().flat_map(|v| v.iter()).max().unwrap();
             println!(

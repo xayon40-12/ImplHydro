@@ -12,7 +12,7 @@ struct Cli {
     #[arg(short, long, default_value_t = 40.0)]
     physical_length: f64,
 
-    #[arg(short, long, default_value_t = Solver::Implicit)]
+    #[arg(short, long, default_value_t = Solver::Both)]
     solver_type: Solver,
 
     #[command(subcommand)]

@@ -295,7 +295,7 @@ def convall(l, cnds):
                         else:
                             schemetype = "Explicit"
                         c = convergence(ds0,refs[s1])
-                        c = np.array(list(filter(lambda v: v[4]+1e-14>=0.1*dx*2**-6, c)), dtype=object) # use dt=0.1dx*2**-6 as reference
+                        c = np.array(list(filter(lambda v: v[4]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
                         s = 30
                         sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,4]]
