@@ -25,7 +25,7 @@ pub fn periodic<const F: usize, const C: usize, const VX: usize, const VY: usize
     trs: [[[f64; C]; VX]; VY],
 ) -> ([f64; F], [f64; C]) {
     let j = _periodic(y, VY);
-    let i = _periodic(x, VY);
+    let i = _periodic(x, VX);
     (vs[j][i], trs[j][i])
 }
 
@@ -43,7 +43,7 @@ pub fn ghost<const F: usize, const VX: usize, const VY: usize>(
     vs: &[[[f64; F]; VX]; VY],
 ) -> [f64; F] {
     let j = _ghost(y, VY);
-    let i = _ghost(x, VY);
+    let i = _ghost(x, VX);
     vs[j][i]
 }
 
