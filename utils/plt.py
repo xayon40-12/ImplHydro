@@ -294,6 +294,7 @@ def convall(l, cnds):
                             schemetype = "Implicit"
                         else:
                             schemetype = "Explicit"
+                        # schemetype = info["scheme"]
                         c = convergence(ds0,refs[s1])
                         c = np.array(list(filter(lambda v: v[4]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha

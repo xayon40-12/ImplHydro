@@ -36,11 +36,44 @@ pub fn heun() -> Scheme<2> {
         order: 2,
     }
 }
+pub fn rk4() -> Scheme<4> {
+    Scheme {
+        aij: [
+            [0.5, 0.0, 0.0, 0.0],
+            [0.0, 0.5, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [1.0 / 6.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 6.0],
+        ],
+        bj: None,
+        name: "rk4",
+        integration: Explicit,
+        order: 4,
+    }
+}
 pub fn crank_nicolson() -> Scheme<2> {
     Scheme {
         aij: [[0.0, 0.0], [0.5, 0.5]],
         bj: None,
         name: "CrankNicolson",
+        integration: FixPoint,
+        order: 2,
+    }
+}
+pub fn lobatto_iiic() -> Scheme<2> {
+    Scheme {
+        aij: [[0.5, -0.5], [0.5, 0.5]],
+        bj: None,
+        name: "LobattoIIIC",
+        integration: FixPoint,
+        order: 2,
+    }
+}
+pub fn pareschi() -> Scheme<2> {
+    let x = 1.0 - 2.0f64.sqrt() / 2.0;
+    Scheme {
+        aij: [[x, 0.0], [1.0 - 2.0 * x, x]],
+        bj: Some([0.5, 0.5]),
+        name: "Pareschi",
         integration: FixPoint,
         order: 2,
     }

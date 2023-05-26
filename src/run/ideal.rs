@@ -92,16 +92,30 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     }
 }
 pub fn run_1d<const V: usize>(solver: Solver, t0: f64, tend: f64, l: f64, dtmin: f64, dtmax: f64) {
+    // let imp = implicit_euler(); const I: usize = 3;
+    // let imp = radauiia2(); const I: usize = 2;
+    let imp = gauss_legendre_1();
+    const I: usize = 1;
+    // let imp = gauss_legendre_2(); const I: usize = 2;
+    // let imp = gauss_legendre_3(); const I: usize = 3;
+    // let imp = lobatto_iiic();
+    // const I: usize = 2;
+    // let imp = pareschi();
+    // const I: usize = 2;
+    let exp = heun();
+    const E: usize = 2;
+    // let exp = rk4();
+    // const E: usize = 4;
     match solver {
         Solver::Both => {
-            run_convergence_1d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1());
-            run_convergence_1d::<V, 2>(t0, tend, l, dtmin, dtmax, heun());
+            run_convergence_1d::<V, I>(t0, tend, l, dtmin, dtmax, imp);
+            run_convergence_1d::<V, E>(t0, tend, l, dtmin, dtmax, exp);
         }
         Solver::Implicit => {
-            run_convergence_1d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1());
+            run_convergence_1d::<V, I>(t0, tend, l, dtmin, dtmax, imp);
         }
         Solver::Explicit => {
-            run_convergence_1d::<V, 2>(t0, tend, l, dtmin, dtmax, heun());
+            run_convergence_1d::<V, E>(t0, tend, l, dtmin, dtmax, exp);
         }
     }
 }
@@ -114,17 +128,21 @@ pub fn run_2d<const V: usize>(
     dtmax: f64,
     nb_trento: usize,
 ) {
+    let imp = gauss_legendre_1();
+    const I: usize = 1;
+    // let imp = pareschi();
+    // const I: usize = 2;
+    let exp = heun();
     match solver {
         Solver::Both => {
-            run_convergence_2d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(), nb_trento);
-            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
+            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, nb_trento);
+            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, nb_trento);
         }
         Solver::Implicit => {
-            // run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, radauiia2(), nb_trento);
-            run_convergence_2d::<V, 1>(t0, tend, l, dtmin, dtmax, gauss_legendre_1(), nb_trento);
+            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, nb_trento);
         }
         Solver::Explicit => {
-            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, heun(), nb_trento);
+            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, nb_trento);
         }
     }
 }
@@ -137,21 +155,21 @@ pub fn run_trento_2d<const V: usize>(
     nb_trento: usize,
 ) {
     let trentos = prepare_trento::<V>(nb_trento);
-    let gl1 = gauss_legendre_1();
-    let heun = heun();
+    let imp = gauss_legendre_1();
+    let exp = heun();
     let dx = l / V as f64;
     for i in 0..nb_trento {
         let trento = Some((trentos[i], i));
         match solver {
             Solver::Both => {
-                hydro2d::<V, 1>(t0, tend, dx, dt, gl1, trento);
-                hydro2d::<V, 2>(t0, tend, dx, dt, heun, trento);
+                hydro2d::<V, 1>(t0, tend, dx, dt, imp, trento);
+                hydro2d::<V, 2>(t0, tend, dx, dt, exp, trento);
             }
             Solver::Implicit => {
-                hydro2d::<V, 1>(t0, tend, dx, dt, gl1, trento);
+                hydro2d::<V, 1>(t0, tend, dx, dt, imp, trento);
             }
             Solver::Explicit => {
-                hydro2d::<V, 2>(t0, tend, dx, dt, heun, trento);
+                hydro2d::<V, 2>(t0, tend, dx, dt, exp, trento);
             }
         }
     }
