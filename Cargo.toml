@@ -3,6 +3,12 @@ name = "implhydro"
 version = "0.1.0"
 edition = "2021"
 
+build = "build.rs"
+
+[package.metadata.cargo-make]
+# Ensure the build script is executed before cargo install
+pre-install = ["build"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
