@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import CenteredNorm
 from mpl_toolkits import mplot3d
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-sys.path.append(os.path.abspath("%s/.config/" % (os.path.expanduser("~"))))
 import plt_setting
 import numpy as np
 from collections import defaultdict
@@ -280,7 +279,7 @@ def convall(l, cnds):
                 if len(scs) <= 1:
                     plt.close()
                     return 
-                s1 = scs[0]
+                s1 = scs[-1]
                 ax.text(0.03, 0.05, r"$\Delta x = "+str(dx)+"$ fm", color="black", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 for (linestyle, fillstyle, mmi) in ally:
@@ -294,7 +293,7 @@ def convall(l, cnds):
                             schemetype = "Implicit"
                         else:
                             schemetype = "Explicit"
-                        # schemetype = info["scheme"]
+                        schemetype = info["scheme"]
                         c = convergence(ds0,refs[s1])
                         c = np.array(list(filter(lambda v: v[4]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha

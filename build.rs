@@ -10,6 +10,7 @@ fn main() {
         ("implPostHydro", ""),
         ("riemann", ".py"),
         ("gubser", ".py"),
+        ("plt_setting", ".py"),
     ] {
         let dest_path = PathBuf::from(&out_dir).join(&format!("{}{}", name, ext));
         println!("cargo:rerun-if-changed={name}.py");
