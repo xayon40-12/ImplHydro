@@ -36,6 +36,17 @@ pub fn heun() -> Scheme<2> {
         order: 2,
     }
 }
+
+pub fn midpoint() -> Scheme<2> {
+    Scheme {
+        aij: [[0.5, 0.0], [0.0, 1.0]],
+        bj: None,
+        name: "midpoint",
+        integration: Explicit,
+        order: 2,
+    }
+}
+
 pub fn rk4() -> Scheme<4> {
     Scheme {
         aij: [

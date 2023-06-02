@@ -104,6 +104,8 @@ pub fn run_1d<const V: usize>(solver: Solver, t0: f64, tend: f64, l: f64, dtmin:
     // const I: usize = 2;
     let exp = heun();
     const E: usize = 2;
+    // let exp = midpoint();
+    // const E: usize = 2;
     // let exp = rk4();
     // const E: usize = 4;
     match solver {
