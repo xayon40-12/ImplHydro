@@ -243,7 +243,7 @@ pub fn fixpoint<
         for vy in 0..VY {
             for vx in 0..VX {
                 for s in 0..S {
-                    vs[vy][vx][f] += dt * b[s] * k[s][vy][vx][f];
+                    vs[vy][vx][f] += ffka * dt * b[s] * k[s][vy][vx][f];
                 }
             }
         }
@@ -254,7 +254,7 @@ pub fn fixpoint<
         .map(|v| *v)
         .reduce(|| 0, |acc, a| acc + a)) as f64;
     *ot = *t;
-    *t += dt;
+    *t += ffka * dt;
     *dto = maxdt.min(dt * 1.1);
     // ctx.fka = if failed == 1 { ffka.sqrt() } else { ffka };
     for vy in 0..VY {
