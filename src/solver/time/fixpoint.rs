@@ -60,7 +60,7 @@ pub fn fixpoint<
     let mut nbiter = [[0usize; VX]; VY];
     let dt = *dto;
     let mut failed = 1usize;
-    let maxfailed = 30;
+    let maxfailed = 10;
     let mut maxe = 1e50f64;
     let mut omaxe = maxe;
     // let mut ffka = ctx.fka;
