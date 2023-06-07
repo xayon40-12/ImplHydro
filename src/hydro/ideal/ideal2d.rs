@@ -21,8 +21,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; 3] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i].max(VOID);
-        let e = s * 20.0; // Trento normalization
-
+        let e = s;
         // let e = newton(
         //     1e-10,
         //     s,

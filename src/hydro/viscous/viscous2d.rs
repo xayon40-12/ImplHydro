@@ -22,7 +22,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     _temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
-        let s = s[j][i] * 20.0; // 20 is the Trento normalization
+        let s = s[j][i];
 
         // let e = newton(
         //     1e-10,
