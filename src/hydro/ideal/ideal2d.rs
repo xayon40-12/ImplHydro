@@ -204,7 +204,11 @@ pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
             mt22 += f2(t, tran[j][i])[2];
         }
     }
-    let anisotropy = (mt11 - mt22) / (mt11 + mt22);
+    let anisotropy = if mt11 + mt22 == 0.0 {
+        0.0
+    } else {
+        (mt11 - mt22) / (mt11 + mt22)
+    };
     vec![anisotropy]
 }
 
