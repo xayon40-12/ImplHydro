@@ -191,7 +191,7 @@ fn flux<const V: usize>(
     ]
 }
 
-pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
+pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
     t: f64,
     _vs: &[[[f64; 3]; VX]; VY],
     tran: &[[[f64; 6]; VX]; VY],
@@ -204,8 +204,8 @@ pub fn momentum_anysotropy<const VX: usize, const VY: usize>(
             mt22 += f2(t, tran[j][i])[2];
         }
     }
-    let anysotropy = (mt11 - mt22) / (mt11 + mt22);
-    vec![anysotropy]
+    let anisotropy = (mt11 - mt22) / (mt11 + mt22);
+    vec![anisotropy]
 }
 
 pub fn ideal2d<const V: usize, const S: usize>(
@@ -281,7 +281,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
         };
 
     let observables: [Observable<3, 6, V, V>; 1] =
-        [("momentum_anysotropy", &momentum_anysotropy::<V, V>)];
+        [("momentum_anisotropy", &momentum_anisotropy::<V, V>)];
 
     run(
         context,
