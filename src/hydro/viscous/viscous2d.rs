@@ -619,7 +619,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 2e-4;
+    let e = 1e-1;
     let err_thr = |_t: f64, _vs: &[[[f64; F_BOTH_2D]; V]; V], _trs: &[[[f64; C_BOTH_2D]; V]; V]| {
         let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
         let k = m / maxdt;
