@@ -323,7 +323,7 @@ fn flux<const V: usize>(
     dx: f64,
     [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
-    &((etas_min, etas_slope, etas_crv), (zetas_max, zetas_width, zetas_peak), temperature, tempcut): &(
+    &((etas_min, etas_slope, etas_crv), (_zetas_max, _zetas_width, _zetas_peak), temperature, tempcut): &(
         (f64, f64, f64),
         (f64, f64, f64),
         Eos,
@@ -450,9 +450,13 @@ fn flux<const V: usize>(
     let mut eta = etaovers * s;
     let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
-    let zetaovers = (zetas_max) / (1.0 + ((vmev - zetas_peak) / zetas_width).powi(2));
-    let mut zeta = zetaovers * s;
-    let tauppi = taupi; // use shear relaxation time for bulk
+    // let zetaovers = (zetas_max) / (1.0 + ((vmev - zetas_peak) / zetas_width).powi(2));
+    // let mut zeta = zetaovers * s;
+    // let tauppi = taupi; // use shear relaxation time for bulk
+
+    // bulk pressure is currently turned off
+    let mut zeta = 0.0;
+    let tauppi = 1.0;
 
     // const NB_EM: usize = 3;
     // let tau_relax_em = taupi;
