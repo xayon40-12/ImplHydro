@@ -1,5 +1,5 @@
 use crate::{
-    hydro::{Viscosity, C_BOTH_2D, F_BOTH_2D, HBARC},
+    hydro::{Viscosity, C_BOTH_2D, FREESTREAM_2D, F_BOTH_2D, HBARC},
     solver::{
         context::{Boundary, Context, Integration},
         run,
@@ -13,6 +13,93 @@ use crate::{
 use crate::hydro::{Eos, Init2D, VOID};
 
 use nalgebra::matrix;
+
+pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
+    t0: f64,
+    s: [[f64; VX]; VY],
+    p: Eos<'a>,
+    dpde: Eos<'a>,
+    _temperature: Eos<'a>,
+) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
+    Box::new(move |(i, j), _| {
+        let s = s[j][i] * 20.0; // 20 is the Trento normalization
+
+        // let e = newton(
+        //     1e-10,
+        //     s,
+        //     |e| (e + p(e)) / temperature(e) - s,
+        //     |e| e.max(0.0).min(1e10),
+        // )
+        // .max(VOID);
+        let e = s;
+        let vars = [
+            e,
+            p(e),
+            dpde(e),
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ];
+        fitutpi(t0, vars)
+    })
+}
+
+pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
+    t0: f64,
+    trs: [[[f64; FREESTREAM_2D]; VX]; VY],
+    p: Eos<'a>,
+    dpde: Eos<'a>,
+) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
+    Box::new(move |(i, j), _| {
+        let e = trs[j][i][0].max(VOID);
+        let ut = trs[j][i][1];
+        let ux = trs[j][i][2];
+        let uy = trs[j][i][3];
+        // TODO use viscosity from freestream
+        // let pi00 = trs[j][i][4];
+        // let pi01 = trs[j][i][5];
+        // let pi02 = trs[j][i][6];
+        // let pi11 = trs[j][i][7];
+        // let pi12 = trs[j][i][8];
+        // let pi22 = trs[j][i][9];
+        // let pi33 = (pi00 - pi11 - pi22) / (t0 * t0);
+        // let bulk = trs[j][i][10];
+        let vars = [
+            e,
+            p(e),
+            dpde(e),
+            ut,
+            ux,
+            uy,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            // pi00,
+            // pi01,
+            // pi02,
+            // pi11,
+            // pi12,
+            // pi22,
+            // pi33,
+            // bulk,
+        ];
+        // println!("vars: {:?}", vars);
+        fitutpi(t0, vars)
+    })
+}
 
 fn gen_constraints<'a>(
     p: Eos<'a>,
@@ -55,8 +142,8 @@ fn gen_constraints<'a>(
             let e = (t00 - m * v).max(VOID).min(1e10);
 
             let gev = temp(e) * HBARC;
-            // let bellow_kinetic = 1e-200;
-            let bellow_kinetic = 1e-4;
+            let bellow_kinetic = 1e-200;
+            // let bellow_kinetic = 1e-4;
             if gev < bellow_kinetic {
                 // if temperature is much smaller than kninetic freezeout, there are no interactions anymore and thus the cell is considered as vacuum.
                 let vs = [0.0; F_BOTH_2D];
@@ -545,10 +632,9 @@ pub fn viscous2d<const V: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 1e-1;
+    let e = 2e-4;
     let err_thr = |_t: f64, _vs: &[[[f64; F_BOTH_2D]; V]; V], _trs: &[[[f64; C_BOTH_2D]; V]; V]| {
-        // let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
-        let m = 1.0;
+        let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
         let k = m / maxdt;
         e * k * (maxdt / dx).powi(r.order)
     };

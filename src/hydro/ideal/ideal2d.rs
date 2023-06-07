@@ -12,6 +12,30 @@ use crate::{
 
 use crate::hydro::{solve_v, Eos, Init2D, VOID};
 
+pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
+    t0: f64,
+    s: [[f64; VX]; VY],
+    p: Eos<'a>,
+    dpde: Eos<'a>,
+    _temperature: Eos<'a>,
+) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; 3] + 'a> {
+    Box::new(move |(i, j), _| {
+        let s = s[j][i].max(VOID);
+        let e = s * 20.0; // Trento normalization
+
+        // let e = newton(
+        //     1e-10,
+        //     s,
+        //     |e| (e + p(e)) / temperature(e) - s,
+        //     |e| e.max(0.0).min(1e10),
+        // )
+        // .max(VOID);
+        // println!("e: {:.3e}, s: {:.3e}", e, s);
+        let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0];
+        f0(t0, vars)
+    })
+}
+
 fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,

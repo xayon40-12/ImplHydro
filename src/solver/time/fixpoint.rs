@@ -114,6 +114,7 @@ pub fn fixpoint<
         }
 
         let er = err_thr(*t, &vs, &trs);
+        // println!("er: {:.3e}", er);
         pfor2d2(&mut errs, &mut nbiter, &|(Coord { x, y }, errs, nbiter)| {
             if *errs {
                 *errs = false;

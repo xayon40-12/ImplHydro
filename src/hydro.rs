@@ -92,12 +92,19 @@ pub const C_BOTH_2D: usize =
     Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value());
 
 pub mod ideal_gas {
+    use std::f64::consts::PI;
+
     pub fn p(e: f64) -> f64 {
         e / 3.0
     }
 
     pub fn dpde(_e: f64) -> f64 {
         1.0 / 3.0
+    }
+
+    #[allow(non_snake_case)]
+    pub fn T(e: f64) -> f64 {
+        (30.0 * e / (PI * PI * (16.0 + 21.0 / 2.0))).powf(0.25)
     }
 }
 

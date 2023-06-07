@@ -1,8 +1,10 @@
 use crate::{
     hydro::{
         eos::wb,
-        ideal::init_from_energy_2d,
-        ideal::{ideal1d, ideal2d},
+        ideal::{
+            ideal1d,
+            ideal2d::{self, init_from_entropy_density_2d},
+        },
         ideal_gas,
         solutions::{gubser::init_gubser, riemann::init_riemann},
         utils::{converge, prepare_trento},
@@ -24,14 +26,14 @@ fn hydro2d<const V: usize, const S: usize>(
     } else {
         format!("Gubser")
     };
-    let (p, dpde): (Eos, Eos) = if init_e.is_some() {
-        (&wb::p, &wb::dpde)
+    let (p, dpde, temp): (Eos, Eos, Eos) = if init_e.is_some() {
+        (&wb::p, &wb::dpde, &wb::T)
     } else {
-        (&ideal_gas::p, &ideal_gas::dpde)
+        (&ideal_gas::p, &ideal_gas::dpde, &ideal_gas::T)
     };
     println!("{}", name);
     let init = if let Some((es, _)) = init_e {
-        init_from_energy_2d(t0, es, p, dpde)
+        init_from_entropy_density_2d(t0, es, p, dpde, temp)
     } else {
         init_gubser(t0, p, dpde)
     };
