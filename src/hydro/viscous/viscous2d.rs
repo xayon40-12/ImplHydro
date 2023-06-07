@@ -584,7 +584,6 @@ pub fn viscous2d<const V: usize, const S: usize>(
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
             vs[j][i] = init((i, j), (x, y));
-            trs[j][i][0] = vs[j][i][0];
             (vs[j][i], trs[j][i]) = constraints(t, vs[j][i]);
             max_e = trs[j][i][0].max(max_e);
         }
