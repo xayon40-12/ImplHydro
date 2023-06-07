@@ -18,7 +18,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     _temperature: Eos<'a>,
-) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; 3] + 'a> {
+) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_IDEAL_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i].max(VOID);
         let e = s;
@@ -39,7 +39,7 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     coord: &Coordinate,
-) -> Box<dyn Fn(f64, [f64; 3]) -> ([f64; 3], [f64; 6]) + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; F_IDEAL_2D]) -> ([f64; F_IDEAL_2D], [f64; C_IDEAL_2D]) + 'a + Sync> {
     let st = match coord {
         Coordinate::Cartesian => |_| 1.0,
         Coordinate::Milne => |t| t,
@@ -63,18 +63,18 @@ fn gen_constraints<'a>(
     })
 }
 
-fn eigenvaluesx(_t: f64, [_e, _pe, dpde, ut, ux, _uy]: [f64; 6]) -> f64 {
+fn eigenvaluesx(_t: f64, [_e, _pe, dpde, ut, ux, _uy]: [f64; C_IDEAL_2D]) -> f64 {
     let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
     (a.abs() + b.sqrt()) / d
 }
-fn eigenvaluesy(t: f64, [e, pe, dpde, ut, ux, uy]: [f64; 6]) -> f64 {
+fn eigenvaluesy(t: f64, [e, pe, dpde, ut, ux, uy]: [f64; C_IDEAL_2D]) -> f64 {
     eigenvaluesx(t, [e, pe, dpde, ut, uy, ux])
 }
 
-pub fn f0(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
+pub fn f0(t: f64, [e, pe, _, ut, ux, uy]: [f64; C_IDEAL_2D]) -> [f64; F_IDEAL_2D] {
     [
         t * ((e + pe) * ut * ut - pe),
         t * ((e + pe) * ut * ux),
@@ -82,7 +82,7 @@ pub fn f0(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
     ]
 }
 
-fn f1(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
+fn f1(t: f64, [e, pe, _, ut, ux, uy]: [f64; C_IDEAL_2D]) -> [f64; F_IDEAL_2D] {
     [
         t * ((e + pe) * ut * ux),
         t * ((e + pe) * ux * ux + pe),
@@ -90,7 +90,7 @@ fn f1(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
     ]
 }
 
-fn f2(t: f64, [e, pe, _, ut, ux, uy]: [f64; 6]) -> [f64; 3] {
+fn f2(t: f64, [e, pe, _, ut, ux, uy]: [f64; C_IDEAL_2D]) -> [f64; F_IDEAL_2D] {
     [
         t * ((e + pe) * uy * ut),
         t * ((e + pe) * uy * ux),
@@ -105,16 +105,16 @@ pub enum Coordinate {
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[f64; 3]; V]; V]; 2],
-    [_otrs, trs]: [&[[[f64; 6]; V]; V]; 2],
-    constraints: Constraint<3, 6>,
+    [_ov, vs]: [&[[[f64; F_IDEAL_2D]; V]; V]; 2],
+    [_otrs, trs]: [&[[[f64; C_IDEAL_2D]; V]; V]; 2],
+    constraints: Constraint<F_IDEAL_2D, C_IDEAL_2D>,
     bound: Boundary<F_IDEAL_2D, V, V>,
     pos: [i32; 2],
     dx: f64,
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
-    (coord, [eigx, eigy]): &(Coordinate, [Eigenvalues<6>; 2]),
-) -> [f64; 3] {
+    (coord, [eigx, eigy]): &(Coordinate, [Eigenvalues<C_IDEAL_2D>; 2]),
+) -> [f64; F_IDEAL_2D] {
     let theta = 1.1;
     // let theta = 2.0;
 
@@ -123,7 +123,7 @@ fn flux<const V: usize>(
         Coordinate::Milne => t,
     };
 
-    let pre = &|_t: f64, vs: [f64; 3]| {
+    let pre = &|_t: f64, vs: [f64; F_IDEAL_2D]| {
         let t00 = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -131,7 +131,7 @@ fn flux<const V: usize>(
         let m = (t00 * t00 - k).sqrt();
         [m, t01, t02]
     };
-    let post = &|_t: f64, vs: [f64; 3]| {
+    let post = &|_t: f64, vs: [f64; F_IDEAL_2D]| {
         let m = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -193,8 +193,8 @@ fn flux<const V: usize>(
 
 pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
     t: f64,
-    _vs: &[[[f64; 3]; VX]; VY],
-    tran: &[[[f64; 6]; VX]; VY],
+    _vs: &[[[f64; F_IDEAL_2D]; VX]; VY],
+    tran: &[[[f64; C_IDEAL_2D]; VX]; VY],
 ) -> Vec<f64> {
     let mut mt11 = 0.0;
     let mut mt12 = 0.0;
@@ -225,7 +225,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
     r: Scheme<S>,
     p: Eos,
     dpde: Eos,
-    init: Init2D<3>,
+    init: Init2D<F_IDEAL_2D>,
 ) -> Option<(
     ([[[f64; F_IDEAL_2D]; V]; V], [[[f64; C_IDEAL_2D]; V]; V]),
     f64,
@@ -234,11 +234,11 @@ pub fn ideal2d<const V: usize, const S: usize>(
 )> {
     let coord = Coordinate::Milne;
     let constraints = gen_constraints(&p, &dpde, &coord);
-    let mut vs = [[[0.0; 3]; V]; V];
-    let mut trs = [[[0.0; 6]; V]; V];
+    let mut vs = [[[0.0; F_IDEAL_2D]; V]; V];
+    let mut trs = [[[0.0; C_IDEAL_2D]; V]; V];
 
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
-    let k = [[[[0.0; 3]; V]; V]; S];
+    let k = [[[[0.0; F_IDEAL_2D]; V]; V]; S];
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {
@@ -253,7 +253,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
     let eigx = Eigenvalues::Analytical(&eigenvaluesx);
     let eigy = Eigenvalues::Analytical(&eigenvaluesy);
 
-    // let eigconstr = |_t: f64, [_, _, dpde, _, _, _]: [f64; 6], eig: f64| eig.max(dpde).min(1.0);
+    // let eigconstr = |_t: f64, [_, _, dpde, _, _, _]: [f64; C_IDEAL_2D], eig: f64| eig.max(dpde).min(1.0);
     // let eigx: Eigenvalues<6> = Eigenvalues::ApproxConstraint(&eigconstr);
     // let eigy = eigx;
     let context = Context {
@@ -288,7 +288,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
             e * k * (maxdt / dx).powi(r.order)
         };
 
-    let observables: [Observable<3, 6, V, V>; 1] =
+    let observables: [Observable<F_IDEAL_2D, C_IDEAL_2D, V, V>; 1] =
         [("momentum_anisotropy", &momentum_anisotropy::<V, V>)];
 
     run(
