@@ -22,7 +22,7 @@ fn hydro2d<const V: usize, const S: usize>(
 ) -> HydroOutput<V, V, F_BOTH_2D, C_BOTH_2D> {
     let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
-    let eos = EOSs::HotQCD;
+    let eos = EOSs::WB;
     let (p, dpde, temp): (Eos, Eos, Eos) = match eos {
         EOSs::WB => (&wb::p, &wb::dpde, &wb::T),
         EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::T),

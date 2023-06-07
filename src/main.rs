@@ -60,7 +60,7 @@ enum Hydro {
         zetaovers_width: f64,
         #[arg(short, long, default_value_t = 0.174)] // GeV
         zetaovers_peak: f64,
-        #[arg(long, default_value_t = 0.020)] // GeV
+        #[arg(long, default_value_t = 0.050)] // GeV
         tempcut: f64,
         #[arg(long, default_value_t = 0.148)] // GeV
         freezeout: f64,

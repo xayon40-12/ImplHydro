@@ -104,7 +104,7 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
 fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
-    temp: Eos<'a>,
+    _temp: Eos<'a>,
     _implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_BOTH_2D]) + 'a + Sync> {
     Box::new(
@@ -141,20 +141,7 @@ fn gen_constraints<'a>(
 
             let e = (t00 - m * v).max(VOID).min(1e10);
 
-            let gev = temp(e) * HBARC;
-            let bellow_kinetic = 1e-200;
-            // let bellow_kinetic = 1e-4;
-            if gev < bellow_kinetic {
-                // if temperature is much smaller than kninetic freezeout, there are no interactions anymore and thus the cell is considered as vacuum.
-                let vs = [0.0; F_BOTH_2D];
-                let mut trans = [0.0; C_BOTH_2D];
-                trans[0] = VOID;
-                trans[1] = p(VOID);
-                trans[2] = dpde(VOID);
-                trans[3] = 1.0;
-
-                (vs, trans)
-            } else {
+            {
                 let g = (1.0 - v * v).sqrt();
 
                 let pe = p(e);
@@ -336,7 +323,7 @@ fn flux<const V: usize>(
     dx: f64,
     [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
-    &((etas_min, etas_slope, etas_crv), (zetas_max, zetas_width, zetas_peak), temperature, tempcut): &(
+    &((etas_min, etas_slope, etas_crv), (_zetas_max, _zetas_width, _zetas_peak), temperature, tempcut): &(
         (f64, f64, f64),
         (f64, f64, f64),
         Eos,
@@ -463,9 +450,13 @@ fn flux<const V: usize>(
     let mut eta = etaovers * s;
     let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
-    let zetaovers = (zetas_max) / (1.0 + ((vmev - zetas_peak) / zetas_width).powi(2));
-    let mut zeta = zetaovers * s;
-    let tauppi = taupi; // use shear relaxation time for bulk
+    // let zetaovers = (zetas_max) / (1.0 + ((vmev - zetas_peak) / zetas_width).powi(2));
+    // let mut zeta = zetaovers * s;
+    // let tauppi = taupi; // use shear relaxation time for bulk
+
+    // bulk pressure is currently turned off
+    let mut zeta = 0.0;
+    let tauppi = 1.0;
 
     // const NB_EM: usize = 3;
     // let tau_relax_em = taupi;
@@ -632,7 +623,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 2e-4;
+    let e = 1e-1;
     let err_thr = |_t: f64, _vs: &[[[f64; F_BOTH_2D]; V]; V], _trs: &[[[f64; C_BOTH_2D]; V]; V]| {
         let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
         let k = m / maxdt;
