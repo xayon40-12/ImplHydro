@@ -104,7 +104,7 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
 fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
-    temp: Eos<'a>,
+    _temp: Eos<'a>,
     _implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_BOTH_2D]) + 'a + Sync> {
     Box::new(
@@ -141,20 +141,7 @@ fn gen_constraints<'a>(
 
             let e = (t00 - m * v).max(VOID).min(1e10);
 
-            let gev = temp(e) * HBARC;
-            let bellow_kinetic = 1e-200;
-            // let bellow_kinetic = 1e-4;
-            if gev < bellow_kinetic {
-                // if temperature is much smaller than kninetic freezeout, there are no interactions anymore and thus the cell is considered as vacuum.
-                let vs = [0.0; F_BOTH_2D];
-                let mut trans = [0.0; C_BOTH_2D];
-                trans[0] = VOID;
-                trans[1] = p(VOID);
-                trans[2] = dpde(VOID);
-                trans[3] = 1.0;
-
-                (vs, trans)
-            } else {
+            {
                 let g = (1.0 - v * v).sqrt();
 
                 let pe = p(e);
