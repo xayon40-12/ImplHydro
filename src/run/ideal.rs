@@ -79,13 +79,16 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     dtmin: f64,
     dtmax: f64,
     r: Scheme<S>,
+    gubser: bool,
     nb_trento: usize,
 ) {
     let trentos = prepare_trento::<V>(nb_trento);
     let dx = l / V as f64;
     let dt0 = dtmax;
     println!("{}", r.name);
-    converge(dt0, dtmin, |dt| hydro2d::<V, S>(t0, tend, dx, dt, r, None));
+    if gubser {
+        converge(dt0, dtmin, |dt| hydro2d::<V, S>(t0, tend, dx, dt, r, None));
+    }
     for i in 0..nb_trento {
         let trento = Some((trentos[i], i));
         converge(dt0, dtmin, |dt| {
@@ -130,6 +133,7 @@ pub fn run_2d<const V: usize>(
     l: f64,
     dtmin: f64,
     dtmax: f64,
+    gubser: bool,
     nb_trento: usize,
 ) {
     let imp = gauss_legendre_1();
@@ -139,14 +143,14 @@ pub fn run_2d<const V: usize>(
     let exp = heun();
     match solver {
         Solver::Both => {
-            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, nb_trento);
-            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, nb_trento);
+            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, gubser, nb_trento);
+            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, gubser, nb_trento);
         }
         Solver::Implicit => {
-            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, nb_trento);
+            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, gubser, nb_trento);
         }
         Solver::Explicit => {
-            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, nb_trento);
+            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, gubser, nb_trento);
         }
     }
 }

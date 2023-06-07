@@ -42,6 +42,8 @@ enum Dim {
 #[derive(Subcommand, Debug)]
 enum Hydro {
     Ideal {
+        #[arg(short, long, default_value_t = false)]
+        enable_gubser: bool,
         #[command(subcommand)]
         command: ToSimulate,
     },
@@ -112,7 +114,10 @@ fn run<const CELLS: usize>(args: Cli) {
         Dim::Dim1 { t0, tend, command } => {
             checkt(t0, tend);
             match command {
-                Hydro::Ideal { command } => match command {
+                Hydro::Ideal {
+                    enable_gubser: _,
+                    command,
+                } => match command {
                     ToSimulate::Benchmark {
                         dtmin,
                         dtmax,
@@ -132,7 +137,10 @@ fn run<const CELLS: usize>(args: Cli) {
         Dim::Dim2 { t0, tend, command } => {
             checkt(t0, tend);
             match command {
-                Hydro::Ideal { command } => match command {
+                Hydro::Ideal {
+                    enable_gubser,
+                    command,
+                } => match command {
                     ToSimulate::Benchmark {
                         dtmin,
                         dtmax,
@@ -140,7 +148,16 @@ fn run<const CELLS: usize>(args: Cli) {
                     } => {
                         let dtmax = dtmax.unwrap_or(dx * 0.1);
                         checkdt(dtmin, dtmax);
-                        ideal::run_2d::<CELLS>(solver, t0, tend, l, dtmin, dtmax, nb_trento);
+                        ideal::run_2d::<CELLS>(
+                            solver,
+                            t0,
+                            tend,
+                            l,
+                            dtmin,
+                            dtmax,
+                            enable_gubser,
+                            nb_trento,
+                        );
                     }
                     ToSimulate::Trento { dt, nb_trento } => {
                         let dt = dt.unwrap_or(dx * 0.1);
