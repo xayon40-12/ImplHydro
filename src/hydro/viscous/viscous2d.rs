@@ -445,8 +445,8 @@ fn flux<const V: usize>(
     let s = (e + pe) / temp;
     let tc = 0.154; // GeV
 
-    let vmev = gev.max(tc); // viscous temperature blocked at tc
-    let etaovers = etas_min + etas_slope * (vmev - tc) * (vmev / tc).powf(etas_crv);
+    let vgev = gev.max(tc); // viscous temperature [GeV] blocked at tc
+    let etaovers = etas_min + etas_slope * (vgev - tc) * (vgev / tc).powf(etas_crv);
     let mut eta = etaovers * s;
     let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
@@ -584,7 +584,6 @@ pub fn viscous2d<const V: usize, const S: usize>(
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
             vs[j][i] = init((i, j), (x, y));
-            trs[j][i][0] = vs[j][i][0];
             (vs[j][i], trs[j][i]) = constraints(t, vs[j][i]);
             max_e = trs[j][i][0].max(max_e);
         }
