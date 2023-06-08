@@ -19,11 +19,20 @@ git clone https://github.com/xayon40-12/ImplHydro.git
 cd ImplHydro
 ```
 
-Then, build and install the executable `implhydro`:  
+If you installed `rust` with `rustup`, then you should have a `.cargo` directory in your home folder. Furthermore, you should have been asked to add `$HOME/.cargo/bin` to you `PATH` environement variable. If so, you can install the `implhydro` executable and the other useful scripts located in the `utils` folder by executing the `install` script:  
 ```sh
-cargo install --path .
+./install
 ```
+
+If you do not want to install, you can simply build the project with
+```sh
+cargo build --release
+```
+and then acces the executable in `target/release/implhydro`
 
 ### Usefull scripts
 
-Many useful scripts are located in the `utils` directory. The most useful ones are installed as well without the `.py` extension during the install process of the `implhydro` executable for easier access.
+Many useful scripts are located in the `utils` directory.  
+
+_Description_:  
+TODO

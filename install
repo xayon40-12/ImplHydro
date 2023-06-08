@@ -1,0 +1,6 @@
+#!/bin/sh
+
+cargo install --path .
+for n in implplt.py implPreHydro.py implPostHydro.py riemann.py gubser.py plt_setting.py; do
+	cp utils/$n $HOME/.cargo/bin
+done
