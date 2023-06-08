@@ -3,21 +3,27 @@ use std::io::{Result, Write};
 
 use crate::solver::context::Arr;
 
-pub type IsoSurface2DFun<'a, const C: usize, const VX: usize, const VY: usize> =
+pub type IsoSurface2DFun<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize> =
     &'a dyn Fn(
-        &Arr<C, VX, VY>,    // old fields
-        &Arr<C, VX, VY>,    // new fields
-        usize,              // ID e
-        [usize; 3],         // ID [ut,ux,uy]
-        Option<[usize; 7]>, // ID [pitt,pitx,pity,pixx,pixy,piyy,pizz]
-        Option<usize>,      // ID bulk
-        f64,                // time for fields
-        f64,                // dx
-        f64,                // dt
-        f64,                // freezeout energy fm^-4
+        &Arr<C, VX, VY, VZ>, // old fields
+        &Arr<C, VX, VY, VZ>, // new fields
+        usize,               // ID e
+        [usize; 3],          // ID [ut,ux,uy]
+        Option<[usize; 7]>,  // ID [pitt,pitx,pity,pixx,pixy,piyy,pizz]
+        Option<usize>,       // ID bulk
+        f64,                 // time for fields
+        f64,                 // dx
+        f64,                 // dt
+        f64,                 // freezeout energy fm^-4
     ) -> Vec<Surface2D>;
 
-pub struct IsoSurfaceHandler<'a, const C: usize, const VX: usize, const VY: usize> {
+pub struct IsoSurface2DHandler<
+    'a,
+    const C: usize,
+    const VX: usize,
+    const VY: usize,
+    const VZ: usize,
+> {
     file: File,
     e_id: usize,
     u_ids: [usize; 3],             // [ut,ux,uy]
@@ -25,10 +31,12 @@ pub struct IsoSurfaceHandler<'a, const C: usize, const VX: usize, const VY: usiz
     bulk_id: Option<usize>,
     dx: f64,
     freezeout_energy: f64, // fm^-4
-    iso_surface_fun: IsoSurface2DFun<'a, C, VX, VY>,
+    iso_surface_fun: IsoSurface2DFun<'a, C, VX, VY, VZ>,
 }
 
-impl<'a, const C: usize, const VX: usize, const VY: usize> IsoSurfaceHandler<'a, C, VX, VY> {
+impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
+    IsoSurface2DHandler<'a, C, VX, VY, VZ>
+{
     pub fn new(
         filename: &str,
         e_id: usize,
@@ -37,9 +45,9 @@ impl<'a, const C: usize, const VX: usize, const VY: usize> IsoSurfaceHandler<'a,
         bulk_id: Option<usize>,
         dx: f64,
         freezeout_energy: f64, // fm^-4
-    ) -> Result<IsoSurfaceHandler<'a, C, VX, VY>> {
+    ) -> Result<IsoSurface2DHandler<'a, C, VX, VY, VZ>> {
         let file = File::create(filename)?;
-        let handler = IsoSurfaceHandler {
+        let handler = IsoSurface2DHandler {
             file,
             e_id,
             u_ids,
@@ -54,8 +62,8 @@ impl<'a, const C: usize, const VX: usize, const VY: usize> IsoSurfaceHandler<'a,
 
     pub fn find_surfaces(
         &mut self,
-        fields: &Arr<C, VX, VY>,
-        new_fields: &Arr<C, VX, VY>,
+        fields: &Arr<C, VX, VY, VZ>,
+        new_fields: &Arr<C, VX, VY, VZ>,
         ot: f64, // time for new_fields
         nt: f64, // where t+dt is the time of new_fields
     ) {
@@ -118,9 +126,9 @@ impl Surface2D {
 }
 
 #[allow(non_snake_case)]
-pub fn zigzag2D<const C: usize, const VX: usize, const VY: usize>(
-    fields: &Arr<C, VX, VY>,
-    new_fields: &Arr<C, VX, VY>,
+pub fn zigzag2D<const C: usize, const VX: usize, const VY: usize, const VZ: usize>(
+    fields: &Arr<C, VX, VY, VZ>,
+    new_fields: &Arr<C, VX, VY, VZ>,
     e_id: usize,
     u_ids: [usize; 3],             // [ut,ux,uy]
     shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
@@ -138,12 +146,13 @@ pub fn zigzag2D<const C: usize, const VX: usize, const VY: usize>(
     let vx2 = (VX - 1) as f64 * 0.5;
     let vy2 = (VY - 1) as f64 * 0.5;
 
+    let lz: usize = 0;
     for ly in 0..VY - 1 {
         for lx in 0..VX - 1 {
-            let f = fields[ly][lx];
-            let fx = fields[ly][lx + 1];
-            let fy = fields[ly + 1][lx];
-            let ft = new_fields[ly][lx];
+            let f = fields[lz][ly][lx];
+            let fx = fields[lz][ly][lx + 1];
+            let fy = fields[lz][ly + 1][lx];
+            let ft = new_fields[lz][ly][lx];
             let e = f[e_id] - freezeout_energy;
 
             let lut = f[u_ids[0]];

@@ -1,7 +1,7 @@
 use crate::{
     hydro::{
         eos::{hotqcd, wb, EOSs},
-        utils::{converge, prepare_trento},
+        utils::{converge, prepare_trento_2d},
         viscous::viscous2d::{init_from_entropy_density_2d, viscous2d},
         Eos, HydroOutput, C_BOTH_2D, F_BOTH_2D,
     },
@@ -18,8 +18,8 @@ fn hydro2d<const V: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     r: Scheme<S>,
-    init_s: ([[f64; V]; V], usize),
-) -> HydroOutput<V, V, F_BOTH_2D, C_BOTH_2D> {
+    init_s: (&[[f64; V]; V], usize),
+) -> HydroOutput<V, V, 1, F_BOTH_2D, C_BOTH_2D> {
     let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
     let eos = EOSs::WB;
@@ -60,11 +60,11 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     r: impl Fn(f64) -> Scheme<S>,
     nb_trento: usize,
 ) {
-    let trentos = prepare_trento::<V>(nb_trento);
+    let trentos = prepare_trento_2d::<V>(nb_trento);
     let dx = l / V as f64;
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
-        let trento = (trentos[i], i);
+        let trento = (trentos[i].as_ref(), i);
         converge(dtmax, dtmin, |dt| {
             hydro2d::<V, S>(
                 t0,
@@ -149,7 +149,7 @@ pub fn run_trento_2d<const V: usize>(
     freezeout_temp_gev: f64,
     nb_trento: usize,
 ) {
-    let trentos = prepare_trento::<V>(nb_trento);
+    let trentos = prepare_trento_2d::<V>(nb_trento);
     let gl1 = gauss_legendre_1();
     let heun = heun();
     let dx = l / V as f64;
@@ -182,7 +182,7 @@ pub fn run_trento_2d<const V: usize>(
         );
     };
     for i in 0..nb_trento {
-        let trento = (trentos[i], i);
+        let trento = (trentos[i].as_ref(), i);
         match solver {
             Solver::Both => {
                 do_gl1(trento);

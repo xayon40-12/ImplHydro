@@ -2,8 +2,11 @@ use crate::hydro::Eos;
 
 use super::{time::schemes::Scheme, Constraint};
 
-pub type Arr<const F: usize, const VX: usize, const VY: usize> = [[[f64; F]; VX]; VY];
-pub type BArr<const F: usize, const VX: usize, const VY: usize> = Box<Arr<F, VX, VY>>;
+pub const DIM: usize = 3;
+pub type Arr<const F: usize, const VX: usize, const VY: usize, const VZ: usize> =
+    [[[[f64; F]; VX]; VY]; VZ];
+pub type BArr<const F: usize, const VX: usize, const VY: usize, const VZ: usize> =
+    Box<Arr<F, VX, VY, VZ>>;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Integration {
@@ -11,21 +14,28 @@ pub enum Integration {
     FixPoint,
 }
 
-pub type Boundary<'a, const F: usize, const VX: usize, const VY: usize> =
-    &'a (dyn Fn([i32; 2], &Arr<F, VX, VY>) -> [f64; F] + Sync);
-pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY: usize> =
-    &'a (dyn Fn(
-        [&Arr<F, VX, VY>; 2],
-        [&Arr<C, VX, VY>; 2],
-        Constraint<F, C>,
-        Boundary<F, VX, VY>,
-        [i32; 2], // position in index [x,y]
-        f64,      // dx
-        [f64; 2], // [old t, current t]
-        [f64; 2], // [dt, current dt]
-        &Opt,
-    ) -> [f64; F]
-             + Sync);
+pub type Boundary<'a, const F: usize, const VX: usize, const VY: usize, const VZ: usize> =
+    &'a (dyn Fn([i32; DIM], &Arr<F, VX, VY, VZ>) -> [f64; F] + Sync);
+pub type Fun<
+    'a,
+    Opt,
+    const F: usize,
+    const C: usize,
+    const VX: usize,
+    const VY: usize,
+    const VZ: usize,
+> = &'a (dyn Fn(
+    [&Arr<F, VX, VY, VZ>; 2],
+    [&Arr<C, VX, VY, VZ>; 2],
+    Constraint<F, C>,
+    Boundary<F, VX, VY, VZ>,
+    [i32; DIM], // position in index [x,y]
+    f64,        // dx
+    [f64; 2],   // [old t, current t]
+    [f64; 2],   // [dt, current dt]
+    &Opt,
+) -> [f64; F]
+         + Sync);
 
 #[derive(Clone)]
 pub struct Context<
@@ -35,17 +45,18 @@ pub struct Context<
     const C: usize,
     const VX: usize,
     const VY: usize,
+    const VZ: usize,
     const S: usize,
 > {
-    pub fun: Fun<'a, Opt, F, C, VX, VY>,
+    pub fun: Fun<'a, Opt, F, C, VX, VY, VZ>,
     pub constraints: Constraint<'a, F, C>,
-    pub boundary: Boundary<'a, F, VX, VY>,
+    pub boundary: Boundary<'a, F, VX, VY, VZ>,
     pub post_constraints: Option<Constraint<'a, F, C>>,
-    pub local_interaction: [i32; 2],
-    pub vstrs: (BArr<F, VX, VY>, BArr<C, VX, VY>),
-    pub ovstrs: (BArr<F, VX, VY>, BArr<C, VX, VY>), // old
-    pub total_diff_vs: BArr<F, VX, VY>,
-    pub k: Box<[Arr<F, VX, VY>; S]>,
+    pub local_interaction: [i32; 3],
+    pub vstrs: (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>),
+    pub ovstrs: (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>), // old
+    pub total_diff_vs: BArr<F, VX, VY, VZ>,
+    pub k: Box<[Arr<F, VX, VY, VZ>; S]>,
     pub r: Scheme<S>,
     pub dt: f64,
     pub dx: f64,

@@ -9,31 +9,39 @@ use crate::solver::context::Arr;
 
 use super::{HydroOutput, FREESTREAM_2D};
 
-pub fn compare<const VX: usize, const VY: usize, const F: usize>(
+pub fn compare<const VX: usize, const VY: usize, const VZ: usize, const F: usize>(
     f: usize,
-    v1: &Arr<F, VX, VY>,
-    v2: &Arr<F, VX, VY>,
+    v1: &Arr<F, VX, VY, VZ>,
+    v2: &Arr<F, VX, VY, VZ>,
 ) -> (f64, f64) {
     let mut average: f64 = 0.0;
     let mut maximum: f64 = 0.0;
-    for j in 0..VY {
-        for i in 0..VX {
-            let v1 = v1[j][i][f];
-            let v2 = v2[j][i][f];
-            let d = (v1 - v2).abs() / v1.abs().max(v2.abs());
-            average += d;
-            maximum = maximum.max(d);
+    for vz in 0..VZ {
+        for vy in 0..VY {
+            for vx in 0..VX {
+                let v1 = v1[vz][vy][vx][f];
+                let v2 = v2[vz][vy][vx][f];
+                let d = (v1 - v2).abs() / v1.abs().max(v2.abs());
+                average += d;
+                maximum = maximum.max(d);
+            }
         }
     }
-    average /= (VX * VY) as f64;
+    average /= (VX * VY * VZ) as f64;
 
     (maximum, average)
 }
 
-pub fn converge<const VX: usize, const VY: usize, const F: usize, const C: usize>(
+pub fn converge<
+    const VX: usize,
+    const VY: usize,
+    const VZ: usize,
+    const F: usize,
+    const C: usize,
+>(
     mut dt: f64,
     dtmin: f64,
-    fun: impl Fn(f64) -> HydroOutput<VX, VY, F, C>,
+    fun: impl Fn(f64) -> HydroOutput<VX, VY, VZ, F, C>,
 ) -> Option<()> {
     let dtmul = 0.5;
     let mut f = fun(dt)?.0;
@@ -56,9 +64,9 @@ pub fn converge<const VX: usize, const VY: usize, const F: usize, const C: usize
     Some(())
 }
 
-pub fn load_matrix<const VX: usize, const VY: usize>(
+pub fn load_matrix_2d<const VX: usize, const VY: usize>(
     filename: &str,
-) -> std::io::Result<[[f64; VX]; VY]> {
+) -> std::io::Result<Box<[[f64; VX]; VY]>> {
     let mut file = File::open(filename)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -85,7 +93,7 @@ pub fn load_matrix<const VX: usize, const VY: usize>(
             VX, VY, vx, vy
         );
     }
-    let mut mat = [[0.0f64; VX]; VY];
+    let mut mat = Box::new([[0.0f64; VX]; VY]);
     for j in 0..VY {
         for i in 0..VX {
             mat[j][i] = arr[j][i];
@@ -95,21 +103,21 @@ pub fn load_matrix<const VX: usize, const VY: usize>(
     Ok(mat)
 }
 
-pub fn prepare_trento<const V: usize>(nb_trento: usize) -> Vec<[[f64; V]; V]> {
-    let mut trentos = vec![[[0.0f64; V]; V]; nb_trento];
+pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V]; V]>> {
+    let mut trentos = vec![Box::new([[0.0f64; V]; V]); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
-        trentos[i] = load_matrix(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
+        trentos[i] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
             "Could not load trento initial condition file \"e{V}/{i:0>width$}.dat\"."
         ));
     }
     trentos
 }
 
-pub fn prepare_trento_freestream<const V: usize>(
+pub fn prepare_trento_2d_freestream<const V: usize>(
     nb_trento: usize,
-) -> Vec<Arr<FREESTREAM_2D, V, V>> {
-    let mut trentos = vec![[[[0.0f64; FREESTREAM_2D]; V]; V]; nb_trento];
+) -> Vec<Arr<FREESTREAM_2D, V, V, 1>> {
+    let mut trentos = vec![[[[[0.0f64; FREESTREAM_2D]; V]; V]; 1]; nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for tr in 0..nb_trento {
         let err = format!(
@@ -125,7 +133,7 @@ pub fn prepare_trento_freestream<const V: usize>(
                 let i = x + y * V;
                 LittleEndian::read_f64_into(
                     &bytes[i * size..(i + 1) * size],
-                    &mut trentos[tr][y][x],
+                    &mut trentos[tr][0][y][x],
                 );
             }
         }

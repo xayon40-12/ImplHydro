@@ -1,7 +1,7 @@
 use crate::{
     hydro::{Viscosity, C_BOTH_2D, FREESTREAM_2D, F_BOTH_2D, HBARC},
     solver::{
-        context::{Boundary, Context, Integration},
+        context::{BArr, Boundary, Context, Integration},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -16,7 +16,7 @@ use nalgebra::matrix;
 
 pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     t0: f64,
-    s: [[f64; VX]; VY],
+    s: &'a [[f64; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
     _temperature: Eos<'a>,
@@ -46,7 +46,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
 
 pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
     t0: f64,
-    trs: [[[f64; FREESTREAM_2D]; VX]; VY],
+    trs: &'a [[[f64; FREESTREAM_2D]; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
@@ -282,11 +282,11 @@ pub enum Coordinate {
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[f64; F_BOTH_2D]; V]; V]; 2],
-    [otrs, trs]: [&[[[f64; C_BOTH_2D]; V]; V]; 2],
+    [_ov, vs]: [&[[[[f64; F_BOTH_2D]; V]; V]; 1]; 2],
+    [otrs, trs]: [&[[[[f64; C_BOTH_2D]; V]; V]; 1]; 2],
     constraints: Constraint<F_BOTH_2D, C_BOTH_2D>,
-    bound: Boundary<F_BOTH_2D, V, V>,
-    pos: [i32; 2],
+    bound: Boundary<F_BOTH_2D, V, V, 1>,
+    pos: [i32; 3],
     dx: f64,
     [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
@@ -350,11 +350,12 @@ fn flux<const V: usize>(
         theta,
     );
 
+    let z = 0;
     let y = pos[1] as usize;
     let x = pos[0] as usize;
     let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi] =
-        otrs[y][x];
-    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi] = trs[y][x];
+        otrs[z][y][x];
+    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi] = trs[z][y][x];
     let pimn = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
 
     let g = [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]];
@@ -453,16 +454,16 @@ fn flux<const V: usize>(
 
 pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
     t: f64,
-    _vs: &[[[f64; F_BOTH_2D]; VX]; VY],
-    tran: &[[[f64; C_BOTH_2D]; VX]; VY],
+    _vs: &[[[[f64; F_BOTH_2D]; VX]; VY]; 1],
+    tran: &[[[[f64; C_BOTH_2D]; VX]; VY]; 1],
 ) -> Vec<f64> {
     let mut mt11 = 0.0;
     let mut mt12 = 0.0;
     let mut mt22 = 0.0;
     for j in 0..VY {
         for i in 0..VX {
-            let [_, t11, t12, ..] = fxuxpi(t, tran[j][i]);
-            let [_, _, t22, ..] = fyuypi(t, tran[j][i]);
+            let [_, t11, t12, ..] = fxuxpi(t, tran[0][j][i]);
+            let [_, _, t22, ..] = fyuypi(t, tran[0][j][i]);
             mt11 += t11;
             mt12 += t12;
             mt22 += t22;
@@ -493,10 +494,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
     shear_temp_cut: f64,
     freezeout_temp: f64,
 ) -> Option<(
-    (
-        Box<[[[f64; F_BOTH_2D]; V]; V]>,
-        Box<[[[f64; C_BOTH_2D]; V]; V]>,
-    ),
+    (BArr<F_BOTH_2D, V, V, 1>, BArr<C_BOTH_2D, V, V, 1>),
     f64,
     usize,
     usize,
@@ -507,8 +505,8 @@ pub fn viscous2d<const V: usize, const S: usize>(
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);
 
-    let mut vs = Box::new([[[0.0; F_BOTH_2D]; V]; V]);
-    let mut trs = Box::new([[[0.0; C_BOTH_2D]; V]; V]);
+    let mut vs = Box::new([[[[0.0; F_BOTH_2D]; V]; V]; 1]);
+    let mut trs = Box::new([[[[0.0; C_BOTH_2D]; V]; V]; 1]);
     let names = (
         ["tt00", "tt01", "tt02", "utpi11", "utpi12", "utpi22", "utPi"],
         [
@@ -516,16 +514,16 @@ pub fn viscous2d<const V: usize, const S: usize>(
             "pi33", "Pi",
         ],
     );
-    let k = Box::new([[[[0.0; F_BOTH_2D]; V]; V]; S]);
+    let k = Box::new([[[[[0.0; F_BOTH_2D]; V]; V]; 1]; S]);
     let v2 = ((V - 1) as f64) / 2.0;
     let mut max_e = 0.0;
     for j in 0..V {
         for i in 0..V {
             let x = (i as f64 - v2) * dx;
             let y = (j as f64 - v2) * dx;
-            vs[j][i] = init((i, j), (x, y));
-            (vs[j][i], trs[j][i]) = constraints(t, vs[j][i]);
-            max_e = trs[j][i][0].max(max_e);
+            vs[0][j][i] = init((i, j), (x, y));
+            (vs[0][j][i], trs[0][j][i]) = constraints(t, vs[0][j][i]);
+            max_e = trs[0][j][i][0].max(max_e);
         }
     }
 
@@ -542,7 +540,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
         constraints: &constraints,
         boundary: &ghost, // TODO use better boundary
         post_constraints: None,
-        local_interaction: [1, 1], // use a distance of 0 to emulate 1D
+        local_interaction: [1, 1, 0], // use a distance of 0 to emulate 1D
         vstrs: (vs.clone(), trs.clone()),
         ovstrs: (vs, trs),
         total_diff_vs: zeros(),
@@ -562,13 +560,18 @@ pub fn viscous2d<const V: usize, const S: usize>(
     };
 
     let e = 1e-1;
-    let err_thr = |_t: f64, _vs: &[[[f64; F_BOTH_2D]; V]; V], _trs: &[[[f64; C_BOTH_2D]; V]; V]| {
-        let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * V) as f64;
-        let k = m / maxdt;
-        e * k * (maxdt / dx).powi(r.order)
-    };
+    let err_thr =
+        |_t: f64, vs: &[[[[f64; F_BOTH_2D]; V]; V]; 1], _trs: &[[[[f64; C_BOTH_2D]; V]; V]; 1]| {
+            let m = vs[0]
+                .iter()
+                .flat_map(|v| v.iter().map(|v| v[0]))
+                .sum::<f64>()
+                / (V * V) as f64;
+            let k = m / maxdt;
+            e * k * (maxdt / dx).powi(r.order)
+        };
 
-    let observables: [Observable<F_BOTH_2D, C_BOTH_2D, V, V>; 1] =
+    let observables: [Observable<F_BOTH_2D, C_BOTH_2D, V, V, 1>; 1] =
         [("momentum_anisotropy", &momentum_anisotropy::<V, V>)];
 
     let temp_fm = shear_temp_cut / HBARC;

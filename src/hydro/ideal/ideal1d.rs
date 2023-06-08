@@ -1,7 +1,7 @@
 use crate::{
     hydro::{C_IDEAL_1D, F_IDEAL_1D},
     solver::{
-        context::{Arr, BArr, Boundary, Context},
+        context::{Arr, BArr, Boundary, Context, DIM},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -47,11 +47,11 @@ fn f1(_t: f64, [e, pe, _, ut, ux]: [f64; C_IDEAL_1D]) -> [f64; F_IDEAL_1D] {
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&Arr<F_IDEAL_1D, V, 1>; 2],
-    [_otrs, trs]: [&Arr<C_IDEAL_1D, V, 1>; 2],
+    [_ov, vs]: [&Arr<F_IDEAL_1D, V, 1, 1>; 2],
+    [_otrs, trs]: [&Arr<C_IDEAL_1D, V, 1, 1>; 2],
     constraints: Constraint<F_IDEAL_1D, C_IDEAL_1D>,
-    bound: Boundary<F_IDEAL_1D, V, 1>,
-    pos: [i32; 2],
+    bound: Boundary<F_IDEAL_1D, V, 1, 1>,
+    pos: [i32; DIM],
     dx: f64,
     [_ot, _t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
@@ -106,29 +106,28 @@ pub fn ideal1d<const V: usize, const S: usize>(
     dpde: Eos,
     init: Init1D<2>,
 ) -> Option<(
-    (BArr<F_IDEAL_1D, V, 1>, BArr<C_IDEAL_1D, V, 1>),
+    (BArr<F_IDEAL_1D, V, 1, 1>, BArr<C_IDEAL_1D, V, 1, 1>),
     f64,
     usize,
     usize,
 )> {
     let constraints = gen_constraints(p, dpde);
-    let mut vs = Box::new([[[0.0; F_IDEAL_1D]; V]]);
-    let mut trs = Box::new([[[0.0; C_IDEAL_1D]; V]]);
+    let mut vs = Box::new([[[[0.0; F_IDEAL_1D]; V]; 1]; 1]);
+    let mut trs = Box::new([[[[0.0; C_IDEAL_1D]; V]; 1]; 1]);
     let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);
-    let k = Box::new([[[[0.0; 2]; V]]; S]);
+    let k = Box::new([[[[[0.0; 2]; V]; 1]; 1]; S]);
     let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {
         let x = (i as f64 - v2) * dx;
-        vs[0][i] = init(i, x);
-        trs[0][i][0] = vs[0][i][0];
-        (vs[0][i], trs[0][i]) = constraints(t, vs[0][i]);
+        vs[0][0][i] = init(i, x);
+        (vs[0][0][i], trs[0][0][i]) = constraints(t, vs[0][0][i]);
     }
     let context = Context {
         fun: &flux,
         constraints: &constraints,
         boundary: &ghost, // use noboundary to emulate 1D
         post_constraints: None,
-        local_interaction: [1, 0], // use a distance of 0 to emulate 1D
+        local_interaction: [1, 0, 0], // use a distance of 0 to emulate 1D
         ovstrs: (vs.clone(), trs.clone()),
         vstrs: (vs, trs),
         total_diff_vs: zeros(),
@@ -148,12 +147,13 @@ pub fn ideal1d<const V: usize, const S: usize>(
     };
 
     let e = 1e-3;
-    let err_thr =
-        |_t: f64, _vs: &[[[f64; F_IDEAL_1D]; V]; 1], _trs: &[[[f64; C_IDEAL_1D]; V]; 1]| {
-            let m = _vs.iter().flat_map(|v| v.iter().map(|v| v[0])).sum::<f64>() / (V * 1) as f64;
-            let k = m / maxdt;
-            e * k * (maxdt / dx).powi(r.order)
-        };
+    let err_thr = |_t: f64,
+                   vs: &[[[[f64; F_IDEAL_1D]; V]; 1]; 1],
+                   _trs: &[[[[f64; C_IDEAL_1D]; V]; 1]; 1]| {
+        let m = vs[0][0].iter().map(|v| v[0]).sum::<f64>() / V as f64;
+        let k = m / maxdt;
+        e * k * (maxdt / dx).powi(r.order)
+    };
 
     run(
         context,

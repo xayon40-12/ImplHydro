@@ -7,7 +7,7 @@ use crate::{
         },
         ideal_gas,
         solutions::{gubser::init_gubser, riemann::init_riemann},
-        utils::{converge, prepare_trento},
+        utils::{converge, prepare_trento_2d},
         Eos, HydroOutput, C_IDEAL_1D, C_IDEAL_2D, F_IDEAL_1D, F_IDEAL_2D,
     },
     solver::{time::schemes::*, Solver},
@@ -19,8 +19,8 @@ fn hydro2d<const V: usize, const S: usize>(
     dx: f64,
     maxdt: f64,
     r: Scheme<S>,
-    init_e: Option<([[f64; V]; V], usize)>,
-) -> HydroOutput<V, V, F_IDEAL_2D, C_IDEAL_2D> {
+    init_e: Option<(&[[f64; V]; V], usize)>,
+) -> HydroOutput<V, V, 1, F_IDEAL_2D, C_IDEAL_2D> {
     let name = if let Some((_, i)) = init_e {
         format!("InitTrento{}", i)
     } else {
@@ -47,7 +47,7 @@ fn hydro1d<const V: usize, const S: usize>(
     maxdt: f64,
     r: Scheme<S>,
     use_void: bool,
-) -> HydroOutput<V, 1, F_IDEAL_1D, C_IDEAL_1D> {
+) -> HydroOutput<V, 1, 1, F_IDEAL_1D, C_IDEAL_1D> {
     let void = if use_void { "Void" } else { "" };
     println!("Rieman{}", void);
     let p = &ideal_gas::p;
@@ -82,7 +82,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     gubser: bool,
     nb_trento: usize,
 ) {
-    let trentos = prepare_trento::<V>(nb_trento);
+    let trentos = prepare_trento_2d::<V>(nb_trento);
     let dx = l / V as f64;
     let dt0 = dtmax;
     println!("{}", r.name);
@@ -90,7 +90,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
         converge(dt0, dtmin, |dt| hydro2d::<V, S>(t0, tend, dx, dt, r, None));
     }
     for i in 0..nb_trento {
-        let trento = Some((trentos[i], i));
+        let trento = Some((trentos[i].as_ref(), i));
         converge(dt0, dtmin, |dt| {
             hydro2d::<V, S>(t0, tend, dx, dt, r, trento)
         });
@@ -162,12 +162,12 @@ pub fn run_trento_2d<const V: usize>(
     dt: f64,
     nb_trento: usize,
 ) {
-    let trentos = prepare_trento::<V>(nb_trento);
+    let trentos = prepare_trento_2d::<V>(nb_trento);
     let imp = gauss_legendre_1();
     let exp = heun();
     let dx = l / V as f64;
     for i in 0..nb_trento {
-        let trento = Some((trentos[i], i));
+        let trento = Some((trentos[i].as_ref(), i));
         match solver {
             Solver::Both => {
                 hydro2d::<V, 1>(t0, tend, dx, dt, imp, trento);

@@ -10,6 +10,7 @@ pub enum Eigenvalues<'a, const C: usize> {
 pub enum Dir {
     X,
     Y,
+    Z,
 }
 
 pub fn id_flux_limiter<const F: usize>(_t: f64, v: [f64; F]) -> [f64; F] {

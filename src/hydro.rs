@@ -62,8 +62,18 @@ impl Viscosity {
     }
 }
 
-pub type HydroOutput<const VX: usize, const VY: usize, const F: usize, const C: usize> =
-    Option<((BArr<F, VX, VY>, BArr<C, VX, VY>), f64, usize, usize)>;
+pub type HydroOutput<
+    const VX: usize,
+    const VY: usize,
+    const VZ: usize,
+    const F: usize,
+    const C: usize,
+> = Option<(
+    (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>),
+    f64,
+    usize,
+    usize,
+)>;
 
 pub const FREESTREAM_2D: usize = 11;
 

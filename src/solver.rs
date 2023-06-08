@@ -1,7 +1,7 @@
 use crate::solver::context::{Arr, BArr};
 use std::collections::HashMap;
 
-use crate::hydro::{isosurface::IsoSurfaceHandler, Viscosity};
+use crate::hydro::{isosurface::IsoSurface2DHandler, Viscosity};
 
 use self::time::fixpoint::ErrThr;
 
@@ -30,9 +30,16 @@ custom_derive! {
 pub type Constraint<'a, const F: usize, const C: usize> =
     &'a (dyn Fn(f64, [f64; F]) -> ([f64; F], [f64; C]) + Sync);
 pub type Transform<'a, const F: usize> = &'a (dyn Fn(f64, [f64; F]) -> [f64; F] + Sync);
-pub type Observable<'a, const F: usize, const C: usize, const VX: usize, const VY: usize> = (
+pub type Observable<
+    'a,
+    const F: usize,
+    const C: usize,
+    const VX: usize,
+    const VY: usize,
+    const VZ: usize,
+> = (
     &'a str,
-    &'a (dyn Fn(f64, &Arr<F, VX, VY>, &Arr<C, VX, VY>) -> Vec<f64> + Sync),
+    &'a (dyn Fn(f64, &Arr<F, VX, VY, VZ>, &Arr<C, VX, VY, VZ>) -> Vec<f64> + Sync),
 );
 
 pub fn save<
@@ -41,9 +48,10 @@ pub fn save<
     const C: usize,
     const VX: usize,
     const VY: usize,
+    const VZ: usize,
     const S: usize,
 >(
-    context: &Context<Opt, F, C, VX, VY, S>,
+    context: &Context<Opt, F, C, VX, VY, VZ, S>,
     (namesf, namesc): &([&str; F], [&str; C]),
     name: &str, // simulation name
     foldername: &str,
@@ -51,9 +59,9 @@ pub fn save<
     elapsed: f64,
     cost: usize,
     tsteps: usize,
-    nbiter: [[usize; VX]; VY],
+    nbiter: &[[[usize; VX]; VY]; VZ],
     fails: usize,
-    observables: &[Observable<F, C, VX, VY>],
+    observables: &[Observable<F, C, VX, VY, VZ>],
 ) -> std::io::Result<()> {
     let t0 = context.t0;
     let tend = context.tend;
@@ -66,63 +74,68 @@ pub fn save<
     let integration = context.r.integration;
     let stages = S;
 
-    const TXT: bool = false;
+    // const TXT: bool = false;
     const DIFF: bool = false;
 
-    let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
-    if TXT {
-        for f in 0..F {
-            res = format!("{} {}", res, namesf[f]);
-        }
-        for c in 0..C {
-            res = format!("{} {}", res, namesc[c]);
-        }
-        res = format!("{}\n", res);
-    }
+    // let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
+    // if TXT {
+    //     for f in 0..F {
+    //         res = format!("{} {}", res, namesf[f]);
+    //     }
+    //     for c in 0..C {
+    //         res = format!("{} {}", res, namesc[c]);
+    //     }
+    //     res = format!("{}\n", res);
+    // }
 
-    let fc3 = F + C + 3;
-    let mut ligne = vec![0.0f64; VY * VX * fc3];
-    let f2 = F + 2;
-    let mut ligne_diff = vec![0.0f64; VY * VX * f2];
-    for j in 0..VY {
-        for i in 0..VX {
-            let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
-            let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
-            let v = v[j][i];
-            let vars = trs[j][i];
-            let diffv = diffv[j][i];
+    let fc4 = F + C + 4;
+    let mut ligne = vec![0.0f64; VY * VX * VZ * fc4];
+    let f3 = F + 3;
+    let mut ligne_diff = vec![0.0f64; VY * VX * VZ * f3];
+    for k in 0..VZ {
+        for j in 0..VY {
+            for i in 0..VX {
+                let z = (k as f64 - ((VZ - 1) as f64) / 2.0) * dx;
+                let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
+                let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
+                let v = v[k][j][i];
+                let vars = trs[k][j][i];
+                let diffv = diffv[k][j][i];
 
-            if TXT {
-                let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
+                // if TXT {
+                //     let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
+                //     for f in 0..F {
+                //         s = format!("{} {:e}", s, v[f]);
+                //     }
+                //     for c in 0..C {
+                //         s = format!("{} {:e}", s, vars[c]);
+                //     }
+                //     s = format!("{}\n", s);
+                //     res = format!("{}{}", res, s);
+                // }
+
+                ligne[0 + fc4 * (i + VX * (j + VZ * k))] = x;
+                ligne[1 + fc4 * (i + VX * (j + VZ * k))] = y;
+                ligne[2 + fc4 * (i + VX * (j + VZ * k))] = z;
+                ligne[3 + fc4 * (i + VX * (j + VZ * k))] = nbiter[k][j][i] as f64;
+                if DIFF {
+                    ligne_diff[0 + f3 * (i + VX * (j + VZ * k))] = x;
+                    ligne_diff[1 + f3 * (i + VX * (j + VZ * k))] = y;
+                    ligne_diff[2 + f3 * (i + VX * (j + VZ * k))] = z;
+                }
                 for f in 0..F {
-                    s = format!("{} {:e}", s, v[f]);
+                    ligne[4 + f + fc4 * (i + VX * (j + VZ * k))] = v[f];
+                    if DIFF {
+                        ligne_diff[3 + f + f3 * (i + VX * (j + VZ * k))] = diffv[f];
+                    }
                 }
                 for c in 0..C {
-                    s = format!("{} {:e}", s, vars[c]);
-                }
-                s = format!("{}\n", s);
-                res = format!("{}{}", res, s);
-            }
-
-            ligne[0 + fc3 * (i + j * VX)] = x;
-            ligne[1 + fc3 * (i + j * VX)] = y;
-            ligne[2 + fc3 * (i + j * VX)] = nbiter[j][i] as f64;
-            if DIFF {
-                ligne_diff[0 + f2 * (i + j * VX)] = x;
-                ligne_diff[1 + f2 * (i + j * VX)] = y;
-            }
-            for f in 0..F {
-                ligne[3 + f + fc3 * (i + j * VX)] = v[f];
-                if DIFF {
-                    ligne_diff[2 + f + f2 * (i + j * VX)] = diffv[f];
+                    ligne[4 + F + c + fc4 * (i + VX * (j + VZ * k))] = vars[c];
                 }
             }
-            for c in 0..C {
-                ligne[3 + F + c + fc3 * (i + j * VX)] = vars[c];
-            }
-        }
-        if TXT {
-            res = format!("{}\n", res);
+            // if TXT {
+            //     res = format!("{}\n", res);
+            // }
         }
     }
 
@@ -154,9 +167,9 @@ pub fn save<
                 .collect::<Vec<_>>(),
         )?;
     }
-    if TXT {
-        std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
-    }
+    // if TXT {
+    //     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
+    // }
     let viscosity = match viscosity {
         Viscosity::Ideal => format!("Ideal"),
         Viscosity::Bulk(zeta, energycut) => {
@@ -173,7 +186,7 @@ pub fn save<
             e_min, e_slope, e_crv, z_max, z_width, z_peak, energycut
         ),
     };
-    let variables = ["x", "y", "iter"]
+    let variables = ["x", "y", "z", "iter"]
         .iter()
         .chain(namesf.iter())
         .chain(namesc.iter())
@@ -181,8 +194,8 @@ pub fn save<
         .collect::<Vec<&str>>()
         .join(" ");
     let info = format!(
-        "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\nviscosity: {}\nvariables: {}\n",
-        elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, dx, maxdt, integration, schemename, stages, name, viscosity, variables,
+        "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\nviscosity: {}\nvariables: {}\n",
+        elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, maxdt, integration, schemename, stages, name, viscosity, variables,
     );
     std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
 
@@ -195,15 +208,21 @@ pub fn run<
     const C: usize,
     const VX: usize,
     const VY: usize,
+    const VZ: usize,
     const S: usize,
 >(
-    mut context: Context<Opt, F, C, VX, VY, S>,
+    mut context: Context<Opt, F, C, VX, VY, VZ, S>,
     name: &str,
     viscosity: Viscosity,
     names: &([&str; F], [&str; C]),
-    observables: &[Observable<F, C, VX, VY>],
-    err_thr: ErrThr<F, C, VX, VY>,
-) -> Option<((BArr<F, VX, VY>, BArr<C, VX, VY>), f64, usize, usize)> {
+    observables: &[Observable<F, C, VX, VY, VZ>],
+    err_thr: ErrThr<F, C, VX, VY, VZ>,
+) -> Option<(
+    (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>),
+    f64,
+    usize,
+    usize,
+)> {
     let dim = if VY == 1 { 1 } else { 2 };
     let foldername = &format!(
         "results/{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
@@ -247,24 +266,30 @@ pub fn run<
                 })
             });
     let bulk_id = ids.get("Pi").and_then(|b| Some(*b));
-    let mut isosurface: Option<IsoSurfaceHandler<C, VX, VY>> =
+    let mut isosurface: Option<IsoSurface2DHandler<C, VX, VY, VZ>> =
         context.freezeout_energy.and_then(|freezeout_energy| {
-            IsoSurfaceHandler::new(
-                &surface_filename,
-                ids["e"],
-                [ids["ut"], ids["ux"], ids["uy"]],
-                shear_ids,
-                bulk_id,
-                context.dx,
-                freezeout_energy,
-            )
-            .map_or_else(
-                |err| {
-                    eprintln!("Error in initializing IsoSurfaceHondler: {}", err);
-                    None
-                },
-                |iso| Some(iso),
-            )
+            if VX > 0 && VY > 0 && VZ > 0 {
+                None // TODO implement and use IsoSurface3DHandler
+            } else if VX > 0 && VY > 0 {
+                IsoSurface2DHandler::new(
+                    &surface_filename,
+                    ids["e"],
+                    [ids["ut"], ids["ux"], ids["uy"]],
+                    shear_ids,
+                    bulk_id,
+                    context.dx,
+                    freezeout_energy,
+                )
+                .map_or_else(
+                    |err| {
+                        eprintln!("Error in initializing IsoSurfaceHondler: {}", err);
+                        None
+                    },
+                    |iso| Some(iso),
+                )
+            } else {
+                None
+            }
         });
     let now = Instant::now();
 
@@ -272,9 +297,13 @@ pub fn run<
     let save_every = 0.1f64.max(context.maxdt);
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
-    let mut nbiter = [[1usize; VX]; VY];
+    let mut nbiter = Box::new([[[1usize; VX]; VY]; VZ]);
     let mut fails = 0;
-    let save = |ctx: &Context<Opt, F, C, VX, VY, S>, cost, tsteps, nbiter, fails| {
+    let save = |ctx: &Context<Opt, F, C, VX, VY, VZ, S>,
+                cost,
+                tsteps,
+                nbiter: &[[[usize; VX]; VY]; VZ],
+                fails| {
         let elapsed = now.elapsed().as_secs_f64();
         let err = save(
             ctx,
@@ -294,7 +323,7 @@ pub fn run<
             Ok(()) => {}
         }
     };
-    save(&context, cost, tsteps, nbiter, fails);
+    save(&context, cost, tsteps, &nbiter, fails);
     let m = 1e-13;
     let r = 1e10;
     let enable_save = true;
@@ -319,7 +348,7 @@ pub fn run<
                 d = next_save - tmp_ctx.t;
             }
             tmp_ctx.t = (tmp_ctx.t * r).round() / r; // round time for saving
-            save(&tmp_ctx, cost, tsteps, nbiter, fails);
+            save(&tmp_ctx, cost, tsteps, &nbiter, fails);
             current_save = next_save;
             next_save = (current_save + save_every).min(context.tend);
         }

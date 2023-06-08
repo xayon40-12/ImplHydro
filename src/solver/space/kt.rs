@@ -1,12 +1,19 @@
-use crate::solver::context::{Arr, Boundary};
+use crate::solver::context::{Arr, Boundary, DIM};
 use crate::solver::{utils::flux_limiter, Constraint, Transform};
 
 use super::{Dir, Eigenvalues, Flux};
 
-pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, const SD: usize>(
-    (vs, _trs): (&Arr<F, VX, VY>, &Arr<C, VX, VY>),
-    bound: Boundary<F, VX, VY>,
-    [x, y]: [i32; 2],
+pub fn kt<
+    const F: usize,
+    const VX: usize,
+    const VY: usize,
+    const VZ: usize,
+    const C: usize,
+    const SD: usize,
+>(
+    (vs, _trs): (&Arr<F, VX, VY, VZ>, &Arr<C, VX, VY, VZ>),
+    bound: Boundary<F, VX, VY, VZ>,
+    [x, y, z]: [i32; DIM],
     dir: Dir,
     t: f64,
     flux: Flux<F, C>,
@@ -21,11 +28,12 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     let mut vals: [[f64; F]; 5] = [[0.0; F]; 5];
     let mut tvals: [[f64; C]; 5] = [[0.0; C]; 5];
     for l in 0..5 {
-        let (lx, ly) = match dir {
-            Dir::X => (l as i32 - 2, 0),
-            Dir::Y => (0, l as i32 - 2),
+        let (lx, ly, lz) = match dir {
+            Dir::X => (l as i32 - 2, 0, 0),
+            Dir::Y => (0, l as i32 - 2, 0),
+            Dir::Z => (0, 0, l as i32 - 2),
         };
-        (vals[l], tvals[l]) = constraints(t, bound([x + lx, y + ly], &vs));
+        (vals[l], tvals[l]) = constraints(t, bound([x + lx, y + ly, z + lz], &vs));
         vals[l] = pre_flux_limiter(t, vals[l]);
     }
     let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];

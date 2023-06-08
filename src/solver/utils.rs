@@ -1,13 +1,14 @@
 use rayon::prelude::*;
 
-use super::context::{Arr, BArr};
+use super::context::{Arr, BArr, DIM};
 
 pub fn zero(_j: i32, _n: usize) -> usize {
     0
 }
 
-pub fn zeros<const VY: usize, const VX: usize, const F: usize>() -> BArr<F, VX, VY> {
-    Box::new([[[0.0; F]; VX]; VY])
+pub fn zeros<const F: usize, const VX: usize, const VY: usize, const VZ: usize>(
+) -> BArr<F, VX, VY, VZ> {
+    Box::new([[[[0.0; F]; VX]; VY]; VZ])
 }
 
 pub fn _periodic(j: i32, n: usize) -> usize {
@@ -19,14 +20,14 @@ pub fn _periodic(j: i32, n: usize) -> usize {
         j as usize
     }
 }
-pub fn periodic<const F: usize, const C: usize, const VX: usize, const VY: usize>(
-    [x, y]: [i32; 2],
-    vs: &Arr<F, VX, VY>,
-    trs: &Arr<C, VX, VY>,
-) -> ([f64; F], [f64; C]) {
+pub fn periodic<const F: usize, const VX: usize, const VY: usize, const VZ: usize>(
+    [x, y, z]: [i32; DIM],
+    vs: &Arr<F, VX, VY, VZ>,
+) -> [f64; F] {
+    let k = _periodic(z, VZ);
     let j = _periodic(y, VY);
     let i = _periodic(x, VX);
-    (vs[j][i], trs[j][i])
+    vs[k][j][i]
 }
 
 pub fn _ghost(j: i32, n: usize) -> usize {
@@ -38,13 +39,14 @@ pub fn _ghost(j: i32, n: usize) -> usize {
         j as usize
     }
 }
-pub fn ghost<const F: usize, const VX: usize, const VY: usize>(
-    [x, y]: [i32; 2],
-    vs: &Arr<F, VX, VY>,
+pub fn ghost<const F: usize, const VX: usize, const VY: usize, const VZ: usize>(
+    [x, y, z]: [i32; DIM],
+    vs: &Arr<F, VX, VY, VZ>,
 ) -> [f64; F] {
+    let k = _ghost(z, VZ);
     let j = _ghost(y, VY);
     let i = _ghost(x, VX);
-    vs[j][i]
+    vs[k][j][i]
 }
 
 pub fn _cubical<const F: usize>(x: i32, vs: [[f64; F]; 4]) -> [f64; F] {
@@ -70,10 +72,13 @@ pub fn _cubical<const F: usize>(x: i32, vs: [[f64; F]; 4]) -> [f64; F] {
     res
 }
 
-pub fn cubical<const F: usize, const VX: usize, const VY: usize>(
-    [x, y]: [i32; 2],
-    vs: &Arr<F, VX, VY>,
+pub fn cubical<const F: usize, const VX: usize, const VY: usize, const VZ: usize>(
+    [x, y, z]: [i32; DIM],
+    vs: &Arr<F, VX, VY, VZ>,
 ) -> [f64; F] {
+    let k = z as usize;
+    let j = y as usize;
+    let i = x as usize;
     if x < 0 || x >= VX as i32 {
         let (s, p) = if x < 0 {
             (0, x)
@@ -81,9 +86,8 @@ pub fn cubical<const F: usize, const VX: usize, const VY: usize>(
             (VX - 5, x - VX as i32 + 4)
         };
         let mut cvs = [[0.0f64; F]; 4];
-        let j = y as usize;
         for i in 0..4 {
-            cvs[i] = vs[j][s + i];
+            cvs[i] = vs[k][j][s + i];
         }
         _cubical(p, cvs)
     } else if y < 0 || y >= VY as i32 {
@@ -93,15 +97,23 @@ pub fn cubical<const F: usize, const VX: usize, const VY: usize>(
             (VY - 5, y - VY as i32 + 4)
         };
         let mut cvs = [[0.0f64; F]; 4];
-        let i = x as usize;
         for j in 0..4 {
-            cvs[j] = vs[s + j][i];
+            cvs[j] = vs[k][s + j][i];
+        }
+        _cubical(p, cvs)
+    } else if z < 0 || z >= VZ as i32 {
+        let (s, p) = if z < 0 {
+            (0, z)
+        } else {
+            (VZ - 5, z - VZ as i32 + 4)
+        };
+        let mut cvs = [[0.0f64; F]; 4];
+        for k in 0..4 {
+            cvs[k] = vs[s + k][j][i];
         }
         _cubical(p, cvs)
     } else {
-        let j = y as usize;
-        let i = x as usize;
-        vs[j][i]
+        vs[k][j][i]
     }
 }
 
@@ -113,34 +125,59 @@ pub fn flux_limiter(theta: f64, a: f64, b: f64, c: f64) -> f64 {
 pub struct Coord {
     pub x: usize,
     pub y: usize,
+    pub z: usize,
 }
 
-pub fn pfor2d<T: Send, const VX: usize, const VY: usize>(
-    vss: &mut [[T; VX]; VY],
+pub fn pfor3d<T: Send, const VX: usize, const VY: usize, const VZ: usize>(
+    vsss: &mut [[[T; VX]; VY]; VZ],
     f: &(dyn Fn((Coord, &mut T)) + Sync),
 ) {
-    vss.par_iter_mut()
+    vsss.par_iter_mut()
         .enumerate()
-        .flat_map(|(vy, vs)| {
-            vs.par_iter_mut()
-                .enumerate()
-                .map(move |(vx, v)| (Coord { x: vx, y: vy }, v))
+        .flat_map(|(vz, vss)| {
+            vss.par_iter_mut().enumerate().flat_map(move |(vy, vs)| {
+                vs.par_iter_mut().enumerate().map(move |(vx, v)| {
+                    (
+                        Coord {
+                            x: vx,
+                            y: vy,
+                            z: vz,
+                        },
+                        v,
+                    )
+                })
+            })
         })
         .for_each(f);
 }
-pub fn pfor2d2<T: Send, U: Send, const VX: usize, const VY: usize>(
-    vss: &mut [[T; VX]; VY],
-    wss: &mut [[U; VX]; VY],
+pub fn pfor3d2<T: Send, U: Send, const VX: usize, const VY: usize, const VZ: usize>(
+    vsss: &mut [[[T; VX]; VY]; VZ],
+    wsss: &mut [[[U; VX]; VY]; VZ],
     f: &(dyn Fn((Coord, &mut T, &mut U)) + Sync),
 ) {
-    vss.par_iter_mut()
-        .zip(wss.par_iter_mut())
+    vsss.par_iter_mut()
+        .zip(wsss.par_iter_mut())
         .enumerate()
-        .flat_map(|(vy, (vs, ws))| {
-            vs.par_iter_mut()
-                .zip(ws.par_iter_mut())
+        .flat_map(|(vz, (vss, wss))| {
+            vss.par_iter_mut()
+                .zip(wss.par_iter_mut())
                 .enumerate()
-                .map(move |(vx, (v, w))| (Coord { x: vx, y: vy }, v, w))
+                .flat_map(move |(vy, (vs, ws))| {
+                    vs.par_iter_mut()
+                        .zip(ws.par_iter_mut())
+                        .enumerate()
+                        .map(move |(vx, (v, w))| {
+                            (
+                                Coord {
+                                    x: vx,
+                                    y: vy,
+                                    z: vz,
+                                },
+                                v,
+                                w,
+                            )
+                        })
+                })
         })
         .for_each(f);
 }

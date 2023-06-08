@@ -1,6 +1,6 @@
 use crate::solver::{
     context::Context,
-    utils::{pfor2d, Coord},
+    utils::{pfor3d, Coord},
 };
 
 use super::schemes::Scheme;
@@ -11,6 +11,7 @@ pub fn explicit<
     const C: usize,
     const VX: usize,
     const VY: usize,
+    const VZ: usize,
     const S: usize,
 >(
     Context {
@@ -35,12 +36,12 @@ pub fn explicit<
         p: _,
         dpde: _,
         freezeout_energy: _,
-    }: &mut Context<Opt, F, C, VX, VY, S>,
-) -> Option<(f64, [[usize; VX]; VY], usize)> {
+    }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
+) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>, usize)> {
     *dt = maxdt.min(*dt);
     let cost = S as f64;
-    let nbiter = [[1usize; VX]; VY];
-    let mut fu = [[[0.0f64; F]; VX]; VY];
+    let nbiter = Box::new([[[1usize; VX]; VY]; VZ]);
+    let mut fu = Box::new([[[[0.0f64; F]; VX]; VY]; VZ]);
     let mut vdtk = vs.clone();
     let mut trdtk = trs.clone();
     let mut ovdtk = ovs.clone();
@@ -50,18 +51,20 @@ pub fn explicit<
     let mut c;
     let mut cdt = *t - *ot;
     for s in 0..S {
-        for vy in 0..VY {
-            for vx in 0..VX {
-                (vdtk[vy][vx], trdtk[vy][vx]) = constraints(ct, vdtk[vy][vx]);
+        for vz in 0..VZ {
+            for vy in 0..VY {
+                for vx in 0..VX {
+                    (vdtk[vz][vy][vx], trdtk[vz][vy][vx]) = constraints(ct, vdtk[vz][vy][vx]);
+                }
             }
         }
-        pfor2d(&mut fu, &|(Coord { x, y }, fu)| {
+        pfor3d(&mut fu, &|(Coord { x, y, z }, fu)| {
             *fu = fun(
                 [&ovdtk, &vdtk],
                 [&otrdtk, &trdtk],
                 constraints,
                 boundary,
-                [x as i32, y as i32],
+                [x as i32, y as i32, z as i32],
                 *dx,
                 [*ot, ct],
                 [*dt, cdt],
@@ -70,12 +73,12 @@ pub fn explicit<
         });
         otrdtk = trdtk.clone();
         ovdtk = vdtk.clone();
-        k[s] = fu;
-        pfor2d(&mut vdtk, &|(Coord { x, y }, vdtk)| {
+        k[s] = *fu;
+        pfor3d(&mut vdtk, &|(Coord { x, y, z }, vdtk)| {
             for f in 0..F {
-                vdtk[f] = vs[y][x][f];
+                vdtk[f] = vs[z][y][x][f];
                 for s1 in 0..S {
-                    vdtk[f] += *dt * a[s][s1] * k[s1][y][x][f];
+                    vdtk[f] += *dt * a[s][s1] * k[s1][z][y][x][f];
                 }
             }
         });
@@ -91,22 +94,26 @@ pub fn explicit<
 
     *ot = *t;
     *t += *dt;
-    for vy in 0..VY {
-        for vx in 0..VX {
-            let tmp = vs[vy][vx];
-            (vs[vy][vx], trs[vy][vx]) = constraints(*t, vs[vy][vx]);
-            for f in 0..F {
-                total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
+    for vz in 0..VZ {
+        for vy in 0..VY {
+            for vx in 0..VX {
+                let tmp = vs[vz][vy][vx];
+                (vs[vz][vy][vx], trs[vz][vy][vx]) = constraints(*t, vs[vz][vy][vx]);
+                for f in 0..F {
+                    total_diff_vs[vz][vy][vx][f] += (tmp[f] - vs[vz][vy][vx][f]).abs();
+                }
             }
         }
     }
     if let Some(post) = post_constraints {
-        for vy in 0..VY {
-            for vx in 0..VX {
-                let tmp = vs[vy][vx];
-                (vs[vy][vx], trs[vy][vx]) = post(*t, vs[vy][vx]);
-                for f in 0..F {
-                    total_diff_vs[vy][vx][f] += (tmp[f] - vs[vy][vx][f]).abs();
+        for vz in 0..VZ {
+            for vy in 0..VY {
+                for vx in 0..VX {
+                    let tmp = vs[vz][vy][vx];
+                    (vs[vz][vy][vx], trs[vz][vy][vx]) = post(*t, vs[vz][vy][vx]);
+                    for f in 0..F {
+                        total_diff_vs[vz][vy][vx][f] += (tmp[f] - vs[vz][vy][vx][f]).abs();
+                    }
                 }
             }
         }
