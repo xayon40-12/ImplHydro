@@ -4,10 +4,8 @@ pub fn zero(_j: i32, _n: usize) -> usize {
     0
 }
 
-pub fn zeros<const VY: usize, const VX: usize, const F: usize>(
-    _: &[[[f64; F]; VX]; VY],
-) -> [[[f64; F]; VX]; VY] {
-    [[[0.0; F]; VX]; VY]
+pub fn zeros<const VY: usize, const VX: usize, const F: usize>() -> Box<[[[f64; F]; VX]; VY]> {
+    Box::new([[[0.0; F]; VX]; VY])
 }
 
 pub fn _periodic(j: i32, n: usize) -> usize {

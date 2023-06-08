@@ -2,6 +2,9 @@ use crate::hydro::Eos;
 
 use super::{time::schemes::Scheme, Constraint};
 
+pub type Arr<const F: usize, const VX: usize, const VY: usize> = [[[f64; F]; VX]; VY];
+pub type BArr<const F: usize, const VX: usize, const VY: usize> = Box<Arr<F, VX, VY>>;
+
 #[derive(Debug, Clone, Copy)]
 pub enum Integration {
     Explicit,
@@ -9,11 +12,11 @@ pub enum Integration {
 }
 
 pub type Boundary<'a, const F: usize, const VX: usize, const VY: usize> =
-    &'a (dyn Fn([i32; 2], &[[[f64; F]; VX]; VY]) -> [f64; F] + Sync);
+    &'a (dyn Fn([i32; 2], &Arr<F, VX, VY>) -> [f64; F] + Sync);
 pub type Fun<'a, Opt, const F: usize, const C: usize, const VX: usize, const VY: usize> =
     &'a (dyn Fn(
-        [&[[[f64; F]; VX]; VY]; 2],
-        [&[[[f64; C]; VX]; VY]; 2],
+        [&Arr<F, VX, VY>; 2],
+        [&Arr<C, VX, VY>; 2],
         Constraint<F, C>,
         Boundary<F, VX, VY>,
         [i32; 2], // position in index [x,y]
@@ -39,10 +42,10 @@ pub struct Context<
     pub boundary: Boundary<'a, F, VX, VY>,
     pub post_constraints: Option<Constraint<'a, F, C>>,
     pub local_interaction: [i32; 2],
-    pub vstrs: ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]),
-    pub ovstrs: ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]), // old
-    pub total_diff_vs: [[[f64; F]; VX]; VY],
-    pub k: [[[[f64; F]; VX]; VY]; S],
+    pub vstrs: (Box<Arr<F, VX, VY>>, Box<Arr<C, VX, VY>>),
+    pub ovstrs: (Box<Arr<F, VX, VY>>, Box<Arr<C, VX, VY>>), // old
+    pub total_diff_vs: Box<Arr<F, VX, VY>>,
+    pub k: Box<[Arr<F, VX, VY>; S]>,
     pub r: Scheme<S>,
     pub dt: f64,
     pub dx: f64,

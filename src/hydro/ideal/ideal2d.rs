@@ -1,7 +1,7 @@
 use crate::{
     hydro::{C_IDEAL_2D, F_IDEAL_2D},
     solver::{
-        context::{Boundary, Context},
+        context::{BArr, Boundary, Context},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -202,7 +202,7 @@ pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
     for j in 0..VY {
         for i in 0..VX {
             let [_, t11, t12] = f1(t, tran[j][i]);
-            let [_, _, t22]   = f2(t, tran[j][i]);
+            let [_, _, t22] = f2(t, tran[j][i]);
             mt11 += t11;
             mt12 += t12;
             mt22 += t22;
@@ -227,18 +227,18 @@ pub fn ideal2d<const V: usize, const S: usize>(
     dpde: Eos,
     init: Init2D<F_IDEAL_2D>,
 ) -> Option<(
-    ([[[f64; F_IDEAL_2D]; V]; V], [[[f64; C_IDEAL_2D]; V]; V]),
+    (BArr<F_IDEAL_2D, V, V>, BArr<C_IDEAL_2D, V, V>),
     f64,
     usize,
     usize,
 )> {
     let coord = Coordinate::Milne;
     let constraints = gen_constraints(&p, &dpde, &coord);
-    let mut vs = [[[0.0; F_IDEAL_2D]; V]; V];
-    let mut trs = [[[0.0; C_IDEAL_2D]; V]; V];
+    let mut vs = Box::new([[[0.0; F_IDEAL_2D]; V]; V]);
+    let mut trs = Box::new([[[0.0; C_IDEAL_2D]; V]; V]);
 
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
-    let k = [[[[0.0; F_IDEAL_2D]; V]; V]; S];
+    let k = Box::new([[[[0.0; F_IDEAL_2D]; V]; V]; S]);
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {
@@ -261,9 +261,9 @@ pub fn ideal2d<const V: usize, const S: usize>(
         boundary: &ghost, // use noboundary to emulate 1D
         post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
-        vstrs: (vs, trs),
+        vstrs: (vs.clone(), trs.clone()),
         ovstrs: (vs, trs),
-        total_diff_vs: zeros(&vs),
+        total_diff_vs: zeros(),
         k,
         r,
         dt: 1e10,

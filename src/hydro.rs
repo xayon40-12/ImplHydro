@@ -1,3 +1,5 @@
+use crate::solver::context::BArr;
+
 pub mod eos;
 pub mod ideal;
 pub mod isosurface;
@@ -60,12 +62,8 @@ impl Viscosity {
     }
 }
 
-pub type HydroOutput<const VX: usize, const VY: usize, const F: usize, const C: usize> = Option<(
-    ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]),
-    f64,
-    usize,
-    usize,
-)>;
+pub type HydroOutput<const VX: usize, const VY: usize, const F: usize, const C: usize> =
+    Option<((BArr<F, VX, VY>, BArr<C, VX, VY>), f64, usize, usize)>;
 
 pub const FREESTREAM_2D: usize = 11;
 

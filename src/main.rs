@@ -1,7 +1,6 @@
 use clap::{command, Parser, Subcommand};
 use implhydro::run::{ideal, viscous};
 use implhydro::solver::Solver;
-use std::thread;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -87,7 +86,7 @@ enum ToSimulate {
     },
 }
 
-fn big_stack() {
+fn main() {
     let cli = Cli::parse();
 
     match cli.cells {
@@ -202,23 +201,4 @@ fn run<const CELLS: usize>(args: Cli) {
             }
         }
     }
-}
-
-fn main() {
-    // for i in 0..100 {
-    //     let e = 1000.0 * 2.0f64.powi(-i);
-    //     let pe = implhydro::hydro::eos::hotqcd::p(e);
-    //     let t = implhydro::hydro::eos::hotqcd::T(e) * 197.3;
-    //     let s = (e + pe) / t;
-    //     println!("{:e} fm-4\t{:e} fm-4\t{:e} MeV\t{:e} fm-3", e, pe, t, s);
-    // }
-    // return;
-
-    const STACK_SIZE: usize = 128 * 1024 * 1024; // if you want to run 2D simulation with more than 200x200 cells, you will need to increase the stack size
-    thread::Builder::new()
-        .stack_size(STACK_SIZE)
-        .spawn(big_stack)
-        .unwrap()
-        .join()
-        .unwrap();
 }

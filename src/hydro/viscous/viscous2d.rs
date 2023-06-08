@@ -323,12 +323,12 @@ fn flux<const V: usize>(
     dx: f64,
     [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
-    &((etas_min, etas_slope, etas_crv), (_zetas_max, _zetas_width, _zetas_peak), temperature, tempcut): &(
-        (f64, f64, f64),
-        (f64, f64, f64),
-        Eos,
-        f64,
-    ),
+    &(
+        (etas_min, etas_slope, etas_crv),
+        (_zetas_max, _zetas_width, _zetas_peak),
+        temperature,
+        tempcut,
+    ): &((f64, f64, f64), (f64, f64, f64), Eos, f64),
 ) -> [f64; F_BOTH_2D] {
     let theta = 1.1;
 
@@ -556,7 +556,10 @@ pub fn viscous2d<const V: usize, const S: usize>(
     shear_temp_cut: f64,
     freezeout_temp: f64,
 ) -> Option<(
-    ([[[f64; F_BOTH_2D]; V]; V], [[[f64; C_BOTH_2D]; V]; V]),
+    (
+        Box<[[[f64; F_BOTH_2D]; V]; V]>,
+        Box<[[[f64; C_BOTH_2D]; V]; V]>,
+    ),
     f64,
     usize,
     usize,
@@ -567,8 +570,8 @@ pub fn viscous2d<const V: usize, const S: usize>(
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);
 
-    let mut vs = [[[0.0; F_BOTH_2D]; V]; V];
-    let mut trs = [[[0.0; C_BOTH_2D]; V]; V];
+    let mut vs = Box::new([[[0.0; F_BOTH_2D]; V]; V]);
+    let mut trs = Box::new([[[0.0; C_BOTH_2D]; V]; V]);
     let names = (
         ["tt00", "tt01", "tt02", "utpi11", "utpi12", "utpi22", "utPi"],
         [
@@ -576,7 +579,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
             "pi33", "Pi",
         ],
     );
-    let k = [[[[0.0; F_BOTH_2D]; V]; V]; S];
+    let k = Box::new([[[[0.0; F_BOTH_2D]; V]; V]; S]);
     let v2 = ((V - 1) as f64) / 2.0;
     let mut max_e = 0.0;
     for j in 0..V {
@@ -608,9 +611,9 @@ pub fn viscous2d<const V: usize, const S: usize>(
         boundary: &ghost, // TODO use better boundary
         post_constraints: None,
         local_interaction: [1, 1], // use a distance of 0 to emulate 1D
-        vstrs: (vs, trs),
+        vstrs: (vs.clone(), trs.clone()),
         ovstrs: (vs, trs),
-        total_diff_vs: zeros(&vs),
+        total_diff_vs: zeros(),
         k,
         r,
         dt: 1e10,

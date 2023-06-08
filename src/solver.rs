@@ -62,8 +62,8 @@ pub fn save<
     let t = context.t;
     let dx = context.dx;
     let maxdt = context.maxdt;
-    let (v, trs) = context.vstrs;
-    let diffv = context.total_diff_vs;
+    let (v, trs) = &context.vstrs;
+    let diffv = &context.total_diff_vs;
     let schemename = context.r.name;
     let integration = context.r.integration;
     let stages = S;
@@ -206,7 +206,7 @@ pub fn run<
     observables: &[Observable<F, C, VX, VY>],
     err_thr: ErrThr<F, C, VX, VY>,
 ) -> Option<(
-    ([[[f64; F]; VX]; VY], [[[f64; C]; VX]; VY]),
+    (Box<[[[f64; F]; VX]; VY]>, Box<[[[f64; C]; VX]; VY]>),
     f64,
     usize,
     usize,

@@ -41,10 +41,10 @@ pub fn explicit<
     let cost = S as f64;
     let nbiter = [[1usize; VX]; VY];
     let mut fu = [[[0.0f64; F]; VX]; VY];
-    let mut vdtk = *vs;
-    let mut trdtk = *trs;
-    let mut ovdtk = *ovs;
-    let mut otrdtk = *otrs;
+    let mut vdtk = vs.clone();
+    let mut trdtk = trs.clone();
+    let mut ovdtk = ovs.clone();
+    let mut otrdtk = otrs.clone();
     let mut ct = *t;
 
     let mut c;
@@ -68,8 +68,8 @@ pub fn explicit<
                 opt,
             );
         });
-        otrdtk = trdtk;
-        ovdtk = vdtk;
+        otrdtk = trdtk.clone();
+        ovdtk = vdtk.clone();
         k[s] = fu;
         pfor2d(&mut vdtk, &|(Coord { x, y }, vdtk)| {
             for f in 0..F {
@@ -85,8 +85,8 @@ pub fn explicit<
         ct = *t + c * *dt;
         cdt = ct - cdt; // difference between current time and previous time
     }
-    *ovs = *vs;
-    *otrs = *trs;
+    *ovs = vs.clone();
+    *otrs = trs.clone();
     *vs = vdtk;
 
     *ot = *t;

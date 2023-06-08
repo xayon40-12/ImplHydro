@@ -52,8 +52,8 @@ pub fn fixpoint<
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
     let mut iserr = true;
-    let ko = *k;
-    let mut fu = *k;
+    let ko = k.clone();
+    let mut fu = k.clone();
     let mut vdtk = [[[0.0f64; F]; VX]; VY];
     let mut trdtk = [[[0.0f64; C]; VX]; VY];
     let mut errs = [[true; VX]; VY];
@@ -74,8 +74,8 @@ pub fn fixpoint<
             ffka *= (*dx / dt).min(0.5);
             maxe = 1e50;
             omaxe = maxe;
-            *k = ko;
-            fu = *k;
+            *k = ko.clone();
+            fu = k.clone();
             vdtk = [[[0.0f64; F]; VX]; VY];
             trdtk = [[[0.0f64; C]; VX]; VY];
             errs = [[true; VX]; VY];
@@ -237,8 +237,8 @@ pub fn fixpoint<
         errs = tmperrs;
     }
     // println!("\nnext");
-    *ovs = *vs;
-    *otrs = *trs;
+    *ovs = vs.clone();
+    *otrs = trs.clone();
     let b = if let Some(b) = b { *b } else { a[S - 1] };
     for f in 0..F {
         for vy in 0..VY {
