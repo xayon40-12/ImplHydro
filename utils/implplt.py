@@ -86,7 +86,7 @@ maxvoidratio = 0
 meanvoidratio = 0
 countvoidratio = 0
 dir = "results/"
-for d in os.listdir(dir):
+for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     dird = dir+d
     dirs = list(filter(lambda d: os.path.isdir(dird+"/"+d), os.listdir(dird)))
     ts = sorted(dirs, key=float) 
@@ -293,7 +293,7 @@ def convall(l, cnds):
                             schemetype = "Implicit"
                         else:
                             schemetype = "Explicit"
-                        schemetype = info["scheme"]
+                        # schemetype = info["scheme"]
                         c = convergence(ds0,refs[s1])
                         c = np.array(list(filter(lambda v: v[4]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
@@ -307,7 +307,7 @@ def convall(l, cnds):
                             ax.loglog(c[fromref:,dci],c[fromref:,mmi], label=label, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
                             ax.scatter(c[fromref:,dci],c[fromref:,mmi],sizes, marker=pointstyle(s0), facecolors=facecolors, color=col, alpha=al) #, fillstyle=fillstyle, color=col, alpha=al)
                         pl(ax,schemetype)
-                        if schemetype == "Implicit":
+                        if "FixPoint" in info["integration"]:
                             if n == 100:
                                 col = np.roll(col,2) # lighten(col)
                             label = r"$\Delta x = "+str(dx)+"$ fm"
