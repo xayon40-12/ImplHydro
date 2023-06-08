@@ -1,10 +1,10 @@
-use crate::solver::context::Boundary;
+use crate::solver::context::{Arr, Boundary};
 use crate::solver::{utils::flux_limiter, Constraint, Transform};
 
 use super::{Dir, Eigenvalues, Flux};
 
 pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, const SD: usize>(
-    (vs, _trs): (&[[[f64; F]; VX]; VY], &[[[f64; C]; VX]; VY]),
+    (vs, _trs): (&Arr<F, VX, VY>, &Arr<C, VX, VY>),
     bound: Boundary<F, VX, VY>,
     [x, y]: [i32; 2],
     dir: Dir,
@@ -29,15 +29,11 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
         vals[l] = pre_flux_limiter(t, vals[l]);
     }
     let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];
-    // let mut tderiv: [[f64; C]; 3] = [[0.0; C]; 3];
     let mut fj: [[f64; F]; 3] = [[0.0; F]; 3];
     for l in 0..3 {
         for f in 0..F {
             deriv[l][f] = flux_limiter(theta, vals[l][f], vals[l + 1][f], vals[l + 2][f]);
         }
-        // for c in 0..C {
-        //     tderiv[l][c] = flux_limiter(theta, tvals[l][c], tvals[l + 1][c], tvals[l + 2][c]);
-        // }
         fj[l] = flux(t, tvals[l + 1]);
     }
     let mut upm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
@@ -49,9 +45,6 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
             for f in 0..F {
                 upm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
             }
-            // for c in 0..C {
-            //     tupm[jpm][pm][c] = tvals[1 + j][c] - s * tderiv[j][c];
-            // }
             upm[jpm][pm] = post_flux_limiter(t, upm[jpm][pm]);
             (upm[jpm][pm], tupm[jpm][pm]) = constraints(t, upm[jpm][pm]);
         }
@@ -110,21 +103,6 @@ pub fn kt<const F: usize, const VX: usize, const VY: usize, const C: usize, cons
     for n in 0..SD {
         sdres[n] = (sdh[1][n] - sdh[0][n]) / (2.0 * dx);
     }
-
-    // let m = res
-    //     .iter()
-    //     .map(|v| v.abs())
-    //     .max_by(|a, b| a.total_cmp(b))
-    //     .unwrap();
-    // let msd = sdres
-    //     .iter()
-    //     .map(|v| v.abs())
-    //     .max_by(|a, b| a.total_cmp(b))
-    //     .unwrap();
-    // let mm = 160.0;
-    // if m > mm || msd > mm {
-    //     println!("{:e} {:e}", m, msd);
-    // }
 
     (res, sdres)
 }

@@ -20,26 +20,6 @@ pub fn gubser(x: f64, y: f64, t: f64) -> [f64; 4] {
     }
     [e, ut, ux, uy]
 }
-pub fn gubser_err<const V: usize>(v: [[[f64; 4]; V]; V], t: f64, dx: f64, p: Eos) -> [f64; 2] {
-    let v2 = ((V - 1) as f64) / 2.0;
-    let mut maxerrt00 = 0.0f64;
-    let mut meanerrt00 = 0.0f64;
-    for i in 0..V {
-        for j in 0..V {
-            let x = (i as f64 - v2) * dx;
-            let y = (j as f64 - v2) * dx;
-            let [e, ut, _, _] = gubser(x, y, t);
-
-            let vt00 = v[j][i][0];
-            let gt00 = (e + p(e)) * ut * ut - p(e);
-            let errt00 = (vt00 - gt00).abs() / vt00.abs().max(gt00.abs());
-            maxerrt00 = maxerrt00.max(errt00);
-            meanerrt00 += errt00;
-        }
-    }
-    meanerrt00 /= (V * V) as f64;
-    [maxerrt00, meanerrt00]
-}
 
 pub fn init_gubser<'a>(
     t0: f64,

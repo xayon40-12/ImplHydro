@@ -1,18 +1,20 @@
 use std::fs::File;
 use std::io::{Result, Write};
 
+use crate::solver::context::Arr;
+
 pub type IsoSurface2DFun<'a, const C: usize, const VX: usize, const VY: usize> =
     &'a dyn Fn(
-        &[[[f64; C]; VX]; VY], // old fields
-        &[[[f64; C]; VX]; VY], // new fields
-        usize,                 // ID e
-        [usize; 3],            // ID [ut,ux,uy]
-        Option<[usize; 7]>,    // ID [pitt,pitx,pity,pixx,pixy,piyy,pizz]
-        Option<usize>,         // ID bulk
-        f64,                   // time for fields
-        f64,                   // dx
-        f64,                   // dt
-        f64,                   // freezeout energy fm^-4
+        &Arr<C, VX, VY>,    // old fields
+        &Arr<C, VX, VY>,    // new fields
+        usize,              // ID e
+        [usize; 3],         // ID [ut,ux,uy]
+        Option<[usize; 7]>, // ID [pitt,pitx,pity,pixx,pixy,piyy,pizz]
+        Option<usize>,      // ID bulk
+        f64,                // time for fields
+        f64,                // dx
+        f64,                // dt
+        f64,                // freezeout energy fm^-4
     ) -> Vec<Surface2D>;
 
 pub struct IsoSurfaceHandler<'a, const C: usize, const VX: usize, const VY: usize> {
@@ -45,15 +47,15 @@ impl<'a, const C: usize, const VX: usize, const VY: usize> IsoSurfaceHandler<'a,
             bulk_id,
             dx,
             freezeout_energy,
-            iso_surface_fun: &zigzag,
+            iso_surface_fun: &zigzag2D,
         };
         Ok(handler)
     }
 
     pub fn find_surfaces(
         &mut self,
-        fields: &[[[f64; C]; VX]; VY],
-        new_fields: &[[[f64; C]; VX]; VY],
+        fields: &Arr<C, VX, VY>,
+        new_fields: &Arr<C, VX, VY>,
         ot: f64, // time for new_fields
         nt: f64, // where t+dt is the time of new_fields
     ) {
@@ -115,9 +117,10 @@ impl Surface2D {
     }
 }
 
-pub fn zigzag<const C: usize, const VX: usize, const VY: usize>(
-    fields: &[[[f64; C]; VX]; VY],
-    new_fields: &[[[f64; C]; VX]; VY],
+#[allow(non_snake_case)]
+pub fn zigzag2D<const C: usize, const VX: usize, const VY: usize>(
+    fields: &Arr<C, VX, VY>,
+    new_fields: &Arr<C, VX, VY>,
     e_id: usize,
     u_ids: [usize; 3],             // [ut,ux,uy]
     shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]

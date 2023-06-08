@@ -5,12 +5,14 @@ use std::{
 
 use byteorder::{ByteOrder, LittleEndian};
 
+use crate::solver::context::Arr;
+
 use super::{HydroOutput, FREESTREAM_2D};
 
 pub fn compare<const VX: usize, const VY: usize, const F: usize>(
     f: usize,
-    v1: &[[[f64; F]; VX]; VY],
-    v2: &[[[f64; F]; VX]; VY],
+    v1: &Arr<F, VX, VY>,
+    v2: &Arr<F, VX, VY>,
 ) -> (f64, f64) {
     let mut average: f64 = 0.0;
     let mut maximum: f64 = 0.0;
@@ -106,7 +108,7 @@ pub fn prepare_trento<const V: usize>(nb_trento: usize) -> Vec<[[f64; V]; V]> {
 
 pub fn prepare_trento_freestream<const V: usize>(
     nb_trento: usize,
-) -> Vec<[[[f64; FREESTREAM_2D]; V]; V]> {
+) -> Vec<Arr<FREESTREAM_2D, V, V>> {
     let mut trentos = vec![[[[0.0f64; FREESTREAM_2D]; V]; V]; nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for tr in 0..nb_trento {

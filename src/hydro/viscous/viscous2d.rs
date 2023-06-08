@@ -23,14 +23,6 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i];
-
-        // let e = newton(
-        //     1e-10,
-        //     s,
-        //     |e| (e + p(e)) / temperature(e) - s,
-        //     |e| e.max(0.0).min(1e10),
-        // )
-        // .max(VOID);
         let e = s;
         let vars = [
             e,
@@ -96,7 +88,6 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
             // pi33,
             // bulk,
         ];
-        // println!("vars: {:?}", vars);
         fitutpi(t0, vars)
     })
 }
@@ -109,30 +100,12 @@ fn gen_constraints<'a>(
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_BOTH_2D]) + 'a + Sync> {
     Box::new(
         move |t, cur @ [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi]| {
-            // let oe = otrs[0].max(VOID);
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
             let m = (t01 * t01 + t02 * t02).sqrt();
-            // if t00 < m {
-            //     let r = t00 / m * (1.0 - 1e-10);
-            //     t01 *= r;
-            //     t02 *= r;
-            // }
             let t00 = t00.max(m * (1.0 + 1e-15));
 
-            // let sv = |v: f64| {
-            //     let g = (1.0 - v * v).sqrt();
-            //     let pi00 = g * utpi00;
-            //     let pi01 = g * utpi01;
-            //     let pi02 = g * utpi02;
-            //     let t00 = t00 - pi00;
-            //     let t01 = t01 - pi01;
-            //     let t02 = t02 - pi02;
-            //     let m = (t01 * t01 + t02 * t02).sqrt();
-            //     let t00 = t00.max(m * (1.0 + 1e-15));
-            //     m / (t00 + p((t00 - m * v).max(VOID)) + (1.0 - v * v).sqrt() * utppi)
-            // };
             let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
             let cv = |v: f64| v.max(0.0).min(1.0);
             let gamma_max2 = 20.0f64.powi(2);
@@ -147,12 +120,6 @@ fn gen_constraints<'a>(
                 let pe = p(e);
                 let ux = g * t01 / (e + pe);
                 let uy = g * t02 / (e + pe);
-                // let uu = ux * ux + uy * uy;
-                // if 1.0 + uu > gamma_max2 {
-                //     let r = ((gamma_max2 - 1.0) / uu).sqrt() * 0.999;
-                //     ux *= r;
-                //     uy *= r;
-                // }
                 let ut = (1.0 + ux * ux + uy * uy).sqrt();
 
                 // check that bulk viscosity does not make pressure negative
@@ -351,9 +318,6 @@ fn flux<const V: usize>(
         vs
     };
 
-    // let pre = &id_flux_limiter;
-    // let post = &id_flux_limiter;
-
     let diff = kt;
     let (dxf, dxu) = diff(
         (vs, trs),
@@ -416,16 +380,6 @@ fn flux<const V: usize>(
         (t * (pi02 - ppi * delta[0][2]) - ot * (opi02 - oppi * odelta[0][2])) / cdt,
     ];
     let du = [dtu, dxu, dyu];
-    // let mut du = [dtu, dxu, dyu];
-    // let max_div = 1e2; // TODO think about this cut
-    // for j in 0..3 {
-    //     for i in 0..3 {
-    //         let a = du[j][i].abs();
-    //         if a > max_div {
-    //             du[j][i] = du[j][i].signum() * max_div;
-    //         }
-    //     }
-    // }
     let mut ddu = [0.0f64; 3];
     let mut dcuc = u[0] / t;
     for j in 0..3 {
@@ -433,11 +387,6 @@ fn flux<const V: usize>(
         for i in 0..3 {
             ddu[j] += u[i] * du[i][j];
         }
-        // let a = ddu[j].abs();
-        // if j > 0 && a * t > 500.0 {
-        //     println!("{:?}: {:?}", t, a * t);
-        //     ddu[j] = ddu[j].signum() * 500.0;
-        // }
     }
 
     let temp = temperature(e);
@@ -458,19 +407,10 @@ fn flux<const V: usize>(
     let mut zeta = 0.0;
     let tauppi = 1.0;
 
-    // const NB_EM: usize = 3;
-    // let tau_relax_em = taupi;
-    // let mut relax_em = [0.0f64; NB_EM];
-
     if gev < tempcut {
         eta = 0.0;
         zeta = 0.0;
     }
-    // if gev < tempcut {
-    //     for i in 0..NB_EM {
-    //         relax_em[i] = vs[y][x][i] / tau_relax_em;
-    //     }
-    // }
 
     let mut spi = [0.0f64; 7];
     {
@@ -504,9 +444,6 @@ fn flux<const V: usize>(
         -dxf[0] - dyf[0] - dtpi[0] - s00,
         -dxf[1] - dyf[1] - dtpi[1],
         -dxf[2] - dyf[2] - dtpi[2],
-        // -dxf[0] - dyf[0] - relax_em[0] - dtpi[0] - s00,
-        // -dxf[1] - dyf[1] - relax_em[1] - dtpi[1],
-        // -dxf[2] - dyf[2] - relax_em[2] - dtpi[2],
         -dxf[3] - dyf[3] + spi[3],
         -dxf[4] - dyf[4] + spi[4],
         -dxf[5] - dyf[5] + spi[5],
@@ -591,11 +528,6 @@ pub fn viscous2d<const V: usize, const S: usize>(
             max_e = trs[j][i][0].max(max_e);
         }
     }
-    // let e = max_e;
-    // let t = temperature(e);
-    // let s = (e + p(e)) / t;
-    // println!("T({}): {}, s: {}", max_e, t * HBARC, s);
-    // return None;
 
     let freezeout_temp_fm = freezeout_temp / HBARC;
     let freezeout_energy = newton(

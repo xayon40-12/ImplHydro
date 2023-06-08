@@ -106,7 +106,6 @@ pub fn run_2d<const V: usize>(
             tempcut,
             freezeout_temp_gev,
             |_| gauss_legendre_1(),
-            // |dt| gauss_legendre_1(Some((0, dt * 0.1))),
             nb_trento,
         )
     };

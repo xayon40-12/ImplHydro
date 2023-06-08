@@ -5,7 +5,6 @@ pub fn newton(er: f64, mut v: f64, f: impl Fn(f64) -> f64, constraint: impl Fn(f
     let maxi = 1000;
     let mut ov;
     while e >= er && i < maxi {
-        // while e >= er && i < maxi {
         i += 1;
         let ff = (f(v + er) - fv) / er;
         ov = v;

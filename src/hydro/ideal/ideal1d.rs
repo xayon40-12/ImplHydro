@@ -1,7 +1,7 @@
 use crate::{
     hydro::{C_IDEAL_1D, F_IDEAL_1D},
     solver::{
-        context::{BArr, Boundary, Context},
+        context::{Arr, BArr, Boundary, Context},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -15,7 +15,7 @@ use crate::hydro::{solve_v, Eos, Init1D, VOID};
 fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
-) -> Box<dyn Fn(f64, [f64; 2]) -> ([f64; 2], [f64; 5]) + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; F_IDEAL_1D]) -> ([f64; F_IDEAL_1D], [f64; C_IDEAL_1D]) + 'a + Sync> {
     Box::new(move |_t, [t00, t01]| {
         let m = t01.abs();
         let t00 = t00.max(m * (1.0 + 1e-15));
@@ -30,7 +30,7 @@ fn gen_constraints<'a>(
     })
 }
 
-fn eigenvalues(_t: f64, [_e, _pe, dpde, ut, ux]: [f64; 5]) -> f64 {
+fn eigenvalues(_t: f64, [_e, _pe, dpde, ut, ux]: [f64; C_IDEAL_1D]) -> f64 {
     let vs2 = dpde;
     let a = ut * ux * (1.0 - vs2);
     let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
@@ -38,18 +38,18 @@ fn eigenvalues(_t: f64, [_e, _pe, dpde, ut, ux]: [f64; 5]) -> f64 {
     (a.abs() + b.sqrt()) / d
 }
 
-pub fn f0(_t: f64, [e, pe, _, ut, ux]: [f64; 5]) -> [f64; 2] {
+pub fn f0(_t: f64, [e, pe, _, ut, ux]: [f64; C_IDEAL_1D]) -> [f64; F_IDEAL_1D] {
     [(e + pe) * ut * ut - pe, (e + pe) * ut * ux]
 }
 
-fn f1(_t: f64, [e, pe, _, ut, ux]: [f64; 5]) -> [f64; 2] {
+fn f1(_t: f64, [e, pe, _, ut, ux]: [f64; C_IDEAL_1D]) -> [f64; F_IDEAL_1D] {
     [(e + pe) * ut * ux, (e + pe) * ux * ux + pe]
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[f64; 2]; V]; 1]; 2],
-    [_otrs, trs]: [&[[[f64; 5]; V]; 1]; 2],
-    constraints: Constraint<2, 5>,
+    [_ov, vs]: [&Arr<F_IDEAL_1D, V, 1>; 2],
+    [_otrs, trs]: [&Arr<C_IDEAL_1D, V, 1>; 2],
+    constraints: Constraint<F_IDEAL_1D, C_IDEAL_1D>,
     bound: Boundary<F_IDEAL_1D, V, 1>,
     pos: [i32; 2],
     dx: f64,
@@ -58,7 +58,6 @@ fn flux<const V: usize>(
     _opt: &(),
 ) -> [f64; 2] {
     let theta = 1.1;
-    // let theta = 2.0;
 
     let pre = &|_t: f64, vs: [f64; 2]| {
         let t00 = vs[0];
@@ -113,8 +112,8 @@ pub fn ideal1d<const V: usize, const S: usize>(
     usize,
 )> {
     let constraints = gen_constraints(p, dpde);
-    let mut vs = Box::new([[[0.0; 2]; V]]);
-    let mut trs = Box::new([[[0.0; 5]; V]]);
+    let mut vs = Box::new([[[0.0; F_IDEAL_1D]; V]]);
+    let mut trs = Box::new([[[0.0; C_IDEAL_1D]; V]]);
     let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);
     let k = Box::new([[[[0.0; 2]; V]]; S]);
     let v2 = ((V - 1) as f64) / 2.0;

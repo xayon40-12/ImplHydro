@@ -1,10 +1,12 @@
 use rayon::prelude::*;
 
+use super::context::{Arr, BArr};
+
 pub fn zero(_j: i32, _n: usize) -> usize {
     0
 }
 
-pub fn zeros<const VY: usize, const VX: usize, const F: usize>() -> Box<[[[f64; F]; VX]; VY]> {
+pub fn zeros<const VY: usize, const VX: usize, const F: usize>() -> BArr<F, VX, VY> {
     Box::new([[[0.0; F]; VX]; VY])
 }
 
@@ -19,8 +21,8 @@ pub fn _periodic(j: i32, n: usize) -> usize {
 }
 pub fn periodic<const F: usize, const C: usize, const VX: usize, const VY: usize>(
     [x, y]: [i32; 2],
-    vs: [[[f64; F]; VX]; VY],
-    trs: [[[f64; C]; VX]; VY],
+    vs: &Arr<F, VX, VY>,
+    trs: &Arr<C, VX, VY>,
 ) -> ([f64; F], [f64; C]) {
     let j = _periodic(y, VY);
     let i = _periodic(x, VX);
@@ -38,7 +40,7 @@ pub fn _ghost(j: i32, n: usize) -> usize {
 }
 pub fn ghost<const F: usize, const VX: usize, const VY: usize>(
     [x, y]: [i32; 2],
-    vs: &[[[f64; F]; VX]; VY],
+    vs: &Arr<F, VX, VY>,
 ) -> [f64; F] {
     let j = _ghost(y, VY);
     let i = _ghost(x, VX);
@@ -70,7 +72,7 @@ pub fn _cubical<const F: usize>(x: i32, vs: [[f64; F]; 4]) -> [f64; F] {
 
 pub fn cubical<const F: usize, const VX: usize, const VY: usize>(
     [x, y]: [i32; 2],
-    vs: &[[[f64; F]; VX]; VY],
+    vs: &Arr<F, VX, VY>,
 ) -> [f64; F] {
     if x < 0 || x >= VX as i32 {
         let (s, p) = if x < 0 {

@@ -42,9 +42,9 @@ pub struct Context<
     pub boundary: Boundary<'a, F, VX, VY>,
     pub post_constraints: Option<Constraint<'a, F, C>>,
     pub local_interaction: [i32; 2],
-    pub vstrs: (Box<Arr<F, VX, VY>>, Box<Arr<C, VX, VY>>),
-    pub ovstrs: (Box<Arr<F, VX, VY>>, Box<Arr<C, VX, VY>>), // old
-    pub total_diff_vs: Box<Arr<F, VX, VY>>,
+    pub vstrs: (BArr<F, VX, VY>, BArr<C, VX, VY>),
+    pub ovstrs: (BArr<F, VX, VY>, BArr<C, VX, VY>), // old
+    pub total_diff_vs: BArr<F, VX, VY>,
     pub k: Box<[Arr<F, VX, VY>; S]>,
     pub r: Scheme<S>,
     pub dt: f64,

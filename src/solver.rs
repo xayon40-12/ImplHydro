@@ -1,9 +1,7 @@
+use crate::solver::context::{Arr, BArr};
 use std::collections::HashMap;
 
-use crate::{
-    hydro::{isosurface::IsoSurfaceHandler, Viscosity},
-    solver::time::fixpoint::FixCTX,
-};
+use crate::hydro::{isosurface::IsoSurfaceHandler, Viscosity};
 
 use self::time::fixpoint::ErrThr;
 
@@ -34,7 +32,7 @@ pub type Constraint<'a, const F: usize, const C: usize> =
 pub type Transform<'a, const F: usize> = &'a (dyn Fn(f64, [f64; F]) -> [f64; F] + Sync);
 pub type Observable<'a, const F: usize, const C: usize, const VX: usize, const VY: usize> = (
     &'a str,
-    &'a (dyn Fn(f64, &[[[f64; F]; VX]; VY], &[[[f64; C]; VX]; VY]) -> Vec<f64> + Sync),
+    &'a (dyn Fn(f64, &Arr<F, VX, VY>, &Arr<C, VX, VY>) -> Vec<f64> + Sync),
 );
 
 pub fn save<
@@ -205,12 +203,7 @@ pub fn run<
     names: &([&str; F], [&str; C]),
     observables: &[Observable<F, C, VX, VY>],
     err_thr: ErrThr<F, C, VX, VY>,
-) -> Option<(
-    (Box<[[[f64; F]; VX]; VY]>, Box<[[[f64; C]; VX]; VY]>),
-    f64,
-    usize,
-    usize,
-)> {
+) -> Option<((BArr<F, VX, VY>, BArr<C, VX, VY>), f64, usize, usize)> {
     let dim = if VY == 1 { 1 } else { 2 };
     let foldername = &format!(
         "results/{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
@@ -230,7 +223,6 @@ pub fn run<
         Ok(()) => {}
     }
     let surface_filename = format!("{}/surface.dat", foldername);
-    // let mul = context.local_interaction[0] * context.local_interaction[1] * 2 + 1;
     let mut cost = 0.0;
     let mut tsteps = 0;
     use std::time::Instant;
@@ -305,21 +297,18 @@ pub fn run<
     save(&context, cost, tsteps, nbiter, fails);
     let m = 1e-13;
     let r = 1e10;
-    let mut fixctx = FixCTX { fka: 1.0 };
     let enable_save = true;
     while context.t < context.tend + m {
         let mut d = next_save - context.t;
-        // context.dt = context.dt.min(context.tend - context.t);
         if d <= 2.0 * context.dt && enable_save {
             let mut tmp_ctx = context.clone();
-            let mut tmp_fixctx = fixctx.clone();
             while d > tmp_ctx.t * m {
                 let n = if d <= tmp_ctx.dt { 1 } else { 2 };
                 for _ in 0..n {
                     tmp_ctx.dt = d / n as f64;
                     let res = match integration {
                         Integration::Explicit => explicit(&mut tmp_ctx),
-                        Integration::FixPoint => fixpoint(&mut tmp_ctx, err_thr, &mut tmp_fixctx),
+                        Integration::FixPoint => fixpoint(&mut tmp_ctx, err_thr),
                     };
                     if res.is_none() {
                         eprintln!("Integration failed, abort current run.");
@@ -337,7 +326,7 @@ pub fn run<
         tsteps += 1;
         let res = match integration {
             Integration::Explicit => explicit(&mut context),
-            Integration::FixPoint => fixpoint(&mut context, err_thr, &mut fixctx),
+            Integration::FixPoint => fixpoint(&mut context, err_thr),
         };
         if let Some((c, nbi, nbf)) = res {
             cost += c;
@@ -354,11 +343,6 @@ pub fn run<
             return None;
         }
     }
-    // let d = next_save.min(context.tend) - context.t;
-    // if d < context.t * m && context.t <= context.tend * (1.0 + m) {
-    //     context.t = (context.t * r).round() / r; // round time for saving
-    //     save(&context, cost, tsteps, nbiter, fails);
-    // }
     let elapsed = now.elapsed().as_secs_f64();
     eprintln!("Elapsed: {:.4}", elapsed);
     Some((context.vstrs, context.t, cost as usize, tsteps))

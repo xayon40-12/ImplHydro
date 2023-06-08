@@ -1,7 +1,7 @@
 use crate::{
     hydro::{C_IDEAL_2D, F_IDEAL_2D},
     solver::{
-        context::{BArr, Boundary, Context},
+        context::{Arr, BArr, Boundary, Context},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -17,19 +17,10 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     s: [[f64; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
-    _temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_IDEAL_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i].max(VOID);
         let e = s;
-        // let e = newton(
-        //     1e-10,
-        //     s,
-        //     |e| (e + p(e)) / temperature(e) - s,
-        //     |e| e.max(0.0).min(1e10),
-        // )
-        // .max(VOID);
-        // println!("e: {:.3e}, s: {:.3e}", e, s);
         let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0];
         f0(t0, vars)
     })
@@ -105,8 +96,8 @@ pub enum Coordinate {
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[f64; F_IDEAL_2D]; V]; V]; 2],
-    [_otrs, trs]: [&[[[f64; C_IDEAL_2D]; V]; V]; 2],
+    [_ov, vs]: [&Arr<F_IDEAL_2D, V, V>; 2],
+    [_otrs, trs]: [&Arr<C_IDEAL_2D, V, V>; 2],
     constraints: Constraint<F_IDEAL_2D, C_IDEAL_2D>,
     bound: Boundary<F_IDEAL_2D, V, V>,
     pos: [i32; 2],
@@ -116,7 +107,6 @@ fn flux<const V: usize>(
     (coord, [eigx, eigy]): &(Coordinate, [Eigenvalues<C_IDEAL_2D>; 2]),
 ) -> [f64; F_IDEAL_2D] {
     let theta = 1.1;
-    // let theta = 2.0;
 
     let t = match coord {
         Coordinate::Cartesian => 1.0,
@@ -139,9 +129,6 @@ fn flux<const V: usize>(
         let t00 = (m * m + k).sqrt();
         [t00, t01, t02]
     };
-
-    // let pre = &id_flux_limiter;
-    // let post = &id_flux_limiter;
 
     let diff = kt;
     let (divf1, _) = diff(
@@ -193,8 +180,8 @@ fn flux<const V: usize>(
 
 pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
     t: f64,
-    _vs: &[[[f64; F_IDEAL_2D]; VX]; VY],
-    tran: &[[[f64; C_IDEAL_2D]; VX]; VY],
+    _vs: &Arr<F_IDEAL_2D, VX, VY>,
+    tran: &Arr<C_IDEAL_2D, VX, VY>,
 ) -> Vec<f64> {
     let mut mt11 = 0.0;
     let mut mt12 = 0.0;
@@ -252,9 +239,6 @@ pub fn ideal2d<const V: usize, const S: usize>(
     let eigx = Eigenvalues::Analytical(&eigenvaluesx);
     let eigy = Eigenvalues::Analytical(&eigenvaluesy);
 
-    // let eigconstr = |_t: f64, [_, _, dpde, _, _, _]: [f64; C_IDEAL_2D], eig: f64| eig.max(dpde).min(1.0);
-    // let eigx: Eigenvalues<6> = Eigenvalues::ApproxConstraint(&eigconstr);
-    // let eigy = eigx;
     let context = Context {
         fun: &flux,
         constraints: &constraints,

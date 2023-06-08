@@ -26,14 +26,14 @@ fn hydro2d<const V: usize, const S: usize>(
     } else {
         format!("Gubser")
     };
-    let (p, dpde, temp): (Eos, Eos, Eos) = if init_e.is_some() {
+    let (p, dpde, _temp): (Eos, Eos, Eos) = if init_e.is_some() {
         (&wb::p, &wb::dpde, &wb::T)
     } else {
         (&ideal_gas::p, &ideal_gas::dpde, &ideal_gas::T)
     };
     println!("{}", name);
     let init = if let Some((es, _)) = init_e {
-        init_from_entropy_density_2d(t0, es, p, dpde, temp)
+        init_from_entropy_density_2d(t0, es, p, dpde)
     } else {
         init_gubser(t0, p, dpde)
     };

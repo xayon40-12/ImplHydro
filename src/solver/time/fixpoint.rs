@@ -1,19 +1,14 @@
 use rayon::prelude::*;
 
 use crate::solver::{
-    context::Context,
+    context::{Arr, Context},
     utils::{pfor2d, pfor2d2, Coord},
 };
 
 use super::schemes::Scheme;
 
-#[derive(Clone)]
-pub struct FixCTX {
-    pub fka: f64,
-}
-
 pub type ErrThr<'a, const F: usize, const C: usize, const VX: usize, const VY: usize> =
-    &'a dyn Fn(f64, &[[[f64; F]; VX]; VY], &[[[f64; C]; VX]; VY]) -> f64;
+    &'a dyn Fn(f64, &Arr<F, VX, VY>, &Arr<C, VX, VY>) -> f64;
 
 pub fn fixpoint<
     Opt: Clone + Sync,
@@ -47,7 +42,6 @@ pub fn fixpoint<
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, S>,
     err_thr: ErrThr<F, C, VX, VY>,
-    _ctx: &mut FixCTX,
 ) -> Option<(f64, [[usize; VX]; VY], usize)> {
     let [sizex, sizey] = *local_interaction;
     *dto = maxdt.min(*dto);
@@ -63,15 +57,13 @@ pub fn fixpoint<
     let maxfailed = 10;
     let mut maxe = 1e50f64;
     let mut omaxe = maxe;
-    // let mut ffka = ctx.fka;
-    let mut ffka = 1.0;
+    let mut alpha = 1.0;
     let mut maxe_count = 0;
     while iserr {
         if maxe > 1e50 || maxe_count > 4 {
             eprintln!("fail {}", failed);
             failed += 1;
-            // ffka *= 0.9;
-            ffka *= (*dx / dt).min(0.5);
+            alpha *= (*dx / dt).min(0.5);
             maxe = 1e50;
             omaxe = maxe;
             *k = ko.clone();
@@ -114,7 +106,6 @@ pub fn fixpoint<
         }
 
         let er = err_thr(*t, &vs, &trs);
-        // println!("er: {:.3e}", er);
         pfor2d2(&mut errs, &mut nbiter, &|(Coord { x, y }, errs, nbiter)| {
             if *errs {
                 *errs = false;
@@ -130,8 +121,7 @@ pub fn fixpoint<
                                 fu[s][y][x]
                             );
                         }
-                        *errs |= e > er || e.is_nan(); // |f(k)-k| * cutoff > dt^p
-                                                       // *errs |= e > 1e-2 || e.is_nan();
+                        *errs |= e > er || e.is_nan();
                     }
                 }
             }
@@ -143,7 +133,6 @@ pub fn fixpoint<
             .map(|v| *v)
             .reduce(|| false, |acc, a| acc || a);
 
-        // omaxe = maxe;
         maxe = 0.0;
         let mut errr = [[0.0f64; VX]; VY];
         for s in 0..S {
@@ -155,7 +144,7 @@ pub fn fixpoint<
                         let d = ff - kk;
                         errr[j][i] = errr[j][i].max(d.abs());
                         maxe = maxe.max(d.abs());
-                        k[s][j][i][f] = kk + ffka * d;
+                        k[s][j][i][f] = kk + alpha * d;
                     }
                 }
             }
@@ -173,7 +162,7 @@ pub fn fixpoint<
             let miter = nbiter.iter().flat_map(|v| v.iter()).max().unwrap();
             println!(
                 "t: {:.3e}, ffka: {:.3e}, maxe: {:.3e}, omaxe: {:.3e}, lim: {:.3e}, miter: {}",
-                t, ffka, maxe, omaxe, er, miter
+                t, alpha, maxe, omaxe, er, miter
             );
 
             let col: Vec<char> = " .:-=+*%#@".chars().collect();
@@ -236,7 +225,6 @@ pub fn fixpoint<
         });
         errs = tmperrs;
     }
-    // println!("\nnext");
     *ovs = vs.clone();
     *otrs = trs.clone();
     let b = if let Some(b) = b { *b } else { a[S - 1] };
@@ -257,7 +245,6 @@ pub fn fixpoint<
     *ot = *t;
     *t += dt;
     *dto = maxdt.min(dt * 1.1);
-    // ctx.fka = if failed == 1 { ffka.sqrt() } else { ffka };
     for vy in 0..VY {
         for vx in 0..VX {
             let tmp = vs[vy][vx];

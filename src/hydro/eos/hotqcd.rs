@@ -2,20 +2,8 @@ use crate::hydro::HBARC;
 
 const N: usize = 100000;
 pub static HOTQCD: [[f64; 4]; N] =
-    tofm(unsafe { &std::mem::transmute(*include_bytes!("hrg_hotqcd_eos_binary.dat")) });
+    *unsafe { &std::mem::transmute(*include_bytes!("hrg_hotqcd_eos_binary.dat")) };
 // [e, p, s, T]
-
-const fn tofm(arr: &[[f64; 4]; N]) -> [[f64; 4]; N] {
-    // let mut arr = *arr;
-    // let mut i = 0;
-    // while i < N {
-    //     arr[i][0] *= HBARC;
-    //     i += 1;
-    // }
-    // arr
-
-    *arr
-}
 
 pub fn p(e: f64) -> f64 {
     let e = e * HBARC;
