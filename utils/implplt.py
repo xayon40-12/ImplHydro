@@ -387,7 +387,10 @@ def plot1d(l, nds):
             return [a[0]]+common(a[1:],b[1:])
         else:
             return common(a,b[1:])
-    dts = common(dtss[0],dtss[1])
+    if len(dtss) > 0:
+        dts = common(dtss[0],dtss[1])
+    else:
+        dts = dtss[0]
     dts = [dts[0],dts[-1]] # only keep best and worst
     mindt = dts[0]
     maxdt = dts[-1]
