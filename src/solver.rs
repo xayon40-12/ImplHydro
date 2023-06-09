@@ -1,4 +1,7 @@
-use crate::solver::context::{Arr, BArr};
+use crate::{
+    boxarray,
+    solver::context::{Arr, BArr},
+};
 use std::collections::HashMap;
 
 use crate::hydro::{isosurface::IsoSurface2DHandler, Viscosity};
@@ -297,7 +300,7 @@ pub fn run<
     let save_every = 0.1f64.max(context.maxdt);
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
-    let mut nbiter = Box::new([[[1usize; VX]; VY]; VZ]);
+    let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
     let mut fails = 0;
     let save = |ctx: &Context<Opt, F, C, VX, VY, VZ, S>,
                 cost,

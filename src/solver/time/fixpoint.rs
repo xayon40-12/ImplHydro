@@ -1,8 +1,11 @@
 use rayon::prelude::*;
 
-use crate::solver::{
-    context::{Arr, Context},
-    utils::{pfor3d, pfor3d2, Coord},
+use crate::{
+    boxarray,
+    solver::{
+        context::{Arr, Context},
+        utils::{pfor3d, pfor3d2, Coord},
+    },
 };
 
 use super::schemes::Scheme;
@@ -55,10 +58,10 @@ pub fn fixpoint<
     let mut iserr = true;
     let ko = k.clone();
     let mut fu = k.clone();
-    let mut vdtk = Box::new([[[[0.0f64; F]; VX]; VY]; VZ]);
-    let mut trdtk = Box::new([[[[0.0f64; C]; VX]; VY]; VZ]);
-    let mut errs = Box::new([[[true; VX]; VY]; VZ]);
-    let mut nbiter = Box::new([[[0usize; VX]; VY]; VZ]);
+    let mut vdtk: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
+    let mut trdtk: Box<[[[[f64; C]; VX]; VY]; VZ]> = boxarray(0.0);
+    let mut errs: Box<[[[bool; VX]; VY]; VZ]> = boxarray(true);
+    let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(0);
     let dt = *dto;
     let mut failed = 1usize;
     let maxfailed = 10;
@@ -150,7 +153,7 @@ pub fn fixpoint<
             .reduce(|| false, |acc, a| acc || a);
 
         maxe = 0.0;
-        let mut errr = Box::new([[[0.0f64; VX]; VY]; VZ]);
+        let mut errr: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
         for s in 0..S {
             for z in 0..VZ {
                 for y in 0..VY {
@@ -227,7 +230,7 @@ pub fn fixpoint<
             );
         }
 
-        let mut tmperrs = Box::new([[[false; VX]; VY]; VZ]);
+        let mut tmperrs: Box<[[[bool; VX]; VY]; VZ]> = boxarray(false);
         pfor3d(&mut tmperrs, &|(Coord { x, y, z }, tmperrs)| {
             let mut update = |dx, dy, dz| {
                 let i = x as i32 + dx;

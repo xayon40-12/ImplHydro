@@ -47,17 +47,17 @@ enum Hydro {
         command: ToSimulate,
     },
     Viscous {
-        #[arg(short, long, default_value_t = 0.08)]
+        #[arg(long, default_value_t = 0.08)]
         etaovers_min: f64,
-        #[arg(short, long, default_value_t = 1.23)] // GeV^-1
+        #[arg(long, default_value_t = 1.23)] // GeV^-1
         etaovers_slope: f64,
-        #[arg(short, long, default_value_t = -0.09)]
+        #[arg(long, default_value_t = -0.09)]
         etaovers_crv: f64,
-        #[arg(short, long, default_value_t = 0.026)]
+        #[arg(long, default_value_t = 0.026)]
         zetaovers_max: f64,
-        #[arg(short, long, default_value_t = 0.035)] // GeV
+        #[arg(long, default_value_t = 0.035)] // GeV
         zetaovers_width: f64,
-        #[arg(short, long, default_value_t = 0.174)] // GeV
+        #[arg(long, default_value_t = 0.174)] // GeV
         zetaovers_peak: f64,
         #[arg(long, default_value_t = 0.050)] // GeV
         tempcut: f64,

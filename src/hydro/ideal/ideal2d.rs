@@ -1,4 +1,5 @@
 use crate::{
+    boxarray,
     hydro::{C_IDEAL_2D, F_IDEAL_2D},
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
@@ -221,11 +222,11 @@ pub fn ideal2d<const V: usize, const S: usize>(
 )> {
     let coord = Coordinate::Milne;
     let constraints = gen_constraints(&p, &dpde, &coord);
-    let mut vs = Box::new([[[[0.0; F_IDEAL_2D]; V]; V]; 1]);
-    let mut trs = Box::new([[[[0.0; C_IDEAL_2D]; V]; V]; 1]);
+    let mut vs: Box<[[[[f64; F_IDEAL_2D]; V]; V]; 1]> = boxarray(0.0);
+    let mut trs: Box<[[[[f64; C_IDEAL_2D]; V]; V]; 1]> = boxarray(0.0);
 
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
-    let k = Box::new([[[[[0.0; F_IDEAL_2D]; V]; V]; 1]; S]);
+    let k: Box<[[[[[f64; F_IDEAL_2D]; V]; V]; 1]; S]> = boxarray(0.0);
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {

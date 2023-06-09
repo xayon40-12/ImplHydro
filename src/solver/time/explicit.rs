@@ -1,6 +1,9 @@
-use crate::solver::{
-    context::Context,
-    utils::{pfor3d, Coord},
+use crate::{
+    boxarray,
+    solver::{
+        context::Context,
+        utils::{pfor3d, Coord},
+    },
 };
 
 use super::schemes::Scheme;
@@ -40,8 +43,8 @@ pub fn explicit<
 ) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>, usize)> {
     *dt = maxdt.min(*dt);
     let cost = S as f64;
-    let nbiter = Box::new([[[1usize; VX]; VY]; VZ]);
-    let mut fu = Box::new([[[[0.0f64; F]; VX]; VY]; VZ]);
+    let nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
+    let mut fu: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
     let mut vdtk = vs.clone();
     let mut trdtk = trs.clone();
     let mut ovdtk = ovs.clone();
