@@ -271,9 +271,9 @@ pub fn run<
     let bulk_id = ids.get("Pi").and_then(|b| Some(*b));
     let mut isosurface: Option<IsoSurface2DHandler<C, VX, VY, VZ>> =
         context.freezeout_energy.and_then(|freezeout_energy| {
-            if VX > 0 && VY > 0 && VZ > 0 {
+            if VX > 1 && VY > 1 && VZ > 1 {
                 None // TODO implement and use IsoSurface3DHandler
-            } else if VX > 0 && VY > 0 {
+            } else if VX > 1 && VY > 1 {
                 IsoSurface2DHandler::new(
                     &surface_filename,
                     ids["e"],

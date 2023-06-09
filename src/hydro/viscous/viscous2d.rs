@@ -560,7 +560,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 1e-1;
+    let e = 2.5e-2;
     let err_thr =
         |_t: f64, vs: &[[[[f64; F_BOTH_2D]; V]; V]; 1], _trs: &[[[[f64; C_BOTH_2D]; V]; V]; 1]| {
             let m = vs[0]
