@@ -279,7 +279,7 @@ def convall(l, cnds):
                 if len(scs) <= 1:
                     plt.close()
                     return 
-                s1 = scs[-1]
+                s1 = scs[0]
                 ax.text(0.03, 0.05, r"$\Delta x = "+str(dx)+"$ fm", color="black", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 for (linestyle, fillstyle, mmi) in ally:

@@ -1,3 +1,5 @@
+use crate::hydro::VOID;
+
 // converted from cpp to rust by using src/eos_WB.cpp written by Chun Shen on MUSIC-fluid/MUSIC github
 pub fn dpde(e_local: f64) -> f64 {
     let e1 = e_local;
@@ -42,6 +44,19 @@ pub fn dpde(e_local: f64) -> f64 {
             + 0.09301685073435291 * e12
             + 0.000024810902623582917 * e13);
     cs2_local
+}
+
+#[test]
+pub fn test_wb() {
+    let n = 10000;
+    let m = 1.0;
+    for i in 0..n {
+        let e = i as f64 / n as f64 * m;
+        let t = T(e);
+        let h = p(e);
+        let d = dpde(e);
+        println!("@ {:e} {:e} {:e} {:e}", e, t, h, d);
+    }
 }
 
 // This function returns the local temperature in [1/fm]
@@ -128,6 +143,6 @@ pub fn p(e_local: f64) -> f64 {
             + 2.0931169138134286e7 * e2
             + 4.0574329080826794e6 * e1
             + 45829.44617893836);
-    let p = p.max(1e-130);
+    let p = p + 0.25182 / 4.5829e4; // compensate negative values
     p
 }
