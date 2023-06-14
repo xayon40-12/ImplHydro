@@ -35,8 +35,12 @@ rejectfails = False
 def setRejectFails():
     global rejectfails
     rejectfails = True
+useschemename = False
+def setUseSchemeName():
+    global useschemename
+    useschemename = True
 
-argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails)]
+argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-u","--useschemename"], setUseSchemeName)]
 for arg in sys.argv:
     for (larg, act) in argActions:
         if arg in larg:
@@ -162,8 +166,8 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     if rejectfails and (expl_fail or impl_fail): 
         continue # skip explicit or implicit that failed
 
-    err = 1
     cut = 1
+    err = abs(e.sum()-e[e>cut].sum())/e.sum()
     while err > 1e-6: # find the energy cut such that a relative 1e-6 of the total energy is discarded. This is done to discard the erroneous cell due to numerical diffusion in the vacuum
         cut *= 0.5
         err = abs(e.sum()-e[e>cut].sum())/e.sum()
@@ -293,7 +297,8 @@ def convall(l, cnds):
                             schemetype = "Implicit"
                         else:
                             schemetype = "Explicit"
-                        # schemetype = info["scheme"]
+                        if useschemename:
+                            schemetype = info["scheme"]
                         c = convergence(ds0,refs[s1])
                         c = np.array(list(filter(lambda v: v[4]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
@@ -769,7 +774,7 @@ def plot2d(l, datadts):
                 axs[i][id].yaxis.tick_right()
                 if i == 0:
                     axs[i][id].xaxis.set_label_position('top') 
-                    axs[i][id].set_xlabel(r"$\tau$ = {:.2} fm".format(t))
+                    axs[i][id].set_xlabel(r"$\tau$ = {} fm".format(t))
                 if i == nb-1:
                     axs[i][id].set_xlabel("$x$ (fm)")
                 if id == num-1:
