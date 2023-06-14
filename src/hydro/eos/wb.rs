@@ -1,5 +1,3 @@
-use crate::hydro::VOID;
-
 // converted from cpp to rust by using src/eos_WB.cpp written by Chun Shen on MUSIC-fluid/MUSIC github
 pub fn dpde(e_local: f64) -> f64 {
     let e1 = e_local;
