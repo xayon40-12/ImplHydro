@@ -3,6 +3,8 @@ use std::io::{Result, Write};
 
 use crate::solver::context::Arr;
 
+use super::IsoSurfaceHandler;
+
 pub type IsoSurface2DFun<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize> =
     &'a dyn Fn(
         &Arr<C, VX, VY, VZ>, // old fields
@@ -59,8 +61,12 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         };
         Ok(handler)
     }
+}
 
-    pub fn find_surfaces(
+impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
+    IsoSurfaceHandler<C, VX, VY, VZ> for IsoSurface2DHandler<'a, C, VX, VY, VZ>
+{
+    fn find_surfaces(
         &mut self,
         fields: &Arr<C, VX, VY, VZ>,
         new_fields: &Arr<C, VX, VY, VZ>,

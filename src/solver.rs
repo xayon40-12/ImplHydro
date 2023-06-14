@@ -1,10 +1,14 @@
 use crate::{
     boxarray,
+    hydro::isosurface::{
+        isosurface2d::IsoSurface2DHandler, isosurface3d::IsoSurface3DHandler, toiso,
+        IsoSurfaceHandler,
+    },
     solver::context::{Arr, BArr},
 };
 use std::collections::HashMap;
 
-use crate::hydro::{isosurface::IsoSurface2DHandler, Viscosity};
+use crate::hydro::Viscosity;
 
 use self::time::fixpoint::ErrThr;
 
@@ -255,25 +259,53 @@ pub fn run<
         .map(|(i, v)| (*v, i))
         .collect::<HashMap<&str, usize>>();
 
-    let pis = ["pi00", "pi01", "pi02", "pi11", "pi12", "pi22", "pi33"];
-    let shear_ids =
-        pis.into_iter()
-            .map(|k| ids.get(k))
-            .enumerate()
-            .fold(Some([0; 7]), |acc, (i, id)| {
-                id.and_then(|id| {
-                    acc.and_then(|mut pi| {
-                        pi[i] = *id;
-                        Some(pi)
-                    })
-                })
-            });
     let bulk_id = ids.get("Pi").and_then(|b| Some(*b));
-    let mut isosurface: Option<IsoSurface2DHandler<C, VX, VY, VZ>> =
+    let mut isosurface: Option<Box<dyn IsoSurfaceHandler<C, VX, VY, VZ>>> =
         context.freezeout_energy.and_then(|freezeout_energy| {
             if VX > 1 && VY > 1 && VZ > 1 {
-                None // TODO implement and use IsoSurface3DHandler
+                let pis = [
+                    "pi00", "pi01", "pi02", "pi03", "pi11", "pi12", "pi13", "pi22", "pi23", "pi33",
+                ];
+                let shear_ids = pis.into_iter().map(|k| ids.get(k)).enumerate().fold(
+                    Some([0; 10]),
+                    |acc, (i, id)| {
+                        id.and_then(|id| {
+                            acc.and_then(|mut pi| {
+                                pi[i] = *id;
+                                Some(pi)
+                            })
+                        })
+                    },
+                );
+                IsoSurface3DHandler::new(
+                    &surface_filename,
+                    ids["e"],
+                    [ids["ut"], ids["ux"], ids["uy"], ids["uz"]],
+                    shear_ids,
+                    bulk_id,
+                    context.dx,
+                    freezeout_energy,
+                )
+                .map_or_else(
+                    |err| {
+                        eprintln!("Error in initializing IsoSurface3DHandler: {}", err);
+                        None
+                    },
+                    |iso| Some(toiso(iso)),
+                )
             } else if VX > 1 && VY > 1 {
+                let pis = ["pi00", "pi01", "pi02", "pi11", "pi12", "pi22", "pi33"];
+                let shear_ids = pis.into_iter().map(|k| ids.get(k)).enumerate().fold(
+                    Some([0; 7]),
+                    |acc, (i, id)| {
+                        id.and_then(|id| {
+                            acc.and_then(|mut pi| {
+                                pi[i] = *id;
+                                Some(pi)
+                            })
+                        })
+                    },
+                );
                 IsoSurface2DHandler::new(
                     &surface_filename,
                     ids["e"],
@@ -285,10 +317,10 @@ pub fn run<
                 )
                 .map_or_else(
                     |err| {
-                        eprintln!("Error in initializing IsoSurfaceHondler: {}", err);
+                        eprintln!("Error in initializing IsoSurface2DHandler: {}", err);
                         None
                     },
-                    |iso| Some(iso),
+                    |iso| Some(toiso(iso)),
                 )
             } else {
                 None
