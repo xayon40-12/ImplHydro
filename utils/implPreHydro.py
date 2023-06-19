@@ -33,6 +33,10 @@ if "-m" in args:
     sigs = [4.23, 6.4, 7.32]
     bs = [0,3,7]
 
+usefreestream = False
+if "-f" in args:
+    usefreestream = True
+
 for c in cells:
     dx = 2*half_size / float(c)
     for sig in sigs:
@@ -56,28 +60,29 @@ for c in cells:
 
             # run free streaming
             # git: Duke-QCD/freestream
-            print("freestream")
-            for i in range(num):
-                name = ("{}/{:0<"+str(pn)+"}.dat").format(dir,i)
-                print(name)
-                ic = np.loadtxt(name, dtype=np.float64)
-                fs = freestream.FreeStreamer(ic, half_size, tau_fs)
+            if usefreestream:
+                print("freestream")
+                for i in range(num):
+                    name = ("{}/{:0<"+str(pn)+"}.dat").format(dir,i)
+                    print(name)
+                    ic = np.loadtxt(name, dtype=np.float64)
+                    fs = freestream.FreeStreamer(ic, half_size, tau_fs)
 
-                e = fs.energy_density()
-                ut = fs.flow_velocity(0)
-                ux = fs.flow_velocity(1)
-                uy = fs.flow_velocity(2)
-                def pi(u,v):
-                    return fs.shear_tensor(u,v)
-                bulk = fs.bulk_pressure()  # fs.bulk_pressure(eos)
-                arr = np.transpose(np.array([e, ut, ux, uy, pi(0,0), pi(0,1), pi(0,2), pi(1,1), pi(1,2), pi(2,2), bulk]).reshape((11,-1)))
-                # np.set_printoptions(threshold=sys.maxsize)
-                # print(arr)
-                data = ("{}/data{:0<"+str(pn)+"}.dat").format(dir,i)
-                arr.tofile(data)
+                    e = fs.energy_density()
+                    ut = fs.flow_velocity(0)
+                    ux = fs.flow_velocity(1)
+                    uy = fs.flow_velocity(2)
+                    def pi(u,v):
+                        return fs.shear_tensor(u,v)
+                    bulk = fs.bulk_pressure()  # fs.bulk_pressure(eos)
+                    arr = np.transpose(np.array([e, ut, ux, uy, pi(0,0), pi(0,1), pi(0,2), pi(1,1), pi(1,2), pi(2,2), bulk]).reshape((11,-1)))
+                    # np.set_printoptions(threshold=sys.maxsize)
+                    # print(arr)
+                    data = ("{}/data{:0<"+str(pn)+"}.dat").format(dir,i)
+                    arr.tofile(data)
 
-                # etot = e.sum()*197*dx**3/1000 # GeV
-                # em = e.max()*197/1000 # GeV fm^-3
-                # print("e_tot: {} GeV".format(etot))
-                # print("e_max: {} GeV fm^-3".format(em))
+                    # etot = e.sum()*197*dx**3/1000 # GeV
+                    # em = e.max()*197/1000 # GeV fm^-3
+                    # print("e_tot: {} GeV".format(etot))
+                    # print("e_max: {} GeV fm^-3".format(em))
 
