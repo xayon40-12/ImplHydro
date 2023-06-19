@@ -40,7 +40,7 @@ def setUseSchemeName():
     global useschemename
     useschemename = True
 
-argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-u","--useschemename"], setUseSchemeName)]
+argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-s","--schemename"], setUseSchemeName)]
 for arg in sys.argv:
     for (larg, act) in argActions:
         if arg in larg:
@@ -273,7 +273,7 @@ def convall(l, cnds):
                 scs = sorted(list(ds.keys()))
                 dts = sorted([dt for dt in ds[scs[0]]])
                 mindt = dts[0]
-                scs.sort(key=lambda s: integrationPriority(ds[s][mindt][0]["integration"]))
+                scs.sort(key=lambda s: integrationPriority(ds[s][mindt][0]))
                 def pointstyle(s):
                     if "Explicit" in ds[s][mindt][0]["integration"]:
                         return "s"
@@ -341,11 +341,17 @@ def convall(l, cnds):
         fig2.savefig("figures/convergence_{}_meanmax_dx_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         plt.close()
 
-def integrationPriority(integration):
-    if "Explicit" in integration:
+def integrationPriority(info):
+    scheme = info["scheme"]
+    integration = info["integration"]
+    if "Heun" in scheme:
         return 1
-    else:
+    elif "GL1" in scheme:
         return 2
+    elif "Explicit" in integration:
+        return 3
+    else:
+        return 4
 
 def mask(data,vid,cut):
     m = (data[:,vid["e"]]>cut).astype(int)
@@ -399,7 +405,7 @@ def plot1d(l, nds):
     dts = [dts[0],dts[-1]] # only keep best and worst
     mindt = dts[0]
     maxdt = dts[-1]
-    schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]["integration"]))
+    schemes.sort(key=lambda s: integrationPriority(datas[s][mindt][0]))
     for dt in dts:
         timename = "dt{:.4e}".format(dt)
         if dt == maxdt:
