@@ -274,12 +274,6 @@ def convall(l, cnds):
                 dts = sorted([dt for dt in ds[scs[0]]])
                 mindt = dts[0]
                 scs.sort(key=lambda s: integrationPriority(ds[s][mindt][0]))
-                def pointstyle(s):
-                    if "Explicit" in ds[s][mindt][0]["integration"]:
-                        return "s"
-                    else:
-                        return "o"
-
                 if len(scs) <= 1:
                     plt.close()
                     return 
@@ -310,7 +304,7 @@ def convall(l, cnds):
                             if fillstyle == "full":
                                 facecolors = col
                             ax.loglog(c[fromref:,dci],c[fromref:,mmi], label=label, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
-                            ax.scatter(c[fromref:,dci],c[fromref:,mmi],sizes, marker=pointstyle(s0), facecolors=facecolors, color=col, alpha=al) #, fillstyle=fillstyle, color=col, alpha=al)
+                            ax.scatter(c[fromref:,dci],c[fromref:,mmi],sizes, marker=pointstyle(info), facecolors=facecolors, color=col, alpha=al) #, fillstyle=fillstyle, color=col, alpha=al)
                         pl(ax,schemetype)
                         if "FixPoint" in info["integration"]:
                             if n == 100:
@@ -340,6 +334,12 @@ def convall(l, cnds):
         fig.savefig("figures/convergence_{}_meanmax_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         fig2.savefig("figures/convergence_{}_meanmax_dx_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         plt.close()
+
+def pointstyle(info):
+    markers = ["s","o","^","v","d","*"]
+    l = len(markers)
+    i = integrationPriority(info)-1
+    return markers[i%l]
 
 def integrationPriority(info):
     scheme = info["scheme"]
