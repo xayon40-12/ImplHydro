@@ -43,8 +43,8 @@ pub fn explicit<
 ) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>, usize)> {
     *dt = maxdt.min(*dt);
     let cost = S as f64;
-    let nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
-    let mut fu: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
+    let nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1usize);
+    let mut fu: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0f64);
     let mut vdtk = vs.clone();
     let mut trdtk = trs.clone();
     let mut ovdtk = ovs.clone();

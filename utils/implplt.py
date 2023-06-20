@@ -355,7 +355,7 @@ def integrationPriority(info):
 
 def mask(data,vid,cut):
     m = (data[:,vid["e"]]>cut).astype(int)
-    return np.concatenate((data[:,:3], data[:,3:]/m[:,None]), axis=1)
+    return np.concatenate((data[:,:4], data[:,4:]/m[:,None]), axis=1)
 
 def plot1d(l, nds):
     [dim,name,visc,t0,tend,t,case] = l

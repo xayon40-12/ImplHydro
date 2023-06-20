@@ -93,7 +93,7 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
             VX, VY, vx, vy
         );
     }
-    let mut mat: Box<[[f64; VX]; VY]> = boxarray(0.0);
+    let mut mat: Box<[[f64; VX]; VY]> = boxarray(0.0f64);
     for j in 0..VY {
         for i in 0..VX {
             mat[j][i] = arr[j][i];
@@ -104,7 +104,7 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
 }
 
 pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V]; V]>> {
-    let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0); nb_trento];
+    let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0f64); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
         trentos[i] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(

@@ -506,8 +506,8 @@ pub fn viscous2d<const V: usize, const S: usize>(
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);
 
-    let mut vs: Box<[[[[f64; F_BOTH_2D]; V]; V]; 1]> = boxarray(0.0);
-    let mut trs: Box<[[[[f64; C_BOTH_2D]; V]; V]; 1]> = boxarray(0.0);
+    let mut vs: Box<[[[[f64; F_BOTH_2D]; V]; V]; 1]> = boxarray(0.0f64);
+    let mut trs: Box<[[[[f64; C_BOTH_2D]; V]; V]; 1]> = boxarray(0.0f64);
     let names = (
         ["tt00", "tt01", "tt02", "utpi11", "utpi12", "utpi22", "utPi"],
         [
@@ -515,7 +515,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
             "pi33", "Pi",
         ],
     );
-    let k: Box<[[[[[f64; F_BOTH_2D]; V]; V]; 1]; S]> = boxarray(0.0);
+    let k: Box<[[[[[f64; F_BOTH_2D]; V]; V]; 1]; S]> = boxarray(0.0f64);
     let v2 = ((V - 1) as f64) / 2.0;
     let mut max_e = 0.0;
     for j in 0..V {

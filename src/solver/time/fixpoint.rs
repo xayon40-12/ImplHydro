@@ -58,10 +58,10 @@ pub fn fixpoint<
     let mut iserr = true;
     let ko = k.clone();
     let mut fu = k.clone();
-    let mut vdtk: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
-    let mut trdtk: Box<[[[[f64; C]; VX]; VY]; VZ]> = boxarray(0.0);
+    let mut vdtk: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0f64);
+    let mut trdtk: Box<[[[[f64; C]; VX]; VY]; VZ]> = boxarray(0.0f64);
     let mut errs: Box<[[[bool; VX]; VY]; VZ]> = boxarray(true);
-    let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(0);
+    let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(0usize);
     let dt = *dto;
     let mut failed = 1usize;
     let maxfailed = 10;
@@ -153,7 +153,7 @@ pub fn fixpoint<
             .reduce(|| false, |acc, a| acc || a);
 
         maxe = 0.0;
-        let mut errr: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
+        let mut errr: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0f64);
         for s in 0..S {
             for z in 0..VZ {
                 for y in 0..VY {
