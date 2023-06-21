@@ -281,7 +281,11 @@ def convall(l, cnds):
                 ax.text(0.03, 0.05, r"$\Delta x = "+str(dx)+"$ fm", color="black", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 for (linestyle, fillstyle, mmi) in ally:
-                    for (s0,col) in zip(scs,plt_setting.clist):
+                    if len(scs) == 3:
+                        colors = [plt_setting.clist[i] for i in [0,2,1]]
+                    else:
+                        colors = plt_setting.clist
+                    for (s0,col) in zip(scs,colors): 
                         ds0 = ds[s0]
                         dtref = sorted(list(ds0.keys()))[0]
                         info = ds0[dtref][0]
@@ -324,19 +328,20 @@ def convall(l, cnds):
                     p = line(col,"-")
                     handles += [p]
                     labels += [l]
-            handles = [line("black",(0,(1,0))),line("black",(0,(5,5)))]+handles
-            labels = ["max", "mean"]+labels
             leg = ax.legend(handles, labels, loc="upper right")
             for lh in leg.legendHandles:
                 lh.set_alpha(1)
         clean(axs[0])
+        labels = ["max", "mean"]
+        handles = [line("black",(0,(1,0))),line("black",(0,(5,5)))]
+        axs[1].legend(handles, labels, loc="upper right")
         clean(ax2)
         fig.savefig("figures/convergence_{}_meanmax_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         fig2.savefig("figures/convergence_{}_meanmax_dx_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         plt.close()
 
 def pointstyle(info):
-    markers = ["s","o","^","v","d","*"]
+    markers = ["s","^","o","v","d","*"]
     l = len(markers)
     i = integrationPriority(info)-1
     return markers[i%l]
@@ -346,12 +351,14 @@ def integrationPriority(info):
     integration = info["integration"]
     if "Heun" in scheme:
         return 1
-    elif "GL1" in scheme:
+    if "midpoint" in scheme:
         return 2
-    elif "Explicit" in integration:
+    elif "GL1" in scheme:
         return 3
-    else:
+    elif "Explicit" in integration:
         return 4
+    else:
+        return 5
 
 def mask(data,vid,cut):
     m = (data[:,vid["e"]]>cut).astype(int)
@@ -625,7 +632,7 @@ def plot1d(l, nds):
                 axs[j][i].text(0.03, 0.25, r"$\Delta x = "+str(dx)+"$", color="white", transform=axs[j][i].transAxes, fontsize=22)
                 pow2 = int(np.log2(0.1*dx/dt))
                 if pow2 > 0:
-                    pow2 = r"/2^{"+str(pow2)+"}"
+                    pow2 = r"\times 2^{-"+str(pow2)+"}"
                 else:
                     pow2 = ""
                 axs[j][i].text(0.03, 0.1, r"$\Delta t/\Delta x = 0.1"+pow2+"$", color="white", transform=axs[j][i].transAxes, fontsize=22)
@@ -780,14 +787,14 @@ def plot2d(l, datadts):
                 axs[i][id].yaxis.tick_right()
                 if i == 0:
                     axs[i][id].xaxis.set_label_position('top') 
-                    axs[i][id].set_xlabel(r"$\tau$ = {} fm".format(t))
+                    axs[i][id].set_xlabel(r"$\tau$ = {} (fm)".format(t))
                 if i == nb-1:
                     axs[i][id].set_xlabel("$x$ (fm)")
                 if id == num-1:
                     axs[i][id].yaxis.set_label_position('right')
                     axs[i][id].set_ylabel("$y$ (fm)")
                 if id == 0:
-                    axs[i][id].set_ylabel(n)
+                    axs[i][id].set_ylabel(n, fontsize = 36)
                 if i<nb-1:
                     axs[i][id].tick_params(axis='x', which='both', labelbottom=False)
                 if id<num-1:
