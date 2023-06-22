@@ -1,5 +1,6 @@
 ### setting for matplotlib
 ### Feb. 2022 / Masakiyo Kitazawa
+### https://github.com/MasakiyoK/Saizensen
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
