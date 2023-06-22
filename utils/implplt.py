@@ -774,9 +774,9 @@ def plot2d(l, datadts):
             if "Gubser" in info["name"]:
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]
             if "FixPoint" in info["integration"]:
-                all += [("iterations", ziter)]
+                all += [("$\mathrm{iterations}$", ziter)]
             for (i, (n, z)) in zip(range(nb),all):
-                if n == "iterations":
+                if "iterations" in n:
                     imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=zitermin, vmax=zitermax)
                     colors += list(np.unique(z))
                 elif n == r"$\Delta_\mathrm{exact}$":
@@ -800,7 +800,7 @@ def plot2d(l, datadts):
                 if id<num-1:
                     axs[i][id].tick_params(axis='y', which='both', labelright=False)
 
-                if n != "iterations":
+                if not "iterations" in n:
                     divider = make_axes_locatable(axs[i][id])
                     p = list(divider.get_position())
                     p[1] -= p[3]*0.09
@@ -809,6 +809,9 @@ def plot2d(l, datadts):
                     # cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
                     fig.add_axes(cax)
                     cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
+                    if "Gubser" in info["name"] and "epsilon" in n:
+                        # cbar.ax.set_xticklabels(cbar.ax.get_xticklabels(), rotation=20)
+                        cbar.ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(nbins=2))
                     # cbar.formatter.set_powerlimits((0, 0))
                     # cbar.formatter.set_useMathText(True)
                     # cbar.update_ticks()
