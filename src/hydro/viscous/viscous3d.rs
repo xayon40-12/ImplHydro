@@ -1,6 +1,6 @@
 use crate::{
     boxarray,
-    hydro::{utils::eigenvaluesk, Viscosity, C_MILNE_BOTH_2D, FREESTREAM_2D, F_BOTH_2D, HBARC},
+    hydro::{utils::eigenvaluesk, Viscosity, C_BOTH_3D, F_BOTH_3D, HBARC},
     solver::{
         context::{BArr, Boundary, Context, Integration, DIM},
         run,
@@ -11,19 +11,19 @@ use crate::{
     },
 };
 
-use crate::hydro::{Eos, Init2D, VOID};
+use crate::hydro::{Eos, Init3D, VOID};
 
 use nalgebra::matrix;
 
-pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
+pub fn init_from_entropy_density_3d<'a, const VX: usize, const VY: usize, const VZ: usize>(
     t0: f64,
-    s: &'a [[f64; VX]; VY],
+    s: &'a [[[f64; VX]; VY]; VZ],
     p: Eos<'a>,
     dpde: Eos<'a>,
     _temperature: Eos<'a>,
-) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
-    Box::new(move |(i, j), _| {
-        let s = s[j][i];
+) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_BOTH_3D] + 'a> {
+    Box::new(move |(i, j, k), _| {
+        let s = s[k][j][i].max(VOID);
         let e = s;
         let vars = [
             e,
@@ -40,54 +40,10 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
             0.0,
             0.0,
             0.0,
-        ];
-        fitutpi(t0, vars)
-    })
-}
-
-pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
-    t0: f64,
-    trs: &'a [[[f64; FREESTREAM_2D]; VX]; VY],
-    p: Eos<'a>,
-    dpde: Eos<'a>,
-) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
-    Box::new(move |(i, j), _| {
-        let e = trs[j][i][0].max(VOID);
-        let ut = trs[j][i][1];
-        let ux = trs[j][i][2];
-        let uy = trs[j][i][3];
-        // TODO use viscosity from freestream
-        // let pi00 = trs[j][i][4];
-        // let pi01 = trs[j][i][5];
-        // let pi02 = trs[j][i][6];
-        // let pi11 = trs[j][i][7];
-        // let pi12 = trs[j][i][8];
-        // let pi22 = trs[j][i][9];
-        // let pi33 = (pi00 - pi11 - pi22) / (t0 * t0);
-        // let bulk = trs[j][i][10];
-        let vars = [
-            e,
-            p(e),
-            dpde(e),
-            ut,
-            ux,
-            uy,
             0.0,
             0.0,
             0.0,
             0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            // pi00,
-            // pi01,
-            // pi02,
-            // pi11,
-            // pi12,
-            // pi22,
-            // pi33,
-            // bulk,
         ];
         fitutpi(t0, vars)
     })
@@ -98,13 +54,15 @@ fn gen_constraints<'a>(
     dpde: Eos<'a>,
     _temp: Eos<'a>,
     _implicit: bool,
-) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_MILNE_BOTH_2D]) + 'a + Sync> {
+) -> Box<dyn Fn(f64, [f64; F_BOTH_3D]) -> ([f64; F_BOTH_3D], [f64; C_BOTH_3D]) + 'a + Sync> {
     Box::new(
-        move |t, cur @ [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi]| {
+        move |t, cur @ [tt00, tt01, tt02, tt03, utpi11, utpi12, utpi13, utpi22, utpi23, utpi33, utppi]| {
+            let tt = t*t;
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
-            let m = (t01 * t01 + t02 * t02).sqrt();
+            let t03 = tt03 / t;
+            let m = (t01 * t01 + t02 * t02 + t03 * t03).sqrt();
             let t00 = t00.max(m * (1.0 + 1e-15));
 
             let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
@@ -121,7 +79,8 @@ fn gen_constraints<'a>(
                 let pe = p(e);
                 let ux = g * t01 / (e + pe);
                 let uy = g * t02 / (e + pe);
-                let ut = (1.0 + ux * ux + uy * uy).sqrt();
+                let uz = g * t03 / (e + pe);
+                let ut = (1.0 + ux * ux + uy * uy + uz * uz).sqrt();
 
                 // check that bulk viscosity does not make pressure negative
                 let ppi = g * utppi;
@@ -135,16 +94,20 @@ fn gen_constraints<'a>(
 
                 let pi11 = utpi11 / ut;
                 let pi12 = utpi12 / ut;
+                let pi13 = utpi13 / ut;
                 let pi22 = utpi22 / ut;
-                let pi01 = (ux * pi11 + uy * pi12) / ut;
-                let pi02 = (ux * pi12 + uy * pi22) / ut;
-                let pi00 = (ux * pi01 + uy * pi02) / ut;
-                let pi33 = (pi00 - pi01 - pi02) / (t * t);
+                let pi23 = utpi23 / ut;
+                let pi33 = utpi33 / ut;
+                let pi01 = (ux * pi11 + uy * pi12 + tt*uz*pi13) / ut;
+                let pi02 = (ux * pi12 + uy * pi22 + tt*uz*pi23) / ut;
+                let pi03 = (ux * pi13 + uy * pi23 + tt*uz*pi33) / ut;
+                let pi00 = (ux * pi01 + uy * pi02 + tt*uz*pi03) / ut;
+                let pi33 = (pi00 - pi01 - pi02 - pi03) / tt;
 
                 let m = matrix![
-                    pi11, pi12, 0.0;
-                    pi12, pi22, 0.0;
-                    0.0, 0.0, pi33;
+                    pi11, pi12, pi13;
+                    pi12, pi22, pi23;
+                    pi13, pi23, pi33;
                 ];
                 let eigs = m.symmetric_eigenvalues();
                 let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
@@ -158,19 +121,26 @@ fn gen_constraints<'a>(
                 };
                 let pi11 = r * pi11;
                 let pi12 = r * pi12;
+                let pi13 = r * pi13;
                 let pi22 = r * pi22;
+                let pi23 = r * pi23;
+                let pi33 = r * pi33;
                 let pi01 = r * pi01;
                 let pi02 = r * pi02;
+                let pi03 = r * pi03;
                 let pi00 = r * pi00;
-                let pi33 = r * pi33;
 
                 let vs = [
                     t00 * t,
                     t01 * t,
                     t02 * t,
+                    t03 * t,
                     pi11 * ut,
                     pi12 * ut,
+                    pi13 * ut,
                     pi22 * ut,
+                    pi23 * ut,
+                    pi33 * ut,
                     ppi * ut,
                 ];
 
@@ -181,12 +151,16 @@ fn gen_constraints<'a>(
                     ut,
                     ux,
                     uy,
+                    uz,
                     pi00,
                     pi01,
                     pi02,
+                    pi03,
                     pi11,
                     pi12,
+                    pi13,
                     pi22,
+                    pi23,
                     pi33,
                     ppi,
                 ];
@@ -206,79 +180,113 @@ fn gen_constraints<'a>(
 
 fn eigenvaluesx(
     _t: f64,
-    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _]: [f64; C_MILNE_BOTH_2D],
+    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, ux)
 }
 fn eigenvaluesy(
     _t: f64,
-    [_e, _pe, dpde, ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi]: [f64;
-        C_MILNE_BOTH_2D],
+    [_, _, dpde, ut, _, uy, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, uy)
+}
+fn eigenvaluesz(
+    _t: f64,
+    [_, _, dpde, ut, _, _, uz, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
+) -> f64 {
+    eigenvaluesk(dpde, ut, uz)
 }
 
 pub fn fitutpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, _pi01, _pi02, pi11, pi12, pi22, _pi33, ppi]: [f64;
-        C_MILNE_BOTH_2D],
-) -> [f64; F_BOTH_2D] {
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
+) -> [f64; F_BOTH_3D] {
     [
         t * ((e + pe) * ut * ut - pe), // no pi in Ttt because it is substracted in the flux
         t * ((e + pe) * ut * ux),
         t * ((e + pe) * ut * uy),
+        t * ((e + pe) * ut * uz),
         ut * pi11,
         ut * pi12,
+        ut * pi13,
         ut * pi22,
+        ut * pi23,
+        ut * pi33,
         ut * ppi,
     ]
 }
 fn fxuxpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, pi01, _pi02, pi11, pi12, pi22, _pi33, ppi]: [f64;
-        C_MILNE_BOTH_2D],
-) -> [f64; F_BOTH_2D] {
+    [e, pe, _, ut, ux, uy, uz, _pi00, pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
+) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
         t * ((e + pe) * ux * ut + pi01),
         t * ((e + pe) * ux * ux + pe + pi11),
         t * ((e + pe) * ux * uy + pi12),
-        ux * pi11,
-        ux * pi12,
-        ux * pi22,
+        t * ((e + pe) * ux * uz + pi13),
+        ut * pi11,
+        ut * pi12,
+        ut * pi13,
+        ut * pi22,
+        ut * pi23,
+        ut * pi33,
         ux * ppi,
     ]
 }
 fn fyuypi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, _pi01, pi02, pi11, pi12, pi22, _pi33, ppi]: [f64;
-        C_MILNE_BOTH_2D],
-) -> [f64; F_BOTH_2D] {
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, pi02, _pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
+) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
         t * ((e + pe) * uy * ut + pi02),
         t * ((e + pe) * uy * ux + pi12),
         t * ((e + pe) * uy * uy + pe + pi22),
-        uy * pi11,
-        uy * pi12,
-        uy * pi22,
+        t * ((e + pe) * uy * uz + pi23),
+        ut * pi11,
+        ut * pi12,
+        ut * pi13,
+        ut * pi22,
+        ut * pi23,
+        ut * pi33,
+        uy * ppi,
+    ]
+}
+
+fn fzuzpi(
+    t: f64,
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
+) -> [f64; F_BOTH_3D] {
+    let pe = pe + ppi;
+    [
+        t * ((e + pe) * uz * ut + pi03),
+        t * ((e + pe) * uz * ux + pi13),
+        t * ((e + pe) * uz * uy + pe + pi23),
+        t * ((e + pe) * uz * uz + pi33),
+        ut * pi11,
+        ut * pi12,
+        ut * pi13,
+        ut * pi22,
+        ut * pi23,
+        ut * pi33,
         uy * ppi,
     ]
 }
 
 fn u(
     _t: f64,
-    [_e, _pe, _, ut, ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi]: [f64;
-        C_MILNE_BOTH_2D],
-) -> [f64; 3] {
-    [ut, ux, uy]
+    [_e, _pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, _pi11, _pi12, _pi13, _pi22, _pi23, _pi33, _ppi]: [f64;
+        C_BOTH_3D],
+) -> [f64; 4] {
+    [ut, ux, uy, uz]
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[[f64; F_BOTH_2D]; V]; V]; 1]; 2],
-    [otrs, trs]: [&[[[[f64; C_MILNE_BOTH_2D]; V]; V]; 1]; 2],
-    constraints: Constraint<F_BOTH_2D, C_MILNE_BOTH_2D>,
-    bound: Boundary<F_BOTH_2D, V, V, 1>,
+    [_ov, vs]: [&[[[[f64; F_BOTH_3D]; V]; V]; V]; 2],
+    [otrs, trs]: [&[[[[f64; C_BOTH_3D]; V]; V]; V]; 2],
+    constraints: Constraint<F_BOTH_3D, C_BOTH_3D>,
+    bound: Boundary<F_BOTH_3D, V, V, V>,
     pos: [i32; DIM],
     dx: f64,
     [ot, t]: [f64; 2],
@@ -289,23 +297,26 @@ fn flux<const V: usize>(
         temperature,
         tempcut,
     ): &((f64, f64, f64), (f64, f64, f64), Eos, f64),
-) -> [f64; F_BOTH_2D] {
+) -> [f64; F_BOTH_3D] {
+    let tt = t * t;
     let theta = 1.1;
 
-    let pre = &|_t: f64, mut vs: [f64; F_BOTH_2D]| {
+    let pre = &|_t: f64, mut vs: [f64; F_BOTH_3D]| {
         let t00 = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
-        let k = t01 * t01 + t02 * t02;
+        let t03 = vs[3];
+        let k = t01 * t01 + t02 * t02 + t03 * t03;
         let m = (t00 * t00 - k).sqrt();
         vs[0] = m;
         vs
     };
-    let post = &|_t: f64, mut vs: [f64; F_BOTH_2D]| {
+    let post = &|_t: f64, mut vs: [f64; F_BOTH_3D]| {
         let m = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
-        let k = t01 * t01 + t02 * t02;
+        let t03 = vs[3];
+        let k = t01 * t01 + t02 * t02 + t03 * t03;
         let t00 = (m * m + k).sqrt();
         vs[0] = t00;
         vs
@@ -342,43 +353,75 @@ fn flux<const V: usize>(
         dx,
         theta,
     );
+    let (dzf, dzu) = diff(
+        (vs, trs),
+        bound,
+        pos,
+        Dir::Z,
+        t,
+        &fzuzpi,
+        &u,
+        constraints,
+        Eigenvalues::Analytical(&eigenvaluesz),
+        pre,
+        post,
+        dx,
+        theta,
+    );
 
-    let z = 0;
+    let z = pos[2] as usize;
     let y = pos[1] as usize;
     let x = pos[0] as usize;
-    let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi] =
+    let [_e, _pe, _dpde, out, oux, ouy, ouz, opi00, opi01, opi02, opi03, _opi11, _opi12, _opi13, _opi22, _opi23, _opi33, oppi] =
         otrs[z][y][x];
-    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi] = trs[z][y][x];
-    let pimn = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
+    let [e, pe, _dpde, ut, ux, uy, uz, pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi] =
+        trs[z][y][x];
+    let pimn = [
+        [pi00, pi01, pi02, pi03],
+        [pi01, pi11, pi12, pi13],
+        [pi02, pi12, pi22, pi23],
+        [pi03, pi13, pi23, pi33],
+    ];
 
-    let g = [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]];
-    let u = [ut, ux, uy];
-    let mut delta = [[0.0f64; 3]; 3];
-    for a in 0..3 {
-        for b in 0..3 {
+    let g = [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, -1.0, 0.0, 0.0],
+        [0.0, 0.0, -1.0, 0.0],
+        [0.0, 0.0, 0.0, -tt],
+    ];
+    let u = [ut, ux, uy, uz];
+    let mut delta = [[0.0f64; 4]; 4];
+    for a in 0..4 {
+        for b in 0..4 {
             delta[a][b] = g[a][b] - u[a] * u[b];
         }
     }
-    let ou = [out, oux, ouy];
-    let mut odelta = [[0.0f64; 3]; 3];
-    for a in 0..3 {
-        for b in 0..3 {
+    let ou = [out, oux, ouy, ouz];
+    let mut odelta = [[0.0f64; 4]; 4];
+    for a in 0..4 {
+        for b in 0..4 {
             odelta[a][b] = g[a][b] - ou[a] * ou[b];
         }
     }
 
-    let dtu = [(ut - out) / cdt, (ux - oux) / cdt, (uy - ouy) / cdt];
+    let dtu = [
+        (ut - out) / cdt,
+        (ux - oux) / cdt,
+        (uy - ouy) / cdt,
+        (uz - ouz) / cdt,
+    ];
     let dtpi = [
         (t * (pi00 - ppi * delta[0][0]) - ot * (opi00 - oppi * odelta[0][0])) / cdt,
         (t * (pi01 - ppi * delta[0][1]) - ot * (opi01 - oppi * odelta[0][1])) / cdt,
         (t * (pi02 - ppi * delta[0][2]) - ot * (opi02 - oppi * odelta[0][2])) / cdt,
+        (t * (pi03 - ppi * delta[0][3]) - ot * (opi03 - oppi * odelta[0][3])) / cdt,
     ];
-    let du = [dtu, dxu, dyu];
-    let mut ddu = [0.0f64; 3];
+    let du = [dtu, dxu, dyu, dzu];
+    let mut ddu = [0.0f64; 4];
     let mut dcuc = u[0] / t;
-    for j in 0..3 {
+    for j in 0..4 {
         dcuc += du[j][j];
-        for i in 0..3 {
+        for i in 0..4 {
             ddu[j] += u[i] * du[i][j];
         }
     }
@@ -406,12 +449,12 @@ fn flux<const V: usize>(
         zeta = 0.0;
     }
 
-    let mut spi = [0.0f64; 7];
+    let mut spi = [0.0f64; 11];
     {
         let mut i = 0;
         // pi^munu
-        for a in 0..3 {
-            for b in a..3 {
+        for a in 0..4 {
+            for b in a..4 {
                 let pi_ns = eta
                     * ((0..3)
                         .map(|i| delta[a][i] * du[i][b] + delta[b][i] * du[i][a])
@@ -433,41 +476,20 @@ fn flux<const V: usize>(
         spi[i] = -(ppi - ppi_ns) / tauppi + ippi;
     }
 
-    let s00 = (pe + ppi) + t * t * pi33;
+    let s00 = (pe + ppi) + tt * pi33;
     [
-        -dxf[0] - dyf[0] - dtpi[0] - s00,
-        -dxf[1] - dyf[1] - dtpi[1],
-        -dxf[2] - dyf[2] - dtpi[2],
-        -dxf[3] - dyf[3] + spi[3],
-        -dxf[4] - dyf[4] + spi[4],
-        -dxf[5] - dyf[5] + spi[5],
-        -dxf[6] - dyf[6] + spi[6],
+        -dxf[0] - dyf[0] - dzf[0] - dtpi[0] - s00,
+        -dxf[1] - dyf[1] - dzf[1] - dtpi[1],
+        -dxf[2] - dyf[2] - dzf[2] - dtpi[2],
+        -dxf[3] - dyf[3] - dzf[3] - dtpi[3],
+        -dxf[4] - dyf[4] - dzf[4] + spi[4],
+        -dxf[5] - dyf[5] - dzf[5] + spi[5],
+        -dxf[6] - dyf[6] - dzf[6] + spi[6],
+        -dxf[7] - dyf[7] - dzf[7] + spi[7],
+        -dxf[8] - dyf[8] - dzf[8] + spi[8],
+        -dxf[9] - dyf[9] - dzf[9] + spi[9],
+        -dxf[10] - dyf[10] - dzf[10] + spi[10],
     ]
-}
-
-pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
-    t: f64,
-    _vs: &[[[[f64; F_BOTH_2D]; VX]; VY]; 1],
-    tran: &[[[[f64; C_MILNE_BOTH_2D]; VX]; VY]; 1],
-) -> Vec<f64> {
-    let mut mt11 = 0.0;
-    let mut mt12 = 0.0;
-    let mut mt22 = 0.0;
-    for j in 0..VY {
-        for i in 0..VX {
-            let [_, t11, t12, ..] = fxuxpi(t, tran[0][j][i]);
-            let [_, _, t22, ..] = fyuypi(t, tran[0][j][i]);
-            mt11 += t11;
-            mt12 += t12;
-            mt22 += t22;
-        }
-    }
-    let anisotropy = if mt11 + mt22 == 0.0 {
-        0.0
-    } else {
-        (mt11 - mt22).hypot(2.0 * mt12) / (mt11 + mt22)
-    };
-    vec![anisotropy]
 }
 
 // viscous hydro is in Milne coordinates
@@ -481,13 +503,13 @@ pub fn viscous2d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     temperature: Eos,
-    init: Init2D<F_BOTH_2D>,
+    init: Init3D<F_BOTH_3D>,
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
     shear_temp_cut: f64,
     freezeout_temp: f64,
 ) -> Option<(
-    (BArr<F_BOTH_2D, V, V, 1>, BArr<C_MILNE_BOTH_2D, V, V, 1>),
+    (BArr<F_BOTH_3D, V, V, V>, BArr<C_BOTH_3D, V, V, V>),
     f64,
     usize,
     usize,
@@ -498,25 +520,31 @@ pub fn viscous2d<const V: usize, const S: usize>(
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);
 
-    let mut vs: Box<[[[[f64; F_BOTH_2D]; V]; V]; 1]> = boxarray(0.0f64);
-    let mut trs: Box<[[[[f64; C_MILNE_BOTH_2D]; V]; V]; 1]> = boxarray(0.0f64);
+    let mut vs: Box<[[[[f64; F_BOTH_3D]; V]; V]; V]> = boxarray(0.0f64);
+    let mut trs: Box<[[[[f64; C_BOTH_3D]; V]; V]; V]> = boxarray(0.0f64);
     let names = (
-        ["tt00", "tt01", "tt02", "utpi11", "utpi12", "utpi22", "utPi"],
         [
-            "e", "pe", "dpde", "ut", "ux", "uy", "pi00", "pi01", "pi02", "pi11", "pi12", "pi22",
-            "pi33", "Pi",
+            "tt00", "tt01", "tt02", "tt03", "utpi11", "utpi12", "utpi13", "utpi22", "utpi23",
+            "utpi33", "utPi",
+        ],
+        [
+            "e", "pe", "dpde", "ut", "ux", "uy", "uz", "pi00", "pi01", "pi02", "pi03", "pi11",
+            "pi12", "pi13", "pi22", "pi23", "pi33", "Pi",
         ],
     );
-    let k: Box<[[[[[f64; F_BOTH_2D]; V]; V]; 1]; S]> = boxarray(0.0f64);
+    let k: Box<[[[[[f64; F_BOTH_3D]; V]; V]; V]; S]> = boxarray(0.0f64);
     let v2 = ((V - 1) as f64) / 2.0;
     let mut max_e = 0.0;
-    for j in 0..V {
-        for i in 0..V {
-            let x = (i as f64 - v2) * dx;
-            let y = (j as f64 - v2) * dx;
-            vs[0][j][i] = init((i, j), (x, y));
-            (vs[0][j][i], trs[0][j][i]) = constraints(t, vs[0][j][i]);
-            max_e = trs[0][j][i][0].max(max_e);
+    for k in 0..V {
+        for j in 0..V {
+            for i in 0..V {
+                let x = (i as f64 - v2) * dx;
+                let y = (j as f64 - v2) * dx;
+                let z = (k as f64 - v2) * dx;
+                vs[k][j][i] = init((i, j, k), (x, y, z));
+                (vs[k][j][i], trs[k][j][i]) = constraints(t, vs[k][j][i]);
+                max_e = trs[k][j][i][0].max(max_e);
+            }
         }
     }
 
@@ -554,20 +582,18 @@ pub fn viscous2d<const V: usize, const S: usize>(
 
     // let e = 2e-3;
     let e = 1e-1;
-    let err_thr = |_t: f64,
-                   vs: &[[[[f64; F_BOTH_2D]; V]; V]; 1],
-                   _trs: &[[[[f64; C_MILNE_BOTH_2D]; V]; V]; 1]| {
-        let m = vs[0]
-            .iter()
-            .flat_map(|v| v.iter().map(|v| v[0]))
-            .sum::<f64>()
-            / (V * V) as f64;
-        let k = m / maxdt;
-        e * k * (maxdt / dx).powi(r.order)
-    };
+    let err_thr =
+        |_t: f64, vs: &[[[[f64; F_BOTH_3D]; V]; V]; V], _trs: &[[[[f64; C_BOTH_3D]; V]; V]; V]| {
+            let m = vs[0]
+                .iter()
+                .flat_map(|v| v.iter().map(|v| v[0]))
+                .sum::<f64>()
+                / (V * V) as f64;
+            let k = m / maxdt;
+            e * k * (maxdt / dx).powi(r.order)
+        };
 
-    let observables: [Observable<F_BOTH_2D, C_MILNE_BOTH_2D, V, V, 1>; 1] =
-        [("momentum_anisotropy", &momentum_anisotropy::<V, V>)];
+    let observables: [Observable<F_BOTH_3D, C_BOTH_3D, V, V, V>; 0] = [];
 
     let temp_fm = shear_temp_cut / HBARC;
     let ecut = newton(

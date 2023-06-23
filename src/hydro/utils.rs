@@ -9,6 +9,20 @@ use crate::{boxarray, solver::context::Arr};
 
 use super::{HydroOutput, FREESTREAM_2D};
 
+#[derive(Clone)]
+pub enum Coordinate {
+    Cartesian,
+    Milne,
+}
+
+pub fn eigenvaluesk(dpde: f64, ut: f64, uk: f64) -> f64 {
+    let vs2 = dpde;
+    let a = ut * uk * (1.0 - vs2);
+    let b = (ut * ut - uk * uk - (ut * ut - uk * uk - 1.0) * vs2) * vs2;
+    let d = ut * ut - (ut * ut - 1.0) * vs2;
+    (a.abs() + b.sqrt()) / d
+}
+
 pub fn compare<const VX: usize, const VY: usize, const VZ: usize, const F: usize>(
     f: usize,
     v1: &Arr<F, VX, VY, VZ>,

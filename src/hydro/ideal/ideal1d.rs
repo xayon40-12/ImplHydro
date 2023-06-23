@@ -1,6 +1,6 @@
 use crate::{
     boxarray,
-    hydro::{C_IDEAL_1D, F_IDEAL_1D},
+    hydro::{utils::eigenvaluesk, C_IDEAL_1D, F_IDEAL_1D},
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
         run,
@@ -32,11 +32,7 @@ fn gen_constraints<'a>(
 }
 
 fn eigenvalues(_t: f64, [_e, _pe, dpde, ut, ux]: [f64; C_IDEAL_1D]) -> f64 {
-    let vs2 = dpde;
-    let a = ut * ux * (1.0 - vs2);
-    let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
-    let d = ut * ut - (ut * ut - 1.0) * vs2;
-    (a.abs() + b.sqrt()) / d
+    eigenvaluesk(dpde, ut, ux)
 }
 
 pub fn f0(_t: f64, [e, pe, _, ut, ux]: [f64; C_IDEAL_1D]) -> [f64; F_IDEAL_1D] {

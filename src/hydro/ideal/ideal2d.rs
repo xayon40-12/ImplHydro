@@ -1,6 +1,9 @@
 use crate::{
     boxarray,
-    hydro::{C_IDEAL_2D, F_IDEAL_2D},
+    hydro::{
+        utils::{eigenvaluesk, Coordinate},
+        C_IDEAL_2D, F_IDEAL_2D,
+    },
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
         run,
@@ -56,14 +59,10 @@ fn gen_constraints<'a>(
 }
 
 fn eigenvaluesx(_t: f64, [_e, _pe, dpde, ut, ux, _uy]: [f64; C_IDEAL_2D]) -> f64 {
-    let vs2 = dpde;
-    let a = ut * ux * (1.0 - vs2);
-    let b = (ut * ut - ux * ux - (ut * ut - ux * ux - 1.0) * vs2) * vs2;
-    let d = ut * ut - (ut * ut - 1.0) * vs2;
-    (a.abs() + b.sqrt()) / d
+    eigenvaluesk(dpde, ut, ux)
 }
-fn eigenvaluesy(t: f64, [e, pe, dpde, ut, ux, uy]: [f64; C_IDEAL_2D]) -> f64 {
-    eigenvaluesx(t, [e, pe, dpde, ut, uy, ux])
+fn eigenvaluesy(_t: f64, [_e, _pe, dpde, ut, _ux, uy]: [f64; C_IDEAL_2D]) -> f64 {
+    eigenvaluesk(dpde, ut, uy)
 }
 
 pub fn f0(t: f64, [e, pe, _, ut, ux, uy]: [f64; C_IDEAL_2D]) -> [f64; F_IDEAL_2D] {
@@ -88,12 +87,6 @@ fn f2(t: f64, [e, pe, _, ut, ux, uy]: [f64; C_IDEAL_2D]) -> [f64; F_IDEAL_2D] {
         t * ((e + pe) * uy * ux),
         t * ((e + pe) * uy * uy + pe),
     ]
-}
-
-#[derive(Clone)]
-pub enum Coordinate {
-    Cartesian,
-    Milne,
 }
 
 fn flux<const V: usize>(
