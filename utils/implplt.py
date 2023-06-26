@@ -263,6 +263,7 @@ def convall(l, cnds):
         # plt.title("{} {} t0={} tend={} dx={} cells={}".format(dim, name, t0, tend, dx, nx))
         nbcases = len(cnds)
         alpha = sqrt(1/nbcases)
+        markers = {}
         for case in cnds:
             nds = cnds[case]
             dxs = sorted(nds,key=lambda x: x[1])
@@ -308,6 +309,7 @@ def convall(l, cnds):
                             if fillstyle == "full":
                                 facecolors = col
                             ax.loglog(c[fromref:,dci],c[fromref:,mmi], label=label, color=col, linestyle=(0,linestyle), linewidth=1, alpha=al)
+                            markers[label] = pointstyle(info)
                             ax.scatter(c[fromref:,dci],c[fromref:,mmi],sizes, marker=pointstyle(info), facecolors=facecolors, color=col, alpha=al) #, fillstyle=fillstyle, color=col, alpha=al)
                         pl(ax,schemetype)
                         if "FixPoint" in info["integration"]:
@@ -316,16 +318,17 @@ def convall(l, cnds):
                             label = r"$\Delta x = "+str(dx)+"$ fm"
                             pl(ax2,label)
 
-        def line(col,style):
-            return matplotlib.lines.Line2D([],[], color=col,linestyle=style)
+        def line(col,style,marker=None):
+            return matplotlib.lines.Line2D([],[], color=col,linestyle=style,marker=marker,markersize=10)
         def clean(ax):
             handles, labels = [], []
             hs, ls = ax.get_legend_handles_labels()
             for (h,l) in zip(hs,ls):    # this is the loop to change Labels and colors
                 col = h.get_color()
+                marker = markers[l]
                 m = max(col)
                 if not (l in labels or m == 1):    # check for Name already exists
-                    p = line(col,"-")
+                    p = line(col,"-",marker)
                     handles += [p]
                     labels += [l]
             leg = ax.legend(handles, labels, loc="upper right")
@@ -336,8 +339,8 @@ def convall(l, cnds):
         handles = [line("black",(0,(1,0))),line("black",(0,(5,5)))]
         axs[1].legend(handles, labels, loc="upper right")
         clean(ax2)
-        fig.savefig("figures/convergence_{}_meanmax_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
-        fig2.savefig("figures/convergence_{}_meanmax_dx_crop:{}_{}.pdf".format(dtcost, crop, info2name(info, False)))
+        fig.savefig("figures/convergence_{}_meanmax_crop={}_{}.pdf".format(dtcost, crop, info2name(info, False)))
+        fig2.savefig("figures/convergence_{}_meanmax_dx_crop={}_{}.pdf".format(dtcost, crop, info2name(info, False)))
         plt.close()
 
 def pointstyle(info):
