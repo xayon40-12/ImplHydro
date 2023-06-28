@@ -37,6 +37,10 @@ usefreestream = False
 if "-f" in args:
     usefreestream = True
 
+use3d = False
+if "-3d" in args:
+    use3d = True
+
 for c in cells:
     dx = 2*half_size / float(c)
     for sig in sigs:
@@ -51,9 +55,14 @@ for c in cells:
             # run trento
             # git: Duke-QCD/frzout
 
-            trento_cmd = \
-                "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
-                .format(r=random_seed, p=p, k=sigmafluct, w=rcp, m=nc, v=wc, d=dmin, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
+            if use3d:
+                trento_cmd = \
+                    "trento3d Pb Pb --eta-max {etam} --eta-step {dx} --random-seed {r} -p {p} -k {k} -w {w} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --xy-max {l} --xy-step {dx} {num} -o {dir}" \
+                    .format(r=random_seed, p=p, k=sigmafluct, w=rcp, d=dmin, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
+            else:
+                trento_cmd = \
+                    "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
+                    .format(r=random_seed, p=p, k=sigmafluct, w=rcp, m=nc, v=wc, d=dmin, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
             trento = os.popen(trento_cmd)
             output = trento.read()
             print("Trento:\n{}".format(output))

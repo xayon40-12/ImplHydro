@@ -103,7 +103,7 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
     let vy = arr.len();
     if vy != VY || vx != VX {
         panic!(
-            "Wrong matrix size in load_matrix: expected {}x{}, found {}x{}",
+            "Wrong matrix size in load_matrix_3d: expected {}x{}, found {}x{}",
             VX, VY, vx, vy
         );
     }
@@ -117,12 +117,69 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
     Ok(mat)
 }
 
+pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
+    filename: &str,
+) -> std::io::Result<Box<[[[f64; VX]; VY]; VZ]>> {
+    let mut file = File::open(filename)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    let arr = contents
+        .split("\n")
+        .filter(|l| !l.starts_with("#") && l.len() > 0)
+        .map(|l| {
+            l.split(" ")
+                .map(|v| {
+                    v.parse::<f64>().expect(&format!(
+                        "Cannot parse f64 in load_matrix call for file \"{}\"",
+                        filename
+                    ))
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<Vec<_>>>();
+
+    let vxy = arr.len();
+    let vx = vxy / VY;
+    let vy = VY;
+    let vz = arr[0].len();
+
+    if vz != VZ || vxy != VX * VY {
+        panic!(
+            "Wrong matrix size in load_matrix_3d: expected {}x{}x{}, found {}x{}x{}",
+            VX, VY, VZ, vx, vy, vz
+        );
+    }
+    let mut mat: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0f64);
+    for k in 0..VZ {
+        for j in 0..VY {
+            for i in 0..VX {
+                mat[k][j][i] = arr[i + VX * j][k];
+            }
+        }
+    }
+
+    Ok(mat)
+}
+
 pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V]; V]>> {
     let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0f64); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
         trentos[i] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
             "Could not load trento initial condition file \"e{V}/{i:0>width$}.dat\"."
+        ));
+    }
+    trentos
+}
+
+pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
+    nb_trento: usize,
+) -> Vec<Box<[[[f64; XY]; XY]; Z]>> {
+    let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0f64); nb_trento];
+    let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
+    for i in 0..nb_trento {
+        trentos[i] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
+            "Could not load trento initial condition file \"e{XY}/{i:0>width$}.dat\"."
         ));
     }
     trentos

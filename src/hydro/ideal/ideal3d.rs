@@ -109,11 +109,11 @@ fn f3(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D
     ]
 }
 
-fn flux<const V: usize>(
-    [_ov, vs]: [&Arr<F_IDEAL_3D, V, V, V>; 2],
-    [_otrs, trs]: [&Arr<C_IDEAL_3D, V, V, V>; 2],
+fn flux<const XY: usize, const Z: usize>(
+    [_ov, vs]: [&Arr<F_IDEAL_3D, XY, XY, Z>; 2],
+    [_otrs, trs]: [&Arr<C_IDEAL_3D, XY, XY, Z>; 2],
     constraints: Constraint<F_IDEAL_3D, C_IDEAL_3D>,
-    bound: Boundary<F_IDEAL_3D, V, V, V>,
+    bound: Boundary<F_IDEAL_3D, XY, XY, Z>,
     pos: [i32; DIM],
     dx: f64,
     [_ot, t]: [f64; 2],
@@ -204,7 +204,7 @@ fn flux<const V: usize>(
     ]
 }
 
-pub fn ideal3d<const V: usize, const S: usize>(
+pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
     name: &str,
     maxdt: f64,
     t: f64,
@@ -215,28 +215,29 @@ pub fn ideal3d<const V: usize, const S: usize>(
     dpde: Eos,
     init: Init3D<F_IDEAL_3D>,
 ) -> Option<(
-    (BArr<F_IDEAL_3D, V, V, V>, BArr<C_IDEAL_3D, V, V, V>),
+    (BArr<F_IDEAL_3D, XY, XY, Z>, BArr<C_IDEAL_3D, XY, XY, Z>),
     f64,
     usize,
     usize,
 )> {
     let coord = Coordinate::Milne;
     let constraints = gen_constraints(&p, &dpde, &coord);
-    let mut vs: Box<[[[[f64; F_IDEAL_3D]; V]; V]; V]> = boxarray(0.0f64);
-    let mut trs: Box<[[[[f64; C_IDEAL_3D]; V]; V]; V]> = boxarray(0.0f64);
+    let mut vs: Box<[[[[f64; F_IDEAL_3D]; XY]; XY]; Z]> = boxarray(0.0f64);
+    let mut trs: Box<[[[[f64; C_IDEAL_3D]; XY]; XY]; Z]> = boxarray(0.0f64);
 
     let names = (
         ["t00", "t01", "t02", "t03"],
         ["e", "pe", "dpde", "ut", "ux", "uy", "uz"],
     );
-    let k: Box<[[[[[f64; F_IDEAL_3D]; V]; V]; V]; S]> = boxarray(0.0f64);
-    let v2 = ((V - 1) as f64) / 2.0;
-    for k in 0..V {
-        for j in 0..V {
-            for i in 0..V {
+    let k: Box<[[[[[f64; F_IDEAL_3D]; XY]; XY]; Z]; S]> = boxarray(0.0f64);
+    let v2 = ((XY - 1) as f64) / 2.0;
+    let v2z = ((Z - 1) as f64) / 2.0;
+    for k in 0..Z {
+        for j in 0..XY {
+            for i in 0..XY {
                 let x = (i as f64 - v2) * dx;
                 let y = (j as f64 - v2) * dx;
-                let z = (k as f64 - v2) * dx;
+                let z = (k as f64 - v2z) * dx;
                 vs[k][j][i] = init((i, j, k), (x, y, z));
                 (vs[k][j][i], trs[k][j][i]) = constraints(t, vs[k][j][i]);
             }
@@ -273,18 +274,18 @@ pub fn ideal3d<const V: usize, const S: usize>(
 
     let e = 2e-4;
     let err_thr = |_t: f64,
-                   vs: &[[[[f64; F_IDEAL_3D]; V]; V]; V],
-                   _trs: &[[[[f64; C_IDEAL_3D]; V]; V]; V]| {
+                   vs: &[[[[f64; F_IDEAL_3D]; XY]; XY]; Z],
+                   _trs: &[[[[f64; C_IDEAL_3D]; XY]; XY]; Z]| {
         let m = vs[0]
             .iter()
             .flat_map(|v| v.iter().map(|v| v[0]))
             .sum::<f64>()
-            / (V * V) as f64;
+            / (XY * XY * Z) as f64;
         let k = m / maxdt;
         e * k * (maxdt / dx).powi(r.order)
     };
 
-    let observables: [Observable<F_IDEAL_3D, C_IDEAL_3D, V, V, V>; 0] = [];
+    let observables: [Observable<F_IDEAL_3D, C_IDEAL_3D, XY, XY, Z>; 0] = [];
 
     run(
         context,
