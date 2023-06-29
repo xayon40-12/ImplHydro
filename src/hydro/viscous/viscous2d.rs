@@ -20,7 +20,6 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     s: &'a [[f64; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
-    _temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i];
@@ -139,7 +138,7 @@ fn gen_constraints<'a>(
                 let pi01 = (ux * pi11 + uy * pi12) / ut;
                 let pi02 = (ux * pi12 + uy * pi22) / ut;
                 let pi00 = (ux * pi01 + uy * pi02) / ut;
-                let pi33 = (pi00 - pi01 - pi02) / (t * t);
+                let pi33 = pi00 - pi01 - pi02;
 
                 let m = matrix![
                     pi11, pi12, 0.0;
@@ -433,7 +432,7 @@ fn flux<const V: usize>(
         spi[i] = -(ppi - ppi_ns) / tauppi + ippi;
     }
 
-    let s00 = (pe + ppi) + t * t * pi33;
+    let s00 = (pe + ppi) + pi33;
     [
         -dxf[0] - dyf[0] - dtpi[0] - s00,
         -dxf[1] - dyf[1] - dtpi[1],

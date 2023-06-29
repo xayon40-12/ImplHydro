@@ -29,7 +29,7 @@ fn hydro2d<const V: usize, const S: usize>(
         EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::T),
     };
     println!("{}", name);
-    let init = init_from_entropy_density_2d(t0, s, p, dpde, temp);
+    let init = init_from_entropy_density_2d(t0, s, p, dpde);
     viscous2d::<V, S>(
         &name,
         maxdt,

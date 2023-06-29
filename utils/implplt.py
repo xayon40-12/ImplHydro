@@ -105,6 +105,8 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     maxdt = info["maxdt"]
     dx = info["dx"]
     nx = info["nx"]
+    ny = info["ny"]
+    nz = info["nz"]
     t = info["t"]
     fails = info["fails"]
     r = 1e10
@@ -113,9 +115,12 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     if info["ny"] == 1:
         dim = "1D"
         n = nx
-    else:
+    elif info["nz"] == 1:
         dim = "2D"
-        n = nx*nx
+        n = nx*ny
+    else:
+        dim = "3D"
+        n = nx*ny*nz
     info["dim"] = dim
     name = info["name"]
     (name, case) = extractCase(name)
@@ -175,6 +180,16 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     meanvoidratio += err
     maxvoidratio = max(maxvoidratio, err)
     countvoidratio += 1
+
+    # extract zero rapidity part
+    if dim == "3D":
+        dim = "2D"
+        n = nx*ny
+        dataz0 = data[:,vid["z"]]==0
+        if not diff is None:
+            diff = diff[dataz0,:]
+        data = data[dataz0,:]
+        info["datats"] = [(t, d[dataz0,:], diff) for (t,d,diff) in info["datats"]]
 
     # print(p, dim, t0, tend, dx, nx, maxdt)
     datas[dim][name][visc][t0][tend][t][case][(dx,nx)][scheme][maxdt] = (info, data, diff)
@@ -788,7 +803,7 @@ def plot2d(l, datadts):
                 if i == 0:
                     axs[i][id].xaxis.set_label_position('top') 
                     axs[i][id].set_xlabel(r"$\tau$ = {} (fm)".format(t))
-                if i == nb-1:
+                elif i == nb-1:
                     axs[i][id].set_xlabel("$x$ (fm)")
                 if id == num-1:
                     axs[i][id].yaxis.set_label_position('right')

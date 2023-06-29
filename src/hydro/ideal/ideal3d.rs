@@ -69,8 +69,8 @@ fn eigenvaluesx(_t: f64, [_e, _pe, dpde, ut, ux, _uy, _uz]: [f64; C_IDEAL_3D]) -
 fn eigenvaluesy(_t: f64, [_e, _pe, dpde, ut, _ux, uy, _uz]: [f64; C_IDEAL_3D]) -> f64 {
     eigenvaluesk(dpde, ut, uy)
 }
-fn eigenvaluesz(_t: f64, [_e, _pe, dpde, ut, _ux, _uy, uz]: [f64; C_IDEAL_3D]) -> f64 {
-    eigenvaluesk(dpde, ut, uz)
+fn eigenvaluesz(t: f64, [_e, _pe, dpde, ut, _ux, _uy, uz]: [f64; C_IDEAL_3D]) -> f64 {
+    eigenvaluesk(dpde, ut, uz) / t
 }
 
 pub fn f0(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
@@ -100,12 +100,12 @@ fn f2(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D
     ]
 }
 
-fn f3(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
+fn f3(_t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
     [
-        t * ((e + pe) * uz * ut),
-        t * ((e + pe) * uz * ux),
-        t * ((e + pe) * uz * uy),
-        t * ((e + pe) * uz * uz + pe),
+        (e + pe) * uz * ut,
+        (e + pe) * uz * ux,
+        (e + pe) * uz * uy,
+        (e + pe) * uz * uz + pe,
     ]
 }
 
@@ -187,20 +187,20 @@ fn flux<const XY: usize, const Z: usize>(
         theta,
     );
 
-    let s: f64 = match coord {
-        Coordinate::Cartesian => 0.0,
+    let (tee, tte): (f64, f64) = match coord {
+        Coordinate::Cartesian => (0.0, 0.0),
         Coordinate::Milne => {
             let y = pos[1] as usize;
             let x = pos[0] as usize;
-            let [_e, pe, _dpde, _ut, _ux, _uy, _uz] = trs[0][y][x];
-            pe
+            let [e, pe, _dpde, ut, _ux, _uy, uz] = trs[0][y][x];
+            ((e + pe) * uz * uz + pe, (e + pe) * ut * uz)
         }
     };
     [
-        -divf1[0] - divf2[0] - divf3[0] - s,
+        -divf1[0] - divf2[0] - divf3[0] - tee,
         -divf1[1] - divf2[1] - divf3[1],
         -divf1[2] - divf2[2] - divf3[2],
-        -divf1[3] - divf2[3] - divf3[3],
+        -divf1[3] - divf2[3] - divf3[3] - tte,
     ]
 }
 
@@ -253,7 +253,7 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
         constraints: &constraints,
         boundary: &ghost, // use noboundary to emulate 1D
         post_constraints: None,
-        local_interaction: [1, 1, 0], // use a distance of 0 to emulate 1D
+        local_interaction: [1, 1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs.clone(), trs.clone()),
         ovstrs: (vs, trs),
         total_diff_vs: zeros(),
@@ -272,13 +272,13 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
         freezeout_energy: None,
     };
 
-    let e = 2e-4;
+    let e = 1e-2;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_IDEAL_3D]; XY]; XY]; Z],
                    _trs: &[[[[f64; C_IDEAL_3D]; XY]; XY]; Z]| {
-        let m = vs[0]
+        let m = vs
             .iter()
-            .flat_map(|v| v.iter().map(|v| v[0]))
+            .flat_map(|v| v.iter().flat_map(|v| v.iter().map(|v| v[0])))
             .sum::<f64>()
             / (XY * XY * Z) as f64;
         let k = m / maxdt;

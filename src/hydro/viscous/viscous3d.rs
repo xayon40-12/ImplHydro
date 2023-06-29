@@ -20,7 +20,6 @@ pub fn init_from_entropy_density_3d<'a, const VX: usize, const VY: usize, const 
     s: &'a [[[f64; VX]; VY]; VZ],
     p: Eos<'a>,
     dpde: Eos<'a>,
-    _temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_BOTH_3D] + 'a> {
     Box::new(move |(i, j, k), _| {
         let s = s[k][j][i].max(VOID);
@@ -57,7 +56,6 @@ fn gen_constraints<'a>(
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_3D]) -> ([f64; F_BOTH_3D], [f64; C_BOTH_3D]) + 'a + Sync> {
     Box::new(
         move |t, cur @ [tt00, tt01, tt02, tt03, utpi11, utpi12, utpi13, utpi22, utpi23, utpi33, utppi]| {
-            let tt = t*t;
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
@@ -98,11 +96,11 @@ fn gen_constraints<'a>(
                 let pi22 = utpi22 / ut;
                 let pi23 = utpi23 / ut;
                 let pi33 = utpi33 / ut;
-                let pi01 = (ux * pi11 + uy * pi12 + tt*uz*pi13) / ut;
-                let pi02 = (ux * pi12 + uy * pi22 + tt*uz*pi23) / ut;
-                let pi03 = (ux * pi13 + uy * pi23 + tt*uz*pi33) / ut;
-                let pi00 = (ux * pi01 + uy * pi02 + tt*uz*pi03) / ut;
-                let pi33 = (pi00 - pi01 - pi02 - pi03) / tt;
+                let pi01 = (ux * pi11 + uy * pi12 + uz*pi13) / ut;
+                let pi02 = (ux * pi12 + uy * pi22 + uz*pi23) / ut;
+                let pi03 = (ux * pi13 + uy * pi23 + uz*pi33) / ut;
+                let pi00 = (ux * pi01 + uy * pi02 + uz*pi03) / ut;
+                let pi33 = pi00 - pi01 - pi02 - pi03;
 
                 let m = matrix![
                     pi11, pi12, pi13;
@@ -191,10 +189,10 @@ fn eigenvaluesy(
     eigenvaluesk(dpde, ut, uy)
 }
 fn eigenvaluesz(
-    _t: f64,
+    t: f64,
     [_, _, dpde, ut, _, _, uz, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> f64 {
-    eigenvaluesk(dpde, ut, uz)
+    eigenvaluesk(dpde, ut, uz) / t
 }
 
 pub fn fitutpi(
@@ -255,15 +253,15 @@ fn fyuypi(
 }
 
 fn fzuzpi(
-    t: f64,
+    _t: f64,
     [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
-        t * ((e + pe) * uz * ut + pi03),
-        t * ((e + pe) * uz * ux + pi13),
-        t * ((e + pe) * uz * uy + pe + pi23),
-        t * ((e + pe) * uz * uz + pi33),
+        (e + pe) * uz * ut + pi03,
+        (e + pe) * uz * ux + pi13,
+        (e + pe) * uz * uy + pi23,
+        (e + pe) * uz * uz + pe + pi33,
         ut * pi11,
         ut * pi12,
         ut * pi13,
@@ -476,12 +474,13 @@ fn flux<const XY: usize, const Z: usize>(
         spi[i] = -(ppi - ppi_ns) / tauppi + ippi;
     }
 
-    let s00 = (pe + ppi) + tt * pi33;
+    let s00 = (e + pe + ppi) * uz * uz + (pe + ppi) + pi33;
+    let s03 = (e + pe + ppi) * ut * uz + pi03;
     [
         -dxf[0] - dyf[0] - dzf[0] - dtpi[0] - s00,
         -dxf[1] - dyf[1] - dzf[1] - dtpi[1],
         -dxf[2] - dyf[2] - dzf[2] - dtpi[2],
-        -dxf[3] - dyf[3] - dzf[3] - dtpi[3],
+        -dxf[3] - dyf[3] - dzf[3] - dtpi[3] - s03,
         -dxf[4] - dyf[4] - dzf[4] + spi[4],
         -dxf[5] - dyf[5] - dzf[5] + spi[5],
         -dxf[6] - dyf[6] - dzf[6] + spi[6],
@@ -562,7 +561,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
         constraints: &constraints,
         boundary: &ghost, // TODO use better boundary
         post_constraints: None,
-        local_interaction: [1, 1, 0], // use a distance of 0 to emulate 1D
+        local_interaction: [1, 1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs.clone(), trs.clone()),
         ovstrs: (vs, trs),
         total_diff_vs: zeros(),
@@ -586,9 +585,9 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; Z],
                    _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; Z]| {
-        let m = vs[0]
+        let m = vs
             .iter()
-            .flat_map(|v| v.iter().map(|v| v[0]))
+            .flat_map(|v| v.iter().flat_map(|v| v.iter().map(|v| v[0])))
             .sum::<f64>()
             / (XY * XY * Z) as f64;
         let k = m / maxdt;

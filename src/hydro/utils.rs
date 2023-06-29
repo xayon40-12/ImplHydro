@@ -20,6 +20,9 @@ pub fn eigenvaluesk(dpde: f64, ut: f64, uk: f64) -> f64 {
     let a = ut * uk * (1.0 - vs2);
     let b = (ut * ut - uk * uk - (ut * ut - uk * uk - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
+    if b < 0.0 || d == 0.0 {
+        panic!("\nvs2:\na: {a}, b:{b}, d:{d}\n");
+    }
     (a.abs() + b.sqrt()) / d
 }
 
@@ -127,7 +130,8 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
         .split("\n")
         .filter(|l| !l.starts_with("#") && l.len() > 0)
         .map(|l| {
-            l.split(" ")
+            l.trim()
+                .split(" ")
                 .map(|v| {
                     v.parse::<f64>().expect(&format!(
                         "Cannot parse f64 in load_matrix call for file \"{}\"",
