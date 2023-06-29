@@ -3,7 +3,7 @@ use crate::{
         eos::{hotqcd, wb, EOSs},
         utils::{converge, prepare_trento_2d},
         viscous::viscous2d::{init_from_entropy_density_2d, viscous2d},
-        Eos, HydroOutput, C_BOTH_2D, F_BOTH_2D,
+        Eos, HydroOutput, C_MILNE_BOTH_2D, F_BOTH_2D,
     },
     solver::{time::schemes::*, Solver},
 };
@@ -19,7 +19,7 @@ fn hydro2d<const V: usize, const S: usize>(
     freezeout_temp_gev: f64,
     r: Scheme<S>,
     init_s: (&[[f64; V]; V], usize),
-) -> HydroOutput<V, V, 1, F_BOTH_2D, C_BOTH_2D> {
+) -> HydroOutput<V, V, 1, F_BOTH_2D, C_MILNE_BOTH_2D> {
     let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
     let eos = EOSs::WB;
@@ -29,7 +29,7 @@ fn hydro2d<const V: usize, const S: usize>(
         EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::T),
     };
     println!("{}", name);
-    let init = init_from_entropy_density_2d(t0, s, p, dpde, temp);
+    let init = init_from_entropy_density_2d(t0, s, p, dpde);
     viscous2d::<V, S>(
         &name,
         maxdt,

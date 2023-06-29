@@ -121,23 +121,23 @@ pub fn save<
                 //     res = format!("{}{}", res, s);
                 // }
 
-                ligne[0 + fc4 * (i + VX * (j + VZ * k))] = x;
-                ligne[1 + fc4 * (i + VX * (j + VZ * k))] = y;
-                ligne[2 + fc4 * (i + VX * (j + VZ * k))] = z;
-                ligne[3 + fc4 * (i + VX * (j + VZ * k))] = nbiter[k][j][i] as f64;
+                ligne[0 + fc4 * (i + VX * (j + VY * k))] = x;
+                ligne[1 + fc4 * (i + VX * (j + VY * k))] = y;
+                ligne[2 + fc4 * (i + VX * (j + VY * k))] = z;
+                ligne[3 + fc4 * (i + VX * (j + VY * k))] = nbiter[k][j][i] as f64;
                 if DIFF {
-                    ligne_diff[0 + f3 * (i + VX * (j + VZ * k))] = x;
-                    ligne_diff[1 + f3 * (i + VX * (j + VZ * k))] = y;
-                    ligne_diff[2 + f3 * (i + VX * (j + VZ * k))] = z;
+                    ligne_diff[0 + f3 * (i + VX * (j + VY * k))] = x;
+                    ligne_diff[1 + f3 * (i + VX * (j + VY * k))] = y;
+                    ligne_diff[2 + f3 * (i + VX * (j + VY * k))] = z;
                 }
                 for f in 0..F {
-                    ligne[4 + f + fc4 * (i + VX * (j + VZ * k))] = v[f];
+                    ligne[4 + f + fc4 * (i + VX * (j + VY * k))] = v[f];
                     if DIFF {
-                        ligne_diff[3 + f + f3 * (i + VX * (j + VZ * k))] = diffv[f];
+                        ligne_diff[3 + f + f3 * (i + VX * (j + VY * k))] = diffv[f];
                     }
                 }
                 for c in 0..C {
-                    ligne[4 + F + c + fc4 * (i + VX * (j + VZ * k))] = vars[c];
+                    ligne[4 + F + c + fc4 * (i + VX * (j + VY * k))] = vars[c];
                 }
             }
             // if TXT {

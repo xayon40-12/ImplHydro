@@ -11,6 +11,8 @@ pub type Eos<'a> = &'a (dyn Fn(f64) -> f64 + Sync);
 
 pub type Init1D<'a, const F: usize> = &'a dyn Fn(usize, f64) -> [f64; F];
 pub type Init2D<'a, const F: usize> = &'a dyn Fn((usize, usize), (f64, f64)) -> [f64; F];
+pub type Init3D<'a, const F: usize> =
+    &'a dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F];
 
 pub const VOID: f64 = 1e-100;
 pub const HBARC: f64 = 0.1973; // GeV.fm
@@ -19,6 +21,7 @@ pub const HBARC: f64 = 0.1973; // GeV.fm
 pub enum Dim {
     D1,
     D2,
+    D3,
 }
 
 impl Dim {
@@ -26,6 +29,7 @@ impl Dim {
         match self {
             Dim::D1 => 1,
             Dim::D2 => 2,
+            Dim::D3 => 3,
         }
     }
 }
@@ -56,8 +60,8 @@ impl Viscosity {
         match self {
             Viscosity::Ideal => f,
             Viscosity::Bulk(_, _) => f,
-            Viscosity::Shear(_, _) => f + d + 1, // +d for pi00..pi02, +1 for pi33
-            Viscosity::Both(_, _, _) => f + d + 1,
+            Viscosity::Shear(_, _) => f + d,   // +d for pi00..pi02
+            Viscosity::Both(_, _, _) => f + d, // +d for pi00..pi02
         }
     }
 }
@@ -87,6 +91,11 @@ pub const F_BULK_2D: usize = Viscosity::Bulk(0.0, 0.0).nb_fields(Dim::D2.value()
 pub const F_SHEAR_2D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D2.value());
 pub const F_BOTH_2D: usize =
     Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D2.value());
+pub const F_IDEAL_3D: usize = Viscosity::Ideal.nb_fields(Dim::D3.value());
+pub const F_BULK_3D: usize = Viscosity::Bulk(0.0, 0.0).nb_fields(Dim::D3.value());
+pub const F_SHEAR_3D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value());
+pub const F_BOTH_3D: usize =
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value());
 
 pub const C_IDEAL_1D: usize = Viscosity::Ideal.nb_transforms(Dim::D1.value());
 pub const C_BULK_1D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D1.value());
@@ -98,6 +107,15 @@ pub const C_BULK_2D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D2.val
 pub const C_SHEAR_2D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value());
 pub const C_BOTH_2D: usize =
     Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value());
+pub const C_MILNE_SHEAR_2D: usize =
+    Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value()) + 1; // +1 for pi33
+pub const C_MILNE_BOTH_2D: usize =
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value()) + 1; // +1 for pi33
+pub const C_IDEAL_3D: usize = Viscosity::Ideal.nb_transforms(Dim::D3.value());
+pub const C_BULK_3D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D3.value());
+pub const C_SHEAR_3D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D3.value());
+pub const C_BOTH_3D: usize =
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D3.value());
 
 pub mod ideal_gas {
     use std::f64::consts::PI;
