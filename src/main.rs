@@ -96,20 +96,7 @@ enum ToSimulate {
     },
 }
 
-pub fn test_hotqcd() {
-    let n = 1000;
-    for i in 0..n {
-        let x = i as f64 / n as f64;
-        let e = x * 1e-2;
-        let p = implhydro::hydro::eos::hotqcd::p(e);
-        println!("{e:.5e} {p:.5e}");
-    }
-}
-
 fn main() {
-    // test_hotqcd();
-    // return;
-
     let cli = Cli::parse();
 
     match cli.cells {
