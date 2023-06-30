@@ -27,6 +27,11 @@ lazy_static! {
             res[i][3] /= HBARC;
         }
         // after [fm^-4, fm^-4, fm^-3, fm^-1]
+
+        // doing these slight changes avoid oscillations at low energies
+        res[0][1] *= 1.17;
+        res[0][3] *= 0.1;
+
         res
     };
     static ref HOTQCD_P: Box<[[f64; 4]; N]> = cubic_spline_0(HOTQCD_ID_E, HOTQCD_ID_P, &HOTQCD_FM);
@@ -69,6 +74,7 @@ pub fn test_hotqcd() {
         let e = x * 1e0;
         let p = p(e);
         let dpde = dpde(e);
-        println!("@ {e:.5e} {p:.5e} {dpde:.5e}");
+        let t = T(e);
+        println!("@ {e:.5e} {p:.5e} {dpde:.5e} {t:.5e}");
     }
 }
