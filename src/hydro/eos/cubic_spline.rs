@@ -1,15 +1,19 @@
 use crate::boxarray;
 
-pub fn cubic(x: f64, p: &[f64; 4], _a: f64) -> f64 {
+pub fn cubic(x: f64, p: &[f64; 4]) -> f64 {
     p[0] + x * (p[1] + x * (p[2] + x * p[3]))
 }
 
-pub fn cubic_diff(x: f64, p: &[f64; 4], a: f64) -> f64 {
-    (p[1] + x * (2.0 * p[2] + x * 3.0 * p[3])) / a
+pub fn cubic_diff(x: f64, p: &[f64; 4]) -> f64 {
+    p[1] + x * (2.0 * p[2] + x * 3.0 * p[3])
 }
 
-pub fn cubic_diff2(x: f64, p: &[f64; 4], a: f64) -> f64 {
-    (2.0 * p[2] + x * 6.0 * p[3]) / (a * a)
+pub fn cubic_diff2(x: f64, p: &[f64; 4]) -> f64 {
+    2.0 * p[2] + x * 6.0 * p[3]
+}
+
+pub fn cubic_diff3(_x: f64, p: &[f64; 4]) -> f64 {
+    6.0 * p[3]
 }
 
 pub fn cubic_spline_0<const N: usize, const M: usize>(
@@ -76,6 +80,11 @@ pub fn cubic_spline_0<const N: usize, const M: usize>(
         pols[i][2] = 3.0 * (tmp[i + 1][0] - tmp[i][0]) - 2.0 * tmp[i][1] - tmp[i + 1][1];
         pols[i][3] = 2.0 * (tmp[i][0] - tmp[i + 1][0]) + tmp[i][1] + tmp[i + 1][1];
     }
+
+    // make the first segment to be between 0 and a as the other segments
+    pols[0][1] /= a;
+    pols[0][2] /= a.powi(2);
+    pols[0][3] /= a.powi(3);
 
     pols
 }

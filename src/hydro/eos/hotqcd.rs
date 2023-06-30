@@ -33,18 +33,17 @@ lazy_static! {
     static ref HOTQCD_T: Box<[[f64; 4]; N]> = cubic_spline_0(HOTQCD_ID_E, HOTQCD_ID_T, &HOTQCD_FM);
 }
 
-fn hot_cubic(e: f64, spline: &[[f64; 4]; N], cubic: &dyn Fn(f64, &[f64; 4], f64) -> f64) -> f64 {
+fn hot_cubic(e: f64, spline: &[[f64; 4]; N], cubic: &dyn Fn(f64, &[f64; 4]) -> f64) -> f64 {
     let e0 = HOTQCD_FM[0][0];
     let e1 = HOTQCD_FM[1][0];
     let e1e0 = e1 - e0;
     let h = if e < e0 {
-        let a = e0 / e1e0;
-        cubic(e / e0, &spline[0], a)
+        cubic(e / e1e0, &spline[0])
     } else {
         let a = (e - e0) / e1e0;
         let i = (a as usize).min(N - 2);
         let x = a - i as f64;
-        cubic(x, &spline[i + 1], 1.0)
+        cubic(x, &spline[i + 1])
     };
     h
 }
