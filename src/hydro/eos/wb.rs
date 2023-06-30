@@ -122,6 +122,10 @@ pub fn p(e: f64) -> f64 {
     from_arr(e, a_arr, b_arr) + 0.25182 / 4.5829e4 // compensate negative values
 }
 
+pub fn s(e: f64) -> f64 {
+    (e + p(e)) / T(e)
+}
+
 pub fn from_arr<const N: usize>(e: f64, a_arr: [f64; N], b_arr: [f64; N]) -> f64 {
     let mut a = a_arr[0];
     let mut b = b_arr[0];

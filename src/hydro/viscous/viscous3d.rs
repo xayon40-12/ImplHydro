@@ -292,9 +292,10 @@ fn flux<const XY: usize, const Z: usize>(
     &(
         (etas_min, etas_slope, etas_crv),
         (_zetas_max, _zetas_width, _zetas_peak),
+        entropy,
         temperature,
         tempcut,
-    ): &((f64, f64, f64), (f64, f64, f64), Eos, f64),
+    ): &((f64, f64, f64), (f64, f64, f64), Eos, Eos, f64),
 ) -> [f64; F_BOTH_3D] {
     let tt = t * t;
     let theta = 1.1;
@@ -426,7 +427,7 @@ fn flux<const XY: usize, const Z: usize>(
 
     let temp = temperature(e);
     let gev = temp * HBARC;
-    let s = (e + pe) / temp;
+    let s = entropy(e); // (e + pe) / temp;
     let tc = 0.154; // GeV
 
     let vgev = gev.max(tc); // viscous temperature [GeV] blocked at tc
@@ -501,6 +502,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
     r: Scheme<S>,
     p: Eos,
     dpde: Eos,
+    entropy: Eos,
     temperature: Eos,
     init: Init3D<F_BOTH_3D>,
     etaovers: (f64, f64, f64),
@@ -574,7 +576,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
         ot: t - 1.0,
         t0: t,
         tend,
-        opt: (etaovers, zetaovers, temperature, shear_temp_cut),
+        opt: (etaovers, zetaovers, entropy, temperature, shear_temp_cut),
         p,
         dpde,
         freezeout_energy: Some(freezeout_energy),

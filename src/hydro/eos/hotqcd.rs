@@ -12,7 +12,7 @@ static HOTQCD_GEV: &[[f64; 4]; N] =
 
 static HOTQCD_ID_E: usize = 0;
 static HOTQCD_ID_P: usize = 1;
-// static HOTQCD_ID_S: usize = 2;
+static HOTQCD_ID_S: usize = 2;
 static HOTQCD_ID_T: usize = 3;
 
 lazy_static! {
@@ -30,11 +30,13 @@ lazy_static! {
 
         // doing these slight changes avoid oscillations at low energies
         res[0][1] *= 1.17;
+        res[0][2] *= 0.6;
         res[0][3] *= 0.1;
 
         res
     };
     static ref HOTQCD_P: Box<[[f64; 4]; N]> = cubic_spline_0(HOTQCD_ID_E, HOTQCD_ID_P, &HOTQCD_FM);
+    static ref HOTQCD_S: Box<[[f64; 4]; N]> = cubic_spline_0(HOTQCD_ID_E, HOTQCD_ID_S, &HOTQCD_FM);
     static ref HOTQCD_T: Box<[[f64; 4]; N]> = cubic_spline_0(HOTQCD_ID_E, HOTQCD_ID_T, &HOTQCD_FM);
 }
 
@@ -61,6 +63,10 @@ pub fn dpde(e: f64) -> f64 {
     hot_cubic(e, &HOTQCD_P, &cubic_diff)
 }
 
+pub fn s(e: f64) -> f64 {
+    hot_cubic(e, &HOTQCD_S, &cubic)
+}
+
 #[allow(non_snake_case)]
 pub fn T(e: f64) -> f64 {
     hot_cubic(e, &HOTQCD_T, &cubic)
@@ -71,10 +77,11 @@ pub fn test_hotqcd() {
     let n = 10000;
     for i in 0..n {
         let x = i as f64 / n as f64;
-        let e = x * 1e0;
+        let e = x * 1.4e0;
         let p = p(e);
         let dpde = dpde(e);
+        let s = s(e);
         let t = T(e);
-        println!("@ {e:.5e} {p:.5e} {dpde:.5e} {t:.5e}");
+        println!("@ {e:.5e} {p:.5e} {dpde:.5e} {s:.5e} {t:.5e}");
     }
 }

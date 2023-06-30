@@ -24,9 +24,9 @@ fn hydro2d<const V: usize, const S: usize>(
     let name = format!("InitTrento{}", i);
     let eos = EOSs::WB;
     // let eos = EOSs::HotQCD;
-    let (p, dpde, temp): (Eos, Eos, Eos) = match eos {
-        EOSs::WB => (&wb::p, &wb::dpde, &wb::T),
-        EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::T),
+    let (p, dpde, entropy, temp): (Eos, Eos, Eos, Eos) = match eos {
+        EOSs::WB => (&wb::p, &wb::dpde, &wb::s, &wb::T),
+        EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::s, &hotqcd::T),
     };
     println!("{}", name);
     let init = init_from_entropy_density_2d(t0, s, p, dpde);
@@ -39,6 +39,7 @@ fn hydro2d<const V: usize, const S: usize>(
         r,
         p,
         dpde,
+        entropy,
         temp,
         &init,
         etaovers,
