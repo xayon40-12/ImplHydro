@@ -1,5 +1,5 @@
 use crate::{
-    boxarray,
+    boxarray::boxarray,
     hydro::{utils::eigenvaluesk, C_IDEAL_1D, F_IDEAL_1D},
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
@@ -109,10 +109,10 @@ pub fn ideal1d<const V: usize, const S: usize>(
     usize,
 )> {
     let constraints = gen_constraints(p, dpde);
-    let mut vs: Box<[[[[f64; F_IDEAL_1D]; V]; 1]; 1]> = boxarray(0.0f64);
-    let mut trs: Box<[[[[f64; C_IDEAL_1D]; V]; 1]; 1]> = boxarray(0.0f64);
+    let mut vs: Box<[[[[f64; F_IDEAL_1D]; V]; 1]; 1]> = boxarray(0.0);
+    let mut trs: Box<[[[[f64; C_IDEAL_1D]; V]; 1]; 1]> = boxarray(0.0);
     let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);
-    let k: Box<[[[[[f64; 2]; V]; 1]; 1]; S]> = boxarray(0.0f64);
+    let k: Box<[[[[[f64; 2]; V]; 1]; 1]; S]> = boxarray(0.0);
     let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {
         let x = (i as f64 - v2) * dx;

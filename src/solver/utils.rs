@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 
-use crate::boxarray;
+use crate::boxarray::boxarray;
 
 use super::context::{Arr, BArr, DIM};
 
@@ -10,7 +10,7 @@ pub fn zero(_j: i32, _n: usize) -> usize {
 
 pub fn zeros<const F: usize, const VX: usize, const VY: usize, const VZ: usize>(
 ) -> BArr<F, VX, VY, VZ> {
-    boxarray(0.0f64)
+    boxarray(0.0)
 }
 
 pub fn _periodic(j: i32, n: usize) -> usize {

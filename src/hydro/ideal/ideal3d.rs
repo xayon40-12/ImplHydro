@@ -1,5 +1,5 @@
 use crate::{
-    boxarray,
+    boxarray::boxarray,
     hydro::{
         utils::{eigenvaluesk, Coordinate},
         C_IDEAL_3D, F_IDEAL_3D,
@@ -222,14 +222,14 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
 )> {
     let coord = Coordinate::Milne;
     let constraints = gen_constraints(&p, &dpde, &coord);
-    let mut vs: Box<[[[[f64; F_IDEAL_3D]; XY]; XY]; Z]> = boxarray(0.0f64);
-    let mut trs: Box<[[[[f64; C_IDEAL_3D]; XY]; XY]; Z]> = boxarray(0.0f64);
+    let mut vs: Box<[[[[f64; F_IDEAL_3D]; XY]; XY]; Z]> = boxarray(0.0);
+    let mut trs: Box<[[[[f64; C_IDEAL_3D]; XY]; XY]; Z]> = boxarray(0.0);
 
     let names = (
         ["t00", "t01", "t02", "t03"],
         ["e", "pe", "dpde", "ut", "ux", "uy", "uz"],
     );
-    let k: Box<[[[[[f64; F_IDEAL_3D]; XY]; XY]; Z]; S]> = boxarray(0.0f64);
+    let k: Box<[[[[[f64; F_IDEAL_3D]; XY]; XY]; Z]; S]> = boxarray(0.0);
     let v2 = ((XY - 1) as f64) / 2.0;
     let v2z = ((Z - 1) as f64) / 2.0;
     for k in 0..Z {

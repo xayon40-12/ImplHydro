@@ -5,7 +5,7 @@ use std::{
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::{boxarray, solver::context::Arr};
+use crate::{boxarray::boxarray, solver::context::Arr};
 
 use super::{HydroOutput, FREESTREAM_2D};
 
@@ -110,7 +110,7 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
             VX, VY, vx, vy
         );
     }
-    let mut mat: Box<[[f64; VX]; VY]> = boxarray(0.0f64);
+    let mut mat: Box<[[f64; VX]; VY]> = boxarray(0.0);
     for j in 0..VY {
         for i in 0..VX {
             mat[j][i] = arr[j][i];
@@ -153,7 +153,7 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
             VX, VY, VZ, vx, vy, vz
         );
     }
-    let mut mat: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0f64);
+    let mut mat: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
     for k in 0..VZ {
         for j in 0..VY {
             for i in 0..VX {
@@ -166,11 +166,11 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
 }
 
 pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V]; V]>> {
-    let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0f64); nb_trento];
+    let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
         trentos[i] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
-            "Could not load trento initial condition file \"e{V}/{i:0>width$}.dat\"."
+            "Could not load trento initial condition file \"s{V}/{i:0>width$}.dat\"."
         ));
     }
     trentos
@@ -179,11 +179,11 @@ pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V];
 pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
     nb_trento: usize,
 ) -> Vec<Box<[[[f64; XY]; XY]; Z]>> {
-    let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0f64); nb_trento];
+    let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
         trentos[i] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
-            "Could not load trento initial condition file \"e{XY}/{i:0>width$}.dat\"."
+            "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
         ));
     }
     trentos
@@ -196,7 +196,7 @@ pub fn prepare_trento_2d_freestream<const V: usize>(
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for tr in 0..nb_trento {
         let err = format!(
-            "Could not load freestream trento initial condition file \"e{V}/{tr:0>width$}.dat\"."
+            "Could not load freestream trento initial condition file \"s{V}/{tr:0>width$}.dat\"."
         );
         let size = FREESTREAM_2D * std::mem::size_of::<f64>();
         let mut bytes = vec![0; size * V * V];

@@ -1,4 +1,4 @@
-use crate::boxarray;
+use crate::boxarray::boxarray;
 
 pub fn cubic(x: f64, p: &[f64; 4]) -> f64 {
     p[0] + x * (p[1] + x * (p[2] + x * p[3]))
@@ -69,7 +69,7 @@ pub fn cubic_spline_0<const N: usize, const M: usize>(
     tmp[0][1] -= tmp[1][1] * m01;
     tmp[0][1] /= tmp[0][2];
 
-    let mut pols: Box<[[f64; 4]; N]> = boxarray(0.0f64);
+    let mut pols: Box<[[f64; 4]; N]> = boxarray(0.0);
     pols[0][0] = tmp[0][0];
     pols[0][1] = a * tmp[0][1];
     pols[0][2] = 3.0 * (tmp[1][0] - tmp[0][0]) - a * (2.0 * tmp[0][1] + tmp[1][1]);

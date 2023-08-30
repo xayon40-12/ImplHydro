@@ -1,5 +1,5 @@
 use crate::{
-    boxarray,
+    boxarray::boxarray,
     hydro::{utils::eigenvaluesk, Viscosity, C_BOTH_3D, F_BOTH_3D, HBARC},
     solver::{
         context::{BArr, Boundary, Context, Integration, DIM},
@@ -521,8 +521,8 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);
 
-    let mut vs: Box<[[[[f64; F_BOTH_3D]; XY]; XY]; Z]> = boxarray(0.0f64);
-    let mut trs: Box<[[[[f64; C_BOTH_3D]; XY]; XY]; Z]> = boxarray(0.0f64);
+    let mut vs: Box<[[[[f64; F_BOTH_3D]; XY]; XY]; Z]> = boxarray(0.0);
+    let mut trs: Box<[[[[f64; C_BOTH_3D]; XY]; XY]; Z]> = boxarray(0.0);
     let names = (
         [
             "tt00", "tt01", "tt02", "tt03", "utpi11", "utpi12", "utpi13", "utpi22", "utpi23",
@@ -533,7 +533,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
             "pi12", "pi13", "pi22", "pi23", "pi33", "Pi",
         ],
     );
-    let k: Box<[[[[[f64; F_BOTH_3D]; XY]; XY]; Z]; S]> = boxarray(0.0f64);
+    let k: Box<[[[[[f64; F_BOTH_3D]; XY]; XY]; Z]; S]> = boxarray(0.0);
     let v2 = ((XY - 1) as f64) / 2.0;
     let v2z = ((Z - 1) as f64) / 2.0;
     let mut max_e = 0.0;

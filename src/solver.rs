@@ -1,5 +1,5 @@
 use crate::{
-    boxarray,
+    boxarray::boxarray,
     hydro::isosurface::{
         isosurface2d::IsoSurface2DHandler, isosurface3d::IsoSurface3DHandler, toiso,
         IsoSurfaceHandler,
@@ -332,7 +332,7 @@ pub fn run<
     let save_every = 0.1f64.max(context.maxdt);
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
-    let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1usize);
+    let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
     let mut fails = 0;
     let save = |ctx: &Context<Opt, F, C, VX, VY, VZ, S>,
                 cost,
