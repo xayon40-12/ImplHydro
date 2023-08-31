@@ -1,6 +1,6 @@
 use crate::{
     hydro::{
-        eos::{hotqcd, wb, EOSs},
+        eos::{conformal_massless, hotqcd, wb, EOSs},
         utils::{converge, prepare_trento_2d},
         viscous::viscous2d::{init_from_entropy_density_2d, viscous2d},
         Eos, HydroOutput, C_MILNE_BOTH_2D, F_BOTH_2D,
@@ -22,11 +22,25 @@ fn hydro2d<const V: usize, const S: usize>(
 ) -> HydroOutput<V, V, 1, F_BOTH_2D, C_MILNE_BOTH_2D> {
     let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
+    // let eos = EOSs::ConformalMassless;
     let eos = EOSs::WB;
     // let eos = EOSs::HotQCD;
+    // let eos = EOSs::HotQCDLog;
     let (p, dpde, entropy, temp): (Eos, Eos, Eos, Eos) = match eos {
+        EOSs::ConformalMassless => (
+            &conformal_massless::p,
+            &conformal_massless::dpde,
+            &conformal_massless::s,
+            &conformal_massless::T,
+        ),
         EOSs::WB => (&wb::p, &wb::dpde, &wb::s, &wb::T),
         EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::s, &hotqcd::T),
+        EOSs::HotQCDLog => (
+            &hotqcd::log::p,
+            &hotqcd::log::dpde,
+            &hotqcd::log::s,
+            &hotqcd::log::T,
+        ),
     };
     println!("{}", name);
     let init = init_from_entropy_density_2d(t0, s, p, dpde);

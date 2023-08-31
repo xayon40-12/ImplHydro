@@ -16,6 +16,14 @@ pub fn cubic_diff3(_x: f64, p: &[f64; 4]) -> f64 {
     6.0 * p[3]
 }
 
+pub fn cubic_log(x: f64, p: &[f64; 4]) -> f64 {
+    (p[0] + x * (p[1] + x * (p[2] + x * p[3]))).exp()
+}
+
+pub fn cubic_diff_log(x: f64, p: &[f64; 4]) -> f64 {
+    (p[1] + x * (2.0 * p[2] + x * 3.0 * p[3])) * cubic_log(x, p)
+}
+
 pub fn cubic_spline_0<const N: usize, const M: usize>(
     idx: usize,
     id: usize,
@@ -28,7 +36,6 @@ pub fn cubic_spline_0<const N: usize, const M: usize>(
     let aa = a * a;
 
     let mut tmp = vec![[0.0f64; 3]; N + 1];
-    // WARNING: as the first segment down to 0 is not the same lenght as the other segments, the spline does not work properly for this first segment
     tmp[0][0] = 0.0;
     tmp[0][2] = 2.0 * a;
     for i in 0..N {
@@ -85,6 +92,46 @@ pub fn cubic_spline_0<const N: usize, const M: usize>(
     pols[0][1] /= a;
     pols[0][2] /= a.powi(2);
     pols[0][3] /= a.powi(3);
+
+    pols
+}
+
+pub fn cubic_spline<const N: usize, const M: usize>(
+    id: usize,
+    arr: &[[f64; M]; N],
+) -> Box<[[f64; 4]; N]> {
+    let mut tmp: Box<[[f64; 4]; N]> = boxarray(0.0);
+    for i in 0..N {
+        tmp[i][0] = arr[i][id];
+        tmp[i][2] = 4.0;
+    }
+    tmp[0][2] = 2.0;
+    tmp[N - 1][2] = 2.0;
+
+    tmp[0][1] = 3.0 * (tmp[1][0] - tmp[0][0]);
+    tmp[N - 1][1] = 3.0 * (tmp[N - 1][0] - tmp[N - 2][0]);
+    for i in 1..N - 1 {
+        tmp[i][1] = 3.0 * (tmp[i + 1][0] - tmp[i - 1][0]);
+    }
+
+    for i in 1..N {
+        let d = 1.0 / tmp[i - 1][2];
+        tmp[i][2] -= d;
+        tmp[i][1] -= d * tmp[i - 1][1];
+    }
+    for i in (0..N - 1).rev() {
+        tmp[i + 1][1] /= tmp[i + 1][2];
+        tmp[i][1] -= tmp[i + 1][1];
+    }
+    tmp[0][1] /= tmp[0][2];
+
+    let mut pols: Box<[[f64; 4]; N]> = boxarray(0.0);
+    for i in 0..N - 1 {
+        pols[i][0] = tmp[i][0];
+        pols[i][1] = tmp[i][1];
+        pols[i][2] = 3.0 * (tmp[i + 1][0] - tmp[i][0]) - 2.0 * tmp[i][1] - tmp[i + 1][1];
+        pols[i][3] = 2.0 * (tmp[i][0] - tmp[i + 1][0]) + tmp[i][1] + tmp[i + 1][1];
+    }
 
     pols
 }
