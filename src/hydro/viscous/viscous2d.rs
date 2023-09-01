@@ -138,7 +138,7 @@ fn gen_constraints<'a>(
                 let pi01 = (ux * pi11 + uy * pi12) / ut;
                 let pi02 = (ux * pi12 + uy * pi22) / ut;
                 let pi00 = (ux * pi01 + uy * pi02) / ut;
-                let pi33 = pi00 - pi01 - pi02;
+                let pi33 = pi00 - pi11 - pi22;
 
                 let m = matrix![
                     pi11, pi12, 0.0;
@@ -155,6 +155,7 @@ fn gen_constraints<'a>(
                 } else {
                     1.0
                 };
+
                 let pi11 = r * pi11;
                 let pi12 = r * pi12;
                 let pi22 = r * pi22;
@@ -284,7 +285,7 @@ fn flux<const V: usize>(
     [_dt, cdt]: [f64; 2],
     &(
         (etas_min, etas_slope, etas_crv),
-        (_zetas_max, _zetas_width, _zetas_peak),
+        (zetas_max, zetas_width, zetas_peak),
         entropy,
         temperature,
         tempcut,
@@ -393,13 +394,9 @@ fn flux<const V: usize>(
     let mut eta = etaovers * s;
     let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
-    // let zetaovers = (zetas_max) / (1.0 + ((vmev - zetas_peak) / zetas_width).powi(2));
-    // let mut zeta = zetaovers * s;
-    // let tauppi = taupi; // use shear relaxation time for bulk
-
-    // bulk pressure is currently turned off
-    let mut zeta = 0.0;
-    let tauppi = 1.0;
+    let zetaovers = (zetas_max) / (1.0 + ((vgev - zetas_peak) / zetas_width).powi(2));
+    let mut zeta = zetaovers * s;
+    let tauppi = taupi; // use shear relaxation time for bulk
 
     if gev < tempcut {
         eta = 0.0;

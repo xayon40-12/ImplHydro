@@ -26,6 +26,6 @@ pub mod conformal_massless {
     }
 
     pub fn s(e: f64) -> f64 {
-        (e + p(e)) / T(e)
+        (e + p(e)) / (T(e) + 1e-100)
     }
 }

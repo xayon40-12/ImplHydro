@@ -100,7 +100,7 @@ fn gen_constraints<'a>(
                 let pi02 = (ux * pi12 + uy * pi22 + uz*pi23) / ut;
                 let pi03 = (ux * pi13 + uy * pi23 + uz*pi33) / ut;
                 let pi00 = (ux * pi01 + uy * pi02 + uz*pi03) / ut;
-                let pi33 = pi00 - pi01 - pi02 - pi03;
+                let pi33 = pi00 - pi11 - pi22;
 
                 let m = matrix![
                     pi11, pi12, pi13;
