@@ -99,18 +99,20 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     p = dird+"/"+maxt
     info = {k: convert(v.strip()) for [k, v] in np.loadtxt(p+"/info.txt", dtype=object, delimiter=":")}
 
+    def round10(x):
+        r = 1e10
+        return float(round(r*x)/r)
     t0 = info["t0"]
     tend = info["tend"]
     scheme = info["scheme"]
-    maxdt = info["maxdt"]
+    maxdt = round10(info["maxdt"])
     dx = info["dx"]
     nx = info["nx"]
     ny = info["ny"]
     nz = info["nz"]
     t = info["t"]
     fails = info["fails"]
-    r = 1e10
-    t = float(round(r*t)/r)
+    t = round10(t)
     info["l"] = str(dx*nx)
     if info["ny"] == 1:
         dim = "1D"
