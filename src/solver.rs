@@ -230,7 +230,13 @@ pub fn run<
     usize,
     usize,
 )> {
-    let dim = if VY == 1 { 1 } else { 2 };
+    let dim = if VY == 1 {
+        1
+    } else if VZ == 1 {
+        2
+    } else {
+        3
+    };
     let foldername = &format!(
         "results/{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
         name,
