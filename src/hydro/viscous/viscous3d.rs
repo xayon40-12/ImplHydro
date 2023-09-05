@@ -223,12 +223,12 @@ fn fxuxpi(
         t * ((e + pe) * ux * ux + pe + pi11),
         t * ((e + pe) * ux * uy + pi12),
         t * ((e + pe) * ux * uz + pi13),
-        ut * pi11,
-        ut * pi12,
-        ut * pi13,
-        ut * pi22,
-        ut * pi23,
-        ut * pi33,
+        ux * pi11,
+        ux * pi12,
+        ux * pi13,
+        ux * pi22,
+        ux * pi23,
+        ux * pi33,
         ux * ppi,
     ]
 }
@@ -242,12 +242,12 @@ fn fyuypi(
         t * ((e + pe) * uy * ux + pi12),
         t * ((e + pe) * uy * uy + pe + pi22),
         t * ((e + pe) * uy * uz + pi23),
-        ut * pi11,
-        ut * pi12,
-        ut * pi13,
-        ut * pi22,
-        ut * pi23,
-        ut * pi33,
+        uy * pi11,
+        uy * pi12,
+        uy * pi13,
+        uy * pi22,
+        uy * pi23,
+        uy * pi33,
         uy * ppi,
     ]
 }
@@ -262,13 +262,13 @@ fn fzuzpi(
         (e + pe) * uz * ux + pi13,
         (e + pe) * uz * uy + pi23,
         (e + pe) * uz * uz + pe + pi33,
-        ut * pi11,
-        ut * pi12,
-        ut * pi13,
-        ut * pi22,
-        ut * pi23,
-        ut * pi33,
-        uy * ppi,
+        uz * pi11,
+        uz * pi12,
+        uz * pi13,
+        uz * pi22,
+        uz * pi23,
+        uz * pi33,
+        uz * ppi,
     ]
 }
 
@@ -291,13 +291,12 @@ fn flux<const XY: usize, const Z: usize>(
     [_dt, cdt]: [f64; 2],
     &(
         (etas_min, etas_slope, etas_crv),
-        (_zetas_max, _zetas_width, _zetas_peak),
+        (zetas_max, zetas_width, zetas_peak),
         entropy,
         temperature,
         tempcut,
     ): &((f64, f64, f64), (f64, f64, f64), Eos, Eos, f64),
 ) -> [f64; F_BOTH_3D] {
-    let tt = t * t;
     let theta = 1.1;
 
     let pre = &|_t: f64, mut vs: [f64; F_BOTH_3D]| {
@@ -386,7 +385,7 @@ fn flux<const XY: usize, const Z: usize>(
         [1.0, 0.0, 0.0, 0.0],
         [0.0, -1.0, 0.0, 0.0],
         [0.0, 0.0, -1.0, 0.0],
-        [0.0, 0.0, 0.0, -tt],
+        [0.0, 0.0, 0.0, -1.0],
     ];
     let u = [ut, ux, uy, uz];
     let mut delta = [[0.0f64; 4]; 4];
@@ -435,13 +434,9 @@ fn flux<const XY: usize, const Z: usize>(
     let mut eta = etaovers * s;
     let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
-    // let zetaovers = (zetas_max) / (1.0 + ((vmev - zetas_peak) / zetas_width).powi(2));
-    // let mut zeta = zetaovers * s;
-    // let tauppi = taupi; // use shear relaxation time for bulk
-
-    // bulk pressure is currently turned off
-    let mut zeta = 0.0;
-    let tauppi = 1.0;
+    let zetaovers = (zetas_max) / (1.0 + ((vgev - zetas_peak) / zetas_width).powi(2));
+    let mut zeta = zetaovers * s;
+    let tauppi = taupi; // use shear relaxation time for bulk
 
     if gev < tempcut {
         eta = 0.0;

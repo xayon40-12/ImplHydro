@@ -10,7 +10,7 @@ random_seed = 1
 num = 10
 pn = int(1+np.log10(num-1))
 half_size = 20 # fm
-half_size_eta = half_size/2 # fm
+half_size_eta = half_size/4 # fm
 
 
 # coefficients from "PHYSICAL REVIEW C 101, 024911 (2020)"
@@ -42,6 +42,7 @@ if "-f" in args:
 use3d = False
 if "-3d" in args:
     use3d = True
+    usefreestream = False
 
 for c in cells:
     dx = 2*half_size / float(c)
@@ -57,10 +58,14 @@ for c in cells:
             # run trento
             # git: Duke-QCD/frzout
 
+            eta_c = int(float(c)/4)
+            eta_c -= eta_c%2
+            etam=eta_c*dx/2*0.999999 # trick to have odd number of cells
+
             if use3d:
                 trento_cmd = \
                     "trento3d Pb Pb --eta-max {etam} --eta-step {dx} --random-seed {r} -p {p} -k {k} -w {w} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --xy-max {l} --xy-step {dx} {num} -o {dir}" \
-                    .format(etam=half_size_eta, r=random_seed, p=p, k=sigmafluct, w=rcp, d=dmin, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
+                    .format(etam=etam, r=random_seed, p=p, k=sigmafluct, w=rcp, d=dmin, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
             else:
                 trento_cmd = \
                     "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \

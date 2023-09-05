@@ -100,8 +100,8 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.cells {
-        100 => run::<100, 51>(cli),
-        200 => run::<200, 101>(cli),
+        100 => run::<100, 25>(cli),
+        200 => run::<200, 51>(cli),
         _ => panic!("The number of cells must be a value from the list {{100,200}}."),
     };
 }
