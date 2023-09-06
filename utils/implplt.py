@@ -50,7 +50,8 @@ CUT = 1e-4
 
 # crop = 9
 crop = 19
-defaultfromref = 1
+crop_eta = crop/4
+defaultfromref = 0
 
 e0 = 10
 emin = 1
@@ -132,7 +133,6 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     vid = {n: i for (i,n) in enumerate(info["variables"])}
     info["ID"] = vid
     visc = info["viscosity"]
-    cut = CUT
     match visc:
         case "Ideal":
             visc = ()
@@ -146,8 +146,6 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
             visc = (info["etaovers"],info["zetaovers"])
             cut = info["energycut"]
     info["visc"] = visc
-    cut = CUT # do not consider energycut when viscosity is disabled
-    info["CUT"] = cut
 
     # data = np.loadtxt(p+"/data.txt")
     data0 = np.fromfile(dird+"/"+ts[0]+"/data.dat", dtype="float64").reshape((n,-1))
@@ -175,7 +173,8 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
 
     cut = 1
     err = abs(e.sum()-e[e>cut].sum())/e.sum()
-    while err > 1e-6: # find the energy cut such that a relative 1e-6 of the total energy is discarded. This is done to discard the erroneous cell due to numerical diffusion in the vacuum
+    maxerr = 1e-6
+    while err > maxerr: # find the energy cut such that a relative 1e-6 of the total energy is discarded. This is done to discard the erroneous cell due to numerical diffusion in the vacuum
         cut *= 0.5
         err = abs(e.sum()-e[e>cut].sum())/e.sum()
     info["CUT"] = cut
@@ -186,12 +185,12 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     # extract zero rapidity part
     if dim == "3D":
         dim = "2D"
-        n = nx*ny
         dataz0 = data[:,vid["z"]]==0
         if not diff is None:
             diff = diff[dataz0,:]
         data = data[dataz0,:]
         info["datats"] = [(t, d[dataz0,:], diff) for (t,d,diff) in info["datats"]]
+        info["data3d"] = data
 
     # print(p, dim, t0, tend, dx, nx, maxdt)
     datas[dim][name][visc][t0][tend][t][case][(dx,nx)][scheme][maxdt] = (info, data, diff)
@@ -206,26 +205,35 @@ print("finished loading")
 def compare(i, cut, vss, wss):
     maxerr = 0
     meanerr = 0
+    varerr = 0
     count = 0
     for (vs, ws) in zip(vss,wss):
-        if  vs[i] > cut and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop:
+        if  vs[i] > cut and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop and vs[2] >= -crop_eta and vs[2] <= crop_eta:
             count += 1
             a = vs[i]
             b = ws[i]
             err = abs(a-b)/(max(abs(a),abs(b))+1e-100)
             maxerr = max(err,maxerr)
             meanerr += err
+            varerr += err**2
     if count>0:
         meanerr /= count
-    return (maxerr, meanerr)
+        varerr /= count
+        varerr = varerr - meanerr**2
+    return (maxerr, meanerr, varerr)
 
 def convergence(a, ref=None):
     maxdts = sorted(list(a))
     if ref is None:
-        ref = a[maxdts[0]][1]
+        ref = a[maxdts[0]]
     all = []
     for i in maxdts:
         (info, v, diff) = a[i]
+        if "data3d" in info:
+            v = info["data3d"]
+            r = ref[0]["data3d"]
+        else:
+            r = ref[1]
         cost = info["cost"]
         dt = info["maxdt"]
         avdt = (info["tend"]-info["t0"])/info["tsteps"]
@@ -233,8 +241,8 @@ def convergence(a, ref=None):
         vid = info["ID"]
         id = vid["e"]
         cut = info["CUT"]
-        (maxerr, meanerr) = compare(id, cut, ref, v)
-        all += [(v, info, maxerr, meanerr, dt, cost, avdt, elapsed)]
+        (maxerr, meanerr, varerr) = compare(id, cut, r, v)
+        all += [(v, info, maxerr, meanerr, varerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
 
@@ -259,9 +267,9 @@ def lighten(c):
 
 def convall(l, cnds):
     [dim,name,visc,t0,tend,t] = l
-    # allx = [("dt", 4), ("cost", 5), ("avdt", 6), ("elapsed", 7)]
+    # allx = [("dt", 5), ("cost", 6), ("avdt", 7), ("elapsed", 8)]
     ally = [((1,0), "full", 2), ((5,5), "none", 3)]
-    allx = [("cost", 5)]
+    allx = [("cost", 6)]
     # ally = [("max", 2)]
     fromref = defaultfromref
     for (dtcost, dci) in allx:
@@ -289,9 +297,11 @@ def convall(l, cnds):
                 (dx,n) = dxn
                 ds = nds[dxn]
                 scs = sorted(list(ds.keys()))
-                dts = sorted([dt for dt in ds[scs[0]]])
-                mindt = dts[0]
-                scs.sort(key=lambda s: integrationPriority(ds[s][mindt][0]))
+                def prio(s):
+                    dts = sorted([dt for dt in ds[s]])
+                    mindt = dts[0]
+                    return integrationPriority(ds[s][mindt][0])
+                scs.sort(key=prio)
                 if len(scs) <= 1:
                     plt.close()
                     return 
@@ -308,7 +318,7 @@ def convall(l, cnds):
                         dtref = sorted(list(ds0.keys()))[0]
                         info = ds0[dtref][0]
                         dx = info["dx"]
-                        refs = {s: ds[s][sorted(list(ds[s].keys()))[0]][1] for s in ds}
+                        refs = {s: ds[s][sorted(list(ds[s].keys()))[0]] for s in ds}
                         if "FixPoint" in info["integration"]:
                             schemetype = "Implicit"
                         else:
@@ -316,10 +326,10 @@ def convall(l, cnds):
                         if useschemename:
                             schemetype = info["scheme"]
                         c = convergence(ds0,refs[s1])
-                        c = np.array(list(filter(lambda v: v[4]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
+                        c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
                         s = 30
-                        sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,4]]
+                        sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,5]]
                         facecolors = fillstyle
                         def pl(ax,label):
                             nonlocal facecolors

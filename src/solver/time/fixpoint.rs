@@ -305,5 +305,5 @@ pub fn fixpoint<
             }
         }
     }
-    Some((cost / (VX * VY) as f64, nbiter, failed - 1))
+    Some((cost / (VX * VY * VZ) as f64, nbiter, failed - 1))
 }
