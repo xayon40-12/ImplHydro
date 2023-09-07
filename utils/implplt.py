@@ -186,11 +186,11 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     if dim == "3D":
         dim = "2D"
         dataz0 = data[:,vid["z"]]==0
+        info["data3d"] = data
         if not diff is None:
             diff = diff[dataz0,:]
         data = data[dataz0,:]
         info["datats"] = [(t, d[dataz0,:], diff) for (t,d,diff) in info["datats"]]
-        info["data3d"] = data
 
     # print(p, dim, t0, tend, dx, nx, maxdt)
     datas[dim][name][visc][t0][tend][t][case][(dx,nx)][scheme][maxdt] = (info, data, diff)

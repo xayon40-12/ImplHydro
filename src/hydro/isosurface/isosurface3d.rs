@@ -28,7 +28,7 @@ pub struct IsoSurface3DHandler<
 > {
     file: File,
     e_id: usize,
-    u_ids: [usize; 4],              // [ut,ux,uy]
+    u_ids: [usize; 4],              // [ut,ux,uy,uz]
     shear_ids: Option<[usize; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
     bulk_id: Option<usize>,
     dx: f64,
