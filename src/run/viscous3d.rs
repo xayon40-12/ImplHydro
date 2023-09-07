@@ -19,6 +19,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     freezeout_temp_gev: f64,
     r: Scheme<S>,
     init_s: (&[[[f64; XY]; XY]; Z], usize),
+    save_raw: bool,
 ) -> HydroOutput<XY, XY, Z, F_BOTH_3D, C_BOTH_3D> {
     let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
@@ -59,6 +60,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
         zetaovers,
         tempcut,
         freezeout_temp_gev,
+        save_raw,
     )
 }
 
@@ -74,6 +76,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     freezeout_temp_mev: f64,
     r: impl Fn(f64) -> Scheme<S>,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
     let dx = l / XY as f64;
@@ -92,6 +95,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
                 freezeout_temp_mev,
                 r(dt),
                 trento,
+                save_raw,
             )
         });
     }
@@ -108,6 +112,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let do_gl1 = || {
         run_convergence_3d::<XY, Z, 1>(
@@ -122,6 +127,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
             freezeout_temp_gev,
             |_| gauss_legendre_1(),
             nb_trento,
+            save_raw,
         )
     };
     let do_heun = || {
@@ -137,6 +143,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
             freezeout_temp_gev,
             |_| heun(),
             nb_trento,
+            save_raw,
         )
     };
     match solver {
@@ -163,6 +170,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
     let gl1 = gauss_legendre_1();
@@ -180,6 +188,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
             freezeout_temp_gev,
             gl1,
             trento,
+            save_raw,
         );
     };
     let do_heun = |trento| {
@@ -194,6 +203,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
             freezeout_temp_gev,
             heun,
             trento,
+            save_raw,
         );
     };
     for i in 0..nb_trento {

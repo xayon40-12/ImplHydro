@@ -504,6 +504,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
     zetaovers: (f64, f64, f64),
     shear_temp_cut: f64,
     freezeout_temp: f64,
+    save_raw: bool,
 ) -> Option<(
     (BArr<F_BOTH_3D, XY, XY, Z>, BArr<C_BOTH_3D, XY, XY, Z>),
     f64,
@@ -607,5 +608,6 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
         &names,
         &observables,
         &err_thr,
+        save_raw,
     )
 }

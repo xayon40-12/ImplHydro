@@ -15,6 +15,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     maxdt: f64,
     r: Scheme<S>,
     init_e: (&[[[f64; XY]; XY]; Z], usize),
+    save_raw: bool,
 ) -> HydroOutput<XY, XY, Z, F_IDEAL_3D, C_IDEAL_3D> {
     let (es, i) = init_e;
 
@@ -22,7 +23,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     let (p, dpde, _temp): (Eos, Eos, Eos) = (&wb::p, &wb::dpde, &wb::T);
     println!("{}", name);
     let init = init_from_entropy_density_3d(t0, es, p, dpde);
-    ideal3d::ideal3d::<XY, Z, S>(&name, maxdt, t0, tend, dx, r, p, dpde, &init)
+    ideal3d::ideal3d::<XY, Z, S>(&name, maxdt, t0, tend, dx, r, p, dpde, &init, save_raw)
 }
 
 pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
@@ -33,6 +34,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     dtmax: f64,
     r: Scheme<S>,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
     let dx = l / XY as f64;
@@ -41,7 +43,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     for i in 0..nb_trento {
         let trento = (trentos[i].as_ref(), i);
         converge(dt0, dtmin, |dt| {
-            hydro3d::<XY, Z, S>(t0, tend, dx, dt, r, trento)
+            hydro3d::<XY, Z, S>(t0, tend, dx, dt, r, trento, save_raw)
         });
     }
 }
@@ -54,6 +56,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
     dtmin: f64,
     dtmax: f64,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let imp = gauss_legendre_1();
     const I: usize = 1;
@@ -62,14 +65,14 @@ pub fn run_3d<const XY: usize, const Z: usize>(
     let exp = heun();
     match solver {
         Solver::Both => {
-            run_convergence_3d::<XY, Z, I>(t0, tend, l, dtmin, dtmax, imp, nb_trento);
-            run_convergence_3d::<XY, Z, 2>(t0, tend, l, dtmin, dtmax, exp, nb_trento);
+            run_convergence_3d::<XY, Z, I>(t0, tend, l, dtmin, dtmax, imp, nb_trento, save_raw);
+            run_convergence_3d::<XY, Z, 2>(t0, tend, l, dtmin, dtmax, exp, nb_trento, save_raw);
         }
         Solver::Implicit => {
-            run_convergence_3d::<XY, Z, I>(t0, tend, l, dtmin, dtmax, imp, nb_trento);
+            run_convergence_3d::<XY, Z, I>(t0, tend, l, dtmin, dtmax, imp, nb_trento, save_raw);
         }
         Solver::Explicit => {
-            run_convergence_3d::<XY, Z, 2>(t0, tend, l, dtmin, dtmax, exp, nb_trento);
+            run_convergence_3d::<XY, Z, 2>(t0, tend, l, dtmin, dtmax, exp, nb_trento, save_raw);
         }
     }
 }
@@ -81,6 +84,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     l: f64,
     dt: f64,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
     let imp = gauss_legendre_1();
@@ -90,14 +94,14 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
         let trento = (trentos[i].as_ref(), i);
         match solver {
             Solver::Both => {
-                hydro3d::<XY, Z, 1>(t0, tend, dx, dt, imp, trento);
-                hydro3d::<XY, Z, 2>(t0, tend, dx, dt, exp, trento);
+                hydro3d::<XY, Z, 1>(t0, tend, dx, dt, imp, trento, save_raw);
+                hydro3d::<XY, Z, 2>(t0, tend, dx, dt, exp, trento, save_raw);
             }
             Solver::Implicit => {
-                hydro3d::<XY, Z, 1>(t0, tend, dx, dt, imp, trento);
+                hydro3d::<XY, Z, 1>(t0, tend, dx, dt, imp, trento, save_raw);
             }
             Solver::Explicit => {
-                hydro3d::<XY, Z, 2>(t0, tend, dx, dt, exp, trento);
+                hydro3d::<XY, Z, 2>(t0, tend, dx, dt, exp, trento, save_raw);
             }
         }
     }

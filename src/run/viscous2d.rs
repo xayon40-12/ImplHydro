@@ -19,6 +19,7 @@ fn hydro2d<const V: usize, const S: usize>(
     freezeout_temp_gev: f64,
     r: Scheme<S>,
     init_s: (&[[f64; V]; V], usize),
+    save_raw: bool,
 ) -> HydroOutput<V, V, 1, F_BOTH_2D, C_MILNE_BOTH_2D> {
     let (s, i) = init_s;
     let name = format!("InitTrento{}", i);
@@ -60,6 +61,7 @@ fn hydro2d<const V: usize, const S: usize>(
         zetaovers,
         tempcut,
         freezeout_temp_gev,
+        save_raw,
     )
 }
 
@@ -75,6 +77,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     freezeout_temp_mev: f64,
     r: impl Fn(f64) -> Scheme<S>,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento);
     let dx = l / V as f64;
@@ -93,6 +96,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
                 freezeout_temp_mev,
                 r(dt),
                 trento,
+                save_raw,
             )
         });
     }
@@ -109,6 +113,7 @@ pub fn run_2d<const V: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let do_gl1 = || {
         run_convergence_2d::<V, 1>(
@@ -123,6 +128,7 @@ pub fn run_2d<const V: usize>(
             freezeout_temp_gev,
             |_| gauss_legendre_1(),
             nb_trento,
+            save_raw,
         )
     };
     let do_heun = || {
@@ -138,6 +144,7 @@ pub fn run_2d<const V: usize>(
             freezeout_temp_gev,
             |_| heun(),
             nb_trento,
+            save_raw,
         )
     };
     match solver {
@@ -164,6 +171,7 @@ pub fn run_trento_2d<const V: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     nb_trento: usize,
+    save_raw: bool,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento);
     let gl1 = gauss_legendre_1();
@@ -181,6 +189,7 @@ pub fn run_trento_2d<const V: usize>(
             freezeout_temp_gev,
             gl1,
             trento,
+            save_raw,
         );
     };
     let do_heun = |trento| {
@@ -195,6 +204,7 @@ pub fn run_trento_2d<const V: usize>(
             freezeout_temp_gev,
             heun,
             trento,
+            save_raw,
         );
     };
     for i in 0..nb_trento {

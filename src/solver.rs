@@ -69,6 +69,7 @@ pub fn save<
     nbiter: &[[[usize; VX]; VY]; VZ],
     fails: usize,
     observables: &[Observable<F, C, VX, VY, VZ>],
+    save_raw: bool,
 ) -> std::io::Result<()> {
     let t0 = context.t0;
     let tend = context.tend;
@@ -81,89 +82,8 @@ pub fn save<
     let integration = context.r.integration;
     let stages = S;
 
-    // const TXT: bool = false;
-    const DIFF: bool = false;
-
-    // let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
-    // if TXT {
-    //     for f in 0..F {
-    //         res = format!("{} {}", res, namesf[f]);
-    //     }
-    //     for c in 0..C {
-    //         res = format!("{} {}", res, namesc[c]);
-    //     }
-    //     res = format!("{}\n", res);
-    // }
-
-    let fc4 = F + C + 4;
-    let mut ligne = vec![0.0f64; VY * VX * VZ * fc4];
-    let f3 = F + 3;
-    let mut ligne_diff = vec![0.0f64; VY * VX * VZ * f3];
-    for k in 0..VZ {
-        for j in 0..VY {
-            for i in 0..VX {
-                let z = (k as f64 - ((VZ - 1) as f64) / 2.0) * dx;
-                let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
-                let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
-                let v = v[k][j][i];
-                let vars = trs[k][j][i];
-                let diffv = diffv[k][j][i];
-
-                // if TXT {
-                //     let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
-                //     for f in 0..F {
-                //         s = format!("{} {:e}", s, v[f]);
-                //     }
-                //     for c in 0..C {
-                //         s = format!("{} {:e}", s, vars[c]);
-                //     }
-                //     s = format!("{}\n", s);
-                //     res = format!("{}{}", res, s);
-                // }
-
-                ligne[0 + fc4 * (i + VX * (j + VY * k))] = x;
-                ligne[1 + fc4 * (i + VX * (j + VY * k))] = y;
-                ligne[2 + fc4 * (i + VX * (j + VY * k))] = z;
-                ligne[3 + fc4 * (i + VX * (j + VY * k))] = nbiter[k][j][i] as f64;
-                if DIFF {
-                    ligne_diff[0 + f3 * (i + VX * (j + VY * k))] = x;
-                    ligne_diff[1 + f3 * (i + VX * (j + VY * k))] = y;
-                    ligne_diff[2 + f3 * (i + VX * (j + VY * k))] = z;
-                }
-                for f in 0..F {
-                    ligne[4 + f + fc4 * (i + VX * (j + VY * k))] = v[f];
-                    if DIFF {
-                        ligne_diff[3 + f + f3 * (i + VX * (j + VY * k))] = diffv[f];
-                    }
-                }
-                for c in 0..C {
-                    ligne[4 + F + c + fc4 * (i + VX * (j + VY * k))] = vars[c];
-                }
-            }
-            // if TXT {
-            //     res = format!("{}\n", res);
-            // }
-        }
-    }
-
     let dir = &format!("{}/{:e}", foldername, t);
     std::fs::create_dir_all(dir)?;
-    std::fs::write(
-        &format!("{}/data.dat", dir),
-        ligne
-            .into_iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect::<Vec<_>>(),
-    )?;
-    if DIFF {
-        std::fs::write(
-            &format!("{}/diff.dat", dir),
-            ligne_diff
-                .into_iter()
-                .flat_map(|v| v.to_le_bytes())
-                .collect::<Vec<_>>(),
-        )?;
-    }
     for (name, obs) in observables {
         let ligne = obs(t, &v, &trs);
         std::fs::write(
@@ -174,37 +94,123 @@ pub fn save<
                 .collect::<Vec<_>>(),
         )?;
     }
-    // if TXT {
-    //     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
-    // }
-    let viscosity = match viscosity {
-        Viscosity::Ideal => format!("Ideal"),
-        Viscosity::Bulk(zeta, energycut) => {
-            format!("Bulk\nzeta: {:e}\nenergycut: {:e}", zeta, energycut)
+
+    if save_raw {
+        // const TXT: bool = false;
+        const DIFF: bool = false;
+
+        // let mut res = format!("# t {:e}\n# cost {}\n# x y iter", t, cost);
+        // if TXT {
+        //     for f in 0..F {
+        //         res = format!("{} {}", res, namesf[f]);
+        //     }
+        //     for c in 0..C {
+        //         res = format!("{} {}", res, namesc[c]);
+        //     }
+        //     res = format!("{}\n", res);
+        // }
+
+        let fc4 = F + C + 4;
+        let mut ligne = vec![0.0f64; VY * VX * VZ * fc4];
+        let f3 = F + 3;
+        let mut ligne_diff = vec![0.0f64; VY * VX * VZ * f3];
+        for k in 0..VZ {
+            for j in 0..VY {
+                for i in 0..VX {
+                    let z = (k as f64 - ((VZ - 1) as f64) / 2.0) * dx;
+                    let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
+                    let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
+                    let v = v[k][j][i];
+                    let vars = trs[k][j][i];
+                    let diffv = diffv[k][j][i];
+
+                    // if TXT {
+                    //     let mut s = format!("{:e} {:e} {}", x, y, nbiter[j][i]);
+                    //     for f in 0..F {
+                    //         s = format!("{} {:e}", s, v[f]);
+                    //     }
+                    //     for c in 0..C {
+                    //         s = format!("{} {:e}", s, vars[c]);
+                    //     }
+                    //     s = format!("{}\n", s);
+                    //     res = format!("{}{}", res, s);
+                    // }
+
+                    ligne[0 + fc4 * (i + VX * (j + VY * k))] = x;
+                    ligne[1 + fc4 * (i + VX * (j + VY * k))] = y;
+                    ligne[2 + fc4 * (i + VX * (j + VY * k))] = z;
+                    ligne[3 + fc4 * (i + VX * (j + VY * k))] = nbiter[k][j][i] as f64;
+                    if DIFF {
+                        ligne_diff[0 + f3 * (i + VX * (j + VY * k))] = x;
+                        ligne_diff[1 + f3 * (i + VX * (j + VY * k))] = y;
+                        ligne_diff[2 + f3 * (i + VX * (j + VY * k))] = z;
+                    }
+                    for f in 0..F {
+                        ligne[4 + f + fc4 * (i + VX * (j + VY * k))] = v[f];
+                        if DIFF {
+                            ligne_diff[3 + f + f3 * (i + VX * (j + VY * k))] = diffv[f];
+                        }
+                    }
+                    for c in 0..C {
+                        ligne[4 + F + c + fc4 * (i + VX * (j + VY * k))] = vars[c];
+                    }
+                }
+                // if TXT {
+                //     res = format!("{}\n", res);
+                // }
+            }
         }
-        Viscosity::Shear((min, slope, crv), energycut) => {
-            format!(
-                "Shear\netaovers: ({:e},{:e},{:e})\nenergycut: {:e}",
-                min, slope, crv, energycut
-            )
+
+        std::fs::write(
+            &format!("{}/data.dat", dir),
+            ligne
+                .into_iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<_>>(),
+        )?;
+        if DIFF {
+            std::fs::write(
+                &format!("{}/diff.dat", dir),
+                ligne_diff
+                    .into_iter()
+                    .flat_map(|v| v.to_le_bytes())
+                    .collect::<Vec<_>>(),
+            )?;
         }
-        Viscosity::Both((e_min, e_slope, e_crv), (z_max, z_width, z_peak), energycut) => format!(
+        // if TXT {
+        //     std::fs::write(&format!("{}/data.txt", dir), res.as_bytes())?;
+        // }
+        let viscosity = match viscosity {
+            Viscosity::Ideal => format!("Ideal"),
+            Viscosity::Bulk(zeta, energycut) => {
+                format!("Bulk\nzeta: {:e}\nenergycut: {:e}", zeta, energycut)
+            }
+            Viscosity::Shear((min, slope, crv), energycut) => {
+                format!(
+                    "Shear\netaovers: ({:e},{:e},{:e})\nenergycut: {:e}",
+                    min, slope, crv, energycut
+                )
+            }
+            Viscosity::Both((e_min, e_slope, e_crv), (z_max, z_width, z_peak), energycut) => {
+                format!(
             "Both\netaovers: ({:e},{:e},{:e})\nzetaovers: ({:e},{:e},{:e})\nenergycut: {:e}",
             e_min, e_slope, e_crv, z_max, z_width, z_peak, energycut
-        ),
-    };
-    let variables = ["x", "y", "z", "iter"]
-        .iter()
-        .chain(namesf.iter())
-        .chain(namesc.iter())
-        .map(|&s| s)
-        .collect::<Vec<&str>>()
-        .join(" ");
-    let info = format!(
-        "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\nviscosity: {}\nvariables: {}\n",
-        elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, maxdt, integration, schemename, stages, name, viscosity, variables,
-    );
-    std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
+        )
+            }
+        };
+        let variables = ["x", "y", "z", "iter"]
+            .iter()
+            .chain(namesf.iter())
+            .chain(namesc.iter())
+            .map(|&s| s)
+            .collect::<Vec<&str>>()
+            .join(" ");
+        let info = format!(
+            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\nviscosity: {}\nvariables: {}\n",
+            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, maxdt, integration, schemename, stages, name, viscosity, variables,
+        );
+        std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
+    }
 
     Ok(())
 }
@@ -224,12 +230,15 @@ pub fn run<
     names: &([&str; F], [&str; C]),
     observables: &[Observable<F, C, VX, VY, VZ>],
     err_thr: ErrThr<F, C, VX, VY, VZ>,
+    save_raw: bool,
 ) -> Option<(
     (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>),
     f64,
     usize,
     usize,
 )> {
+    let do_save = save_raw || observables.len() > 0;
+
     let dim = if VY == 1 {
         1
     } else if VZ == 1 {
@@ -358,40 +367,45 @@ pub fn run<
             nbiter,
             fails,
             observables,
+            save_raw,
         );
         match err {
             Err(e) => eprintln!("{}", e),
             Ok(()) => {}
         }
     };
-    save(&context, cost, tsteps, &nbiter, fails);
+    if do_save {
+        save(&context, cost, tsteps, &nbiter, fails);
+    }
     let m = 1e-13;
     let r = 1e10;
     let enable_save = true;
     while context.t < context.tend + m {
-        let mut d = next_save - context.t;
-        if d <= 2.0 * context.dt && enable_save {
-            let mut tmp_ctx = context.clone();
-            while d > tmp_ctx.t * m {
-                let n = if d <= tmp_ctx.dt { 1 } else { 2 };
-                for _ in 0..n {
-                    tmp_ctx.dt = d / n as f64;
-                    let res = match integration {
-                        Integration::Explicit => explicit(&mut tmp_ctx),
-                        Integration::FixPoint => fixpoint(&mut tmp_ctx, err_thr),
-                    };
-                    if res.is_none() {
-                        eprintln!("Integration failed, abort current run.");
-                        eprintln!("");
-                        return None;
+        if do_save {
+            let mut d = next_save - context.t;
+            if d <= 2.0 * context.dt && enable_save {
+                let mut tmp_ctx = context.clone();
+                while d > tmp_ctx.t * m {
+                    let n = if d <= tmp_ctx.dt { 1 } else { 2 };
+                    for _ in 0..n {
+                        tmp_ctx.dt = d / n as f64;
+                        let res = match integration {
+                            Integration::Explicit => explicit(&mut tmp_ctx),
+                            Integration::FixPoint => fixpoint(&mut tmp_ctx, err_thr),
+                        };
+                        if res.is_none() {
+                            eprintln!("Integration failed, abort current run.");
+                            eprintln!("");
+                            return None;
+                        }
                     }
+                    d = next_save - tmp_ctx.t;
                 }
-                d = next_save - tmp_ctx.t;
+                tmp_ctx.t = (tmp_ctx.t * r).round() / r; // round time for saving
+                save(&tmp_ctx, cost, tsteps, &nbiter, fails);
+                current_save = next_save;
+                next_save = (current_save + save_every).min(context.tend);
             }
-            tmp_ctx.t = (tmp_ctx.t * r).round() / r; // round time for saving
-            save(&tmp_ctx, cost, tsteps, &nbiter, fails);
-            current_save = next_save;
-            next_save = (current_save + save_every).min(context.tend);
         }
         tsteps += 1;
         let res = match integration {

@@ -214,6 +214,7 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init3D<F_IDEAL_3D>,
+    save_raw: bool,
 ) -> Option<(
     (BArr<F_IDEAL_3D, XY, XY, Z>, BArr<C_IDEAL_3D, XY, XY, Z>),
     f64,
@@ -294,5 +295,6 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
         &names,
         &observables,
         &err_thr,
+        save_raw,
     )
 }
