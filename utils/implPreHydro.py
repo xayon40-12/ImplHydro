@@ -30,19 +30,24 @@ for arg in sys.argv[1:]:
 
 sigs = [6.4]
 bs = [3]
-# if '-m' is in the argument list, generate 'many' cases
-if "-m" in args:
-    sigs = [4.23, 6.4, 7.32]
-    bs = [0,3,7]
-
 usefreestream = False
-if "-f" in args:
-    usefreestream = True
-
 use3d = False
-if "-3d" in args:
-    use3d = True
-    usefreestream = False
+
+for arg in args:
+    if "-n=" in arg:
+        num = int(arg[3:])
+
+    # if '-m' is in the argument list, generate 'many' cases
+    if "-m" == arg:
+        sigs = [4.23, 6.4, 7.32]
+        bs = [0,3,7]
+
+    if "-f" == arg:
+        usefreestream = True
+
+    if "-3d" == arg:
+        use3d = True
+        usefreestream = False
 
 for c in cells:
     dx = 2*half_size / float(c)
