@@ -93,7 +93,7 @@ fn flux<const V: usize>(
 }
 
 pub fn ideal1d<const V: usize, const S: usize>(
-    name: &str,
+    name: &(&str, usize),
     maxdt: f64,
     t: f64,
     tend: f64,

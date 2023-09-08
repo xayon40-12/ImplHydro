@@ -469,7 +469,7 @@ pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
 
 // viscous hydro is in Milne coordinates
 pub fn viscous2d<const V: usize, const S: usize>(
-    name: &str,
+    name: &(&str, usize),
     maxdt: f64,
     t: f64,
     tend: f64,

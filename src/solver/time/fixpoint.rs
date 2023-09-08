@@ -102,11 +102,16 @@ pub fn fixpoint<
                     (*vdtk, *trdtk) = constraints(ct, *vdtk);
                 }
             });
+            let (cdt, ovs, otrs) = if cdt == 0.0 {
+                (dt, &ovs, &otrs)
+            } else {
+                (cdt, &vs, &trs)
+            };
             pfor3d(&mut fu[s], &|(Coord { x, y, z }, fu)| {
                 if errs[z][y][x] {
                     *fu = fun(
-                        [&vs, &vdtk],
-                        [&trs, &trdtk],
+                        [&ovs, &vdtk],
+                        [&otrs, &trdtk],
                         constraints,
                         boundary,
                         [x as i32, y as i32, z as i32],

@@ -21,7 +21,18 @@ fn hydro1d<const V: usize, const S: usize>(
     let dpde = &ideal_gas::dpde;
     let name = format!("Riemann{}", void);
     let init = &init_riemann(t0, p, dpde, use_void);
-    ideal1d::ideal1d::<V, S>(&name, maxdt, t0, tend, dx, r, p, dpde, &init, save_raw)
+    ideal1d::ideal1d::<V, S>(
+        &(&name, 0),
+        maxdt,
+        t0,
+        tend,
+        dx,
+        r,
+        p,
+        dpde,
+        &init,
+        save_raw,
+    )
 }
 pub fn run_convergence_1d<const V: usize, const S: usize>(
     t0: f64,

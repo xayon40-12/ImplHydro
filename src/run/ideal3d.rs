@@ -19,9 +19,9 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
 ) -> HydroOutput<XY, XY, Z, F_IDEAL_3D, C_IDEAL_3D> {
     let (es, i) = init_e;
 
-    let name = format!("InitTrento{}", i);
+    let name = ("InitTrento", i);
     let (p, dpde, _temp): (Eos, Eos, Eos) = (&wb::p, &wb::dpde, &wb::T);
-    println!("{}", name);
+    println!("{}{}", name.0, name.1);
     let init = init_from_entropy_density_3d(t0, es, p, dpde);
     ideal3d::ideal3d::<XY, Z, S>(&name, maxdt, t0, tend, dx, r, p, dpde, &init, save_raw)
 }

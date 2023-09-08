@@ -489,7 +489,7 @@ fn flux<const XY: usize, const Z: usize>(
 
 // viscous hydro is in Milne coordinates
 pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
-    name: &str,
+    name: &(&str, usize),
     maxdt: f64,
     t: f64,
     tend: f64,

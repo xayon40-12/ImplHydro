@@ -60,7 +60,7 @@ pub fn save<
 >(
     context: &Context<Opt, F, C, VX, VY, VZ, S>,
     (namesf, namesc): &([&str; F], [&str; C]),
-    name: &str, // simulation name
+    (name, case): &(&str, usize), // simulation name
     foldername: &str,
     viscosity: Viscosity,
     elapsed: f64,
@@ -206,11 +206,67 @@ pub fn save<
             .collect::<Vec<&str>>()
             .join(" ");
         let info = format!(
-            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\nviscosity: {}\nvariables: {}\n",
-            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, maxdt, integration, schemename, stages, name, viscosity, variables,
+            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\nvariables: {}\n",
+            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, maxdt, integration, schemename, stages, name, case, viscosity, variables,
         );
         std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
     }
+
+    Ok(())
+}
+pub fn save_info<
+    Opt: Clone + Sync,
+    const F: usize,
+    const C: usize,
+    const VX: usize,
+    const VY: usize,
+    const VZ: usize,
+    const S: usize,
+>(
+    context: &Context<Opt, F, C, VX, VY, VZ, S>,
+    (namesf, namesc): &([&str; F], [&str; C]),
+    (name, case): &(&str, usize), // simulation name
+    foldername: &str,
+    viscosity: Viscosity,
+) -> std::io::Result<()> {
+    let t0 = context.t0;
+    let tend = context.tend;
+    let dx = context.dx;
+    let maxdt = context.maxdt;
+    let schemename = context.r.name;
+    let integration = context.r.integration;
+    let stages = S;
+
+    let viscosity = match viscosity {
+        Viscosity::Ideal => format!("Ideal"),
+        Viscosity::Bulk(zeta, energycut) => {
+            format!("Bulk\nzeta: {:e}\nenergycut: {:e}", zeta, energycut)
+        }
+        Viscosity::Shear((min, slope, crv), energycut) => {
+            format!(
+                "Shear\netaovers: ({:e},{:e},{:e})\nenergycut: {:e}",
+                min, slope, crv, energycut
+            )
+        }
+        Viscosity::Both((e_min, e_slope, e_crv), (z_max, z_width, z_peak), energycut) => {
+            format!(
+                "Both\netaovers: ({:e},{:e},{:e})\nzetaovers: ({:e},{:e},{:e})\nenergycut: {:e}",
+                e_min, e_slope, e_crv, z_max, z_width, z_peak, energycut
+            )
+        }
+    };
+    let variables = ["x", "y", "z", "iter"]
+        .iter()
+        .chain(namesf.iter())
+        .chain(namesc.iter())
+        .map(|&s| s)
+        .collect::<Vec<&str>>()
+        .join(" ");
+    let info = format!(
+            "t0: {:e}\ntend: {:e}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\nvariables: {}\n",
+            t0, tend, VX, VY, VZ, dx, maxdt, integration, schemename, stages, name, case, viscosity, variables,
+        );
+    std::fs::write(&format!("{}/info.txt", foldername), info.as_bytes())?;
 
     Ok(())
 }
@@ -225,7 +281,7 @@ pub fn run<
     const S: usize,
 >(
     mut context: Context<Opt, F, C, VX, VY, VZ, S>,
-    name: &str,
+    name: &(&str, usize),
     viscosity: Viscosity,
     names: &([&str; F], [&str; C]),
     observables: &[Observable<F, C, VX, VY, VZ>],
@@ -247,8 +303,9 @@ pub fn run<
         3
     };
     let foldername = &format!(
-        "results/{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
-        name,
+        "results/{}{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
+        name.0,
+        name.1,
         viscosity,
         context.r.integration,
         dim,
@@ -374,6 +431,10 @@ pub fn run<
             Ok(()) => {}
         }
     };
+    match save_info(&context, names, name, &foldername, viscosity) {
+        Err(e) => eprintln!("{}", e),
+        Ok(()) => {}
+    }
     if do_save {
         save(&context, cost, tsteps, &nbiter, fails);
     }

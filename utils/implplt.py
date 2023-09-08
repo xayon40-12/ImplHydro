@@ -79,14 +79,6 @@ def convert(v):
         except:
             return v
 
-def extractCase(n):
-    l = n[-1]
-    if l in "0123456789":
-        (name, v) = extractCase(n[:-1])
-        return (name, int(l)+10*v)
-    else:
-        return (n,0)
-
 maxvoidratio = 0
 meanvoidratio = 0
 countvoidratio = 0
@@ -126,9 +118,7 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
         n = nx*ny*nz
     info["dim"] = dim
     name = info["name"]
-    (name, case) = extractCase(name)
-    info["name"] = name
-    info["case"] = case
+    case = info["case"]
     info["variables"] = info["variables"].split(" ")
     vid = {n: i for (i,n) in enumerate(info["variables"])}
     info["ID"] = vid

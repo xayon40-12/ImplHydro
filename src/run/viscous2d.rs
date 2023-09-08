@@ -22,7 +22,7 @@ fn hydro2d<const V: usize, const S: usize>(
     save_raw: bool,
 ) -> HydroOutput<V, V, 1, F_BOTH_2D, C_MILNE_BOTH_2D> {
     let (s, i) = init_s;
-    let name = format!("InitTrento{}", i);
+    let name = ("InitTrento", i);
     // let eos = EOSs::ConformalMassless;
     let eos = EOSs::WB;
     // let eos = EOSs::HotQCD;
@@ -43,7 +43,7 @@ fn hydro2d<const V: usize, const S: usize>(
             &hotqcd::log::T,
         ),
     };
-    println!("{}", name);
+    println!("{}{}", name.0, name.1);
     let init = init_from_entropy_density_2d(t0, s, p, dpde);
     viscous2d::<V, S>(
         &name,

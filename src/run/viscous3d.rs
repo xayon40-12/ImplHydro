@@ -22,7 +22,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     save_raw: bool,
 ) -> HydroOutput<XY, XY, Z, F_BOTH_3D, C_BOTH_3D> {
     let (s, i) = init_s;
-    let name = format!("InitTrento{}", i);
+    let name = ("InitTrento", i);
     let eos = EOSs::WB;
     // let eos = EOSs::HotQCD;
     // let eos = EOSs::HotQCDLog;
@@ -42,7 +42,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
             &hotqcd::log::T,
         ),
     };
-    println!("{}", name);
+    println!("{}{}", name.0, name.1);
     let init = init_from_entropy_density_3d(t0, s, p, dpde);
     viscous3d::<XY, Z, S>(
         &name,
