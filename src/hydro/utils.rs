@@ -183,6 +183,7 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
         const LOAD2D: bool = false;
+        // const LOAD2D: bool = true;
         if LOAD2D {
             let trento_2d =
                 load_matrix_2d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(

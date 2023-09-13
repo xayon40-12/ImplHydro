@@ -36,7 +36,7 @@ enum Dim {
     Dim2 {
         #[arg(long, default_value_t = 0.48)]
         t0: f64,
-        #[arg(long, default_value_t = 10.0)]
+        #[arg(long, default_value_t = 15.0)]
         tend: f64,
         #[command(subcommand)]
         command: Hydro,
@@ -44,7 +44,7 @@ enum Dim {
     Dim3 {
         #[arg(long, default_value_t = 0.48)]
         t0: f64,
-        #[arg(long, default_value_t = 3.0)]
+        #[arg(long, default_value_t = 15.0)]
         tend: f64,
         #[command(subcommand)]
         command: Hydro,

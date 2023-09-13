@@ -183,3 +183,39 @@ pub fn pfor3d2<T: Send, U: Send, const VX: usize, const VY: usize, const VZ: usi
         })
         .for_each(f);
 }
+pub fn pfor3d3<U: Send, V: Send, W: Send, const VX: usize, const VY: usize, const VZ: usize>(
+    usss: &mut [[[U; VX]; VY]; VZ],
+    vsss: &mut [[[V; VX]; VY]; VZ],
+    wsss: &mut [[[W; VX]; VY]; VZ],
+    f: &(dyn Fn((Coord, &mut U, &mut V, &mut W)) + Sync),
+) {
+    usss.par_iter_mut()
+        .zip(vsss.par_iter_mut())
+        .zip(wsss.par_iter_mut())
+        .enumerate()
+        .flat_map(|(vz, ((uss, vss), wss))| {
+            uss.par_iter_mut()
+                .zip(vss.par_iter_mut())
+                .zip(wss.par_iter_mut())
+                .enumerate()
+                .flat_map(move |(vy, ((us, vs), ws))| {
+                    us.par_iter_mut()
+                        .zip(vs.par_iter_mut())
+                        .zip(ws.par_iter_mut())
+                        .enumerate()
+                        .map(move |(vx, ((u, v), w))| {
+                            (
+                                Coord {
+                                    x: vx,
+                                    y: vy,
+                                    z: vz,
+                                },
+                                u,
+                                v,
+                                w,
+                            )
+                        })
+                })
+        })
+        .for_each(f);
+}

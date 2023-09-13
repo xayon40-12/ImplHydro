@@ -137,44 +137,68 @@ pub fn fixpoint<
                     for f in 0..F {
                         let fuf = fu[s][z][y][x][f];
                         let kf = k[s][z][y][x][f];
-                        let e = (fuf - kf).abs();
+                        let e = fuf - kf;
                         if e.is_nan() {
                             panic!(
                                 "\n\nNaN encountered in fixpoint iteration.\nfields: {:?}\n\n",
                                 fu[s][z][y][x]
                             );
                         }
-                        *errs |= e > er || e.is_nan();
+                        *errs |= e.abs() > er || e.is_nan();
                     }
                 }
             }
         });
 
-        iserr = errs
-            .par_iter()
-            .flat_map(|e| e.par_iter())
-            .flat_map(|e| e.par_iter())
-            .map(|v| *v)
-            .reduce(|| false, |acc, a| acc || a);
+        let mut tmperrs: Box<[[[bool; VX]; VY]; VZ]> = boxarray(false);
+        pfor3d(&mut tmperrs, &|(Coord { x, y, z }, tmperrs)| {
+            let mut update = |dx, dy, dz| {
+                let i = x as i32 + dx;
+                let j = y as i32 + dy;
+                let k = z as i32 + dz;
+                if i >= 0 && i < VX as i32 && j >= 0 && j < VY as i32 && k >= 0 && k < VZ as i32 {
+                    *tmperrs |= errs[k as usize][j as usize][i as usize];
+                }
+            };
+            for dz in -sizez..=sizez {
+                if dz == 0 {
+                    for dy in -sizey..=sizey {
+                        if dy == 0 {
+                            for dx in -sizex..=sizex {
+                                update(dx, 0, 0);
+                            }
+                        } else {
+                            update(0, dy, 0);
+                        }
+                    }
+                } else {
+                    update(0, 0, dz);
+                }
+            }
+        });
+        errs = tmperrs;
 
         maxe = 0.0;
-        let mut errr: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
-        for s in 0..S {
-            for z in 0..VZ {
-                for y in 0..VY {
-                    for x in 0..VX {
+        for z in 0..VZ {
+            for y in 0..VY {
+                for x in 0..VX {
+                    // if errs[z][y][x] {
+                    for s in 0..S {
                         for f in 0..F {
                             let kk = k[s][z][y][x][f];
                             let ff = fu[s][z][y][x][f];
                             let d = ff - kk;
-                            errr[z][y][x] = errr[z][y][x].max(d.abs());
                             maxe = maxe.max(d.abs());
                             k[s][z][y][x][f] = kk + alpha * d;
                         }
                     }
+                    // }
                 }
             }
         }
+
+        iserr = maxe > er;
+
         if maxe >= omaxe {
             maxe_count += 1;
         } else {
@@ -182,9 +206,8 @@ pub fn fixpoint<
             omaxe = maxe;
         }
 
-        let debug = false;
-        // let debug = true;
-        if debug {
+        const DEBUG: bool = false;
+        if DEBUG {
             let miter = nbiter
                 .iter()
                 .flat_map(|v| v.iter())
@@ -195,6 +218,21 @@ pub fn fixpoint<
                 "t: {:.3e}, ffka: {:.3e}, maxe: {:.3e}, omaxe: {:.3e}, lim: {:.3e}, miter: {}",
                 t, alpha, maxe, omaxe, er, miter
             );
+            let mut errr: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
+            for z in 0..VZ {
+                for y in 0..VY {
+                    for x in 0..VX {
+                        for s in 0..S {
+                            for f in 0..F {
+                                let kk = k[s][z][y][x][f];
+                                let ff = fu[s][z][y][x][f];
+                                let d = ff - kk;
+                                errr[z][y][x] = errr[z][y][x].max(d.abs());
+                            }
+                        }
+                    }
+                }
+            }
 
             let col: Vec<char> = " .:-=+*%#@".chars().collect();
             let mc = col.len() - 1;
@@ -234,34 +272,6 @@ pub fn fixpoint<
                     .join("\n")
             );
         }
-
-        let mut tmperrs: Box<[[[bool; VX]; VY]; VZ]> = boxarray(false);
-        pfor3d(&mut tmperrs, &|(Coord { x, y, z }, tmperrs)| {
-            let mut update = |dx, dy, dz| {
-                let i = x as i32 + dx;
-                let j = y as i32 + dy;
-                let k = z as i32 + dz;
-                if i >= 0 && i < VX as i32 && j >= 0 && j < VY as i32 && k >= 0 && k < VZ as i32 {
-                    *tmperrs |= errs[k as usize][j as usize][i as usize];
-                }
-            };
-            for dz in -sizez..=sizez {
-                if dz == 0 {
-                    for dy in -sizey..=sizey {
-                        if dy == 0 {
-                            for dx in -sizex..=sizex {
-                                update(dx, 0, 0);
-                            }
-                        } else {
-                            update(0, dy, 0);
-                        }
-                    }
-                } else {
-                    update(0, 0, dz);
-                }
-            }
-        });
-        errs = tmperrs;
     }
     *ovs = vs.clone();
     *otrs = trs.clone();
