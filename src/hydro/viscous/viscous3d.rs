@@ -20,10 +20,11 @@ pub fn init_from_entropy_density_3d<'a, const VX: usize, const VY: usize, const 
     s: &'a [[[f64; VX]; VY]; VZ],
     p: Eos<'a>,
     dpde: Eos<'a>,
+    entropy: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_BOTH_3D] + 'a> {
     Box::new(move |(i, j, k), _| {
-        let s = s[k][j][i].max(VOID);
-        let e = s;
+        let s = s[k][j][i];
+        let e = newton(1e-10, s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
         let vars = [
             e,
             p(e),
@@ -103,9 +104,10 @@ fn gen_constraints<'a>(
                 let pi33 = pi00 - pi11 - pi22;
 
                 let m = matrix![
-                    pi11, pi12, pi13;
-                    pi12, pi22, pi23;
-                    pi13, pi23, pi33;
+                    pi00, pi01, pi02, pi03;
+                    pi01, pi11, pi12, pi13;
+                    pi02, pi12, pi22, pi23;
+                    pi03, pi13, pi23, pi33;
                 ];
                 let eigs = m.symmetric_eigenvalues();
                 let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
@@ -253,15 +255,15 @@ fn fyuypi(
 }
 
 fn fzuzpi(
-    _t: f64,
+    t: f64,
     [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
-        (e + pe) * uz * ut + pi03,
-        (e + pe) * uz * ux + pi13,
-        (e + pe) * uz * uy + pi23,
-        (e + pe) * uz * uz + pe + pi33,
+        t * ((e + pe) * uz * ut + pi03),
+        t * ((e + pe) * uz * ux + pi13),
+        t * ((e + pe) * uz * uy + pi23),
+        t * ((e + pe) * uz * uz + pe + pi33),
         uz * pi11,
         uz * pi12,
         uz * pi13,
@@ -443,6 +445,22 @@ fn flux<const XY: usize, const Z: usize>(
         zeta = 0.0;
     }
 
+    let ipi_g = [
+        [
+            2.0 * uz * pimn[0][3],
+            uz * pimn[3][1],
+            uz * pimn[3][2],
+            uz * (pimn[0][0] + pimn[3][3]),
+        ],
+        [uz * pimn[3][1], 0.0, 0.0, uz * pimn[0][1]],
+        [uz * pimn[3][2], 0.0, 0.0, uz * pimn[0][2]],
+        [
+            uz * (pimn[0][0] + pimn[3][3]),
+            uz * pimn[0][1],
+            uz * pimn[0][2],
+            2.0 * uz * pimn[0][3],
+        ],
+    ];
     let mut spi = [0.0f64; 11];
     {
         let mut i = 0;
@@ -450,15 +468,16 @@ fn flux<const XY: usize, const Z: usize>(
         for a in 0..4 {
             for b in a..4 {
                 let pi_ns = eta
-                    * ((0..3)
+                    * ((0..4)
                         .map(|i| delta[a][i] * du[i][b] + delta[b][i] * du[i][a])
                         .sum::<f64>()
                         - 2.0 / 3.0 * delta[a][b] * dcuc);
                 let ipi = -1.0 / 3.0 * pimn[a][b] * dcuc
                     - pimn[a][b] * u[0] / t
-                    - (0..3)
+                    - (0..4)
                         .map(|i| (u[a] * pimn[b][i] + u[b] * pimn[a][i]) * ddu[i] * g[i][i])
-                        .sum::<f64>();
+                        .sum::<f64>()
+                    + ipi_g[a][b];
 
                 spi[i] = -(pimn[a][b] - pi_ns) / taupi + ipi;
                 i += 1;
@@ -578,7 +597,8 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 2e-4;
+    // let e = 2e-4;
+    let e = 1e-3;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; Z],
                    _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; Z]| {

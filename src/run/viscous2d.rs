@@ -44,7 +44,7 @@ fn hydro2d<const V: usize, const S: usize>(
         ),
     };
     println!("{}{}", name.0, name.1);
-    let init = init_from_entropy_density_2d(t0, s, p, dpde);
+    let init = init_from_entropy_density_2d(t0, s, p, dpde, entropy);
     viscous2d::<V, S>(
         &name,
         maxdt,

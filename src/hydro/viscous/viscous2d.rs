@@ -20,10 +20,11 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     s: &'a [[f64; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
+    entropy: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i];
-        let e = s;
+        let e = newton(1e-10, s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
         let vars = [
             e,
             p(e),
@@ -62,7 +63,7 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
         // let pi11 = trs[j][i][7];
         // let pi12 = trs[j][i][8];
         // let pi22 = trs[j][i][9];
-        // let pi33 = (pi00 - pi11 - pi22) / (t0 * t0);
+        // let pi33 = pi00 - pi11 - pi22;
         // let bulk = trs[j][i][10];
         let vars = [
             e,
@@ -141,9 +142,10 @@ fn gen_constraints<'a>(
                 let pi33 = pi00 - pi11 - pi22;
 
                 let m = matrix![
-                    pi11, pi12, 0.0;
-                    pi12, pi22, 0.0;
-                    0.0, 0.0, pi33;
+                    pi00, pi01, pi02, 0.0;
+                    pi01, pi11, pi12, 0.0;
+                    pi02, pi12, pi22, 0.0;
+                    0.0, 0.0, 0.0, pi33;
                 ];
                 let eigs = m.symmetric_eigenvalues();
                 let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();

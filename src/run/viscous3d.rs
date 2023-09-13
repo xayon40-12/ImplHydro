@@ -43,7 +43,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
         ),
     };
     println!("{}{}", name.0, name.1);
-    let init = init_from_entropy_density_3d(t0, s, p, dpde);
+    let init = init_from_entropy_density_3d(t0, s, p, dpde, entropy);
     viscous3d::<XY, Z, S>(
         &name,
         maxdt,

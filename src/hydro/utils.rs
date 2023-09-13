@@ -182,9 +182,20 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
     let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
-        trentos[i] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
-            "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
-        ));
+        const LOAD2D: bool = false;
+        if LOAD2D {
+            let trento_2d =
+                load_matrix_2d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
+                    "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
+                ));
+            for z in 0..Z {
+                trentos[i][z] = *trento_2d;
+            }
+        } else {
+            trentos[i] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
+                "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
+            ));
+        }
     }
     trentos
 }
