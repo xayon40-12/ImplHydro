@@ -56,7 +56,7 @@ pub fn fixpoint<
     let [sizex, sizey, sizez] = *local_interaction;
     *dto = maxdt.min(*dto);
     let mut iserr = true;
-    let ko = k.clone();
+    let _ko = k.clone();
     let mut fu = k.clone();
     let mut vdtk: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
     let mut trdtk: Box<[[[[f64; C]; VX]; VY]; VZ]> = boxarray(0.0);
@@ -76,7 +76,8 @@ pub fn fixpoint<
             alpha *= (*dx / dt).min(0.5);
             maxe = 1e50;
             omaxe = maxe;
-            *k = ko.clone();
+            // *k = ko.clone();
+            *k = boxarray(0.0); // TODO: consider using 'ko' or reset at 0.0 depending on the number of fails
             fu = k.clone();
             *vdtk = [[[[0.0f64; F]; VX]; VY]; VZ];
             *trdtk = [[[[0.0f64; C]; VX]; VY]; VZ];
