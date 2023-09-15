@@ -26,6 +26,8 @@ pub fn kt<
     theta: f64,
 ) -> ([f64; F], [f64; SD]) {
     let mut vals: [[f64; F]; 5] = [[0.0; F]; 5];
+    let mut sd: [[f64; SD]; 5] = [[0.0; SD]; 5];
+    let mut pvals: [[f64; F]; 5] = [[0.0; F]; 5];
     let mut tvals: [[f64; C]; 5] = [[0.0; C]; 5];
     for l in 0..5 {
         let (lx, ly, lz) = match dir {
@@ -34,13 +36,14 @@ pub fn kt<
             Dir::Z => (0, 0, l as i32 - 2),
         };
         (vals[l], tvals[l]) = constraints(t, bound([x + lx, y + ly, z + lz], &vs));
-        vals[l] = pre_flux_limiter(t, vals[l]);
+        sd[l] = secondary(t, tvals[l]);
+        pvals[l] = pre_flux_limiter(t, vals[l]);
     }
     let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];
     let mut fj: [[f64; F]; 3] = [[0.0; F]; 3];
     for l in 0..3 {
         for f in 0..F {
-            deriv[l][f] = flux_limiter(theta, vals[l][f], vals[l + 1][f], vals[l + 2][f]);
+            deriv[l][f] = flux_limiter(theta, pvals[l][f], pvals[l + 1][f], pvals[l + 2][f]);
         }
         fj[l] = flux(t, tvals[l + 1]);
     }
@@ -51,18 +54,16 @@ pub fn kt<
             let s = pm as f64 - 0.5;
             let j = jpm + pm;
             for f in 0..F {
-                upm[jpm][pm][f] = vals[1 + j][f] - s * deriv[j][f];
+                upm[jpm][pm][f] = pvals[1 + j][f] - s * deriv[j][f];
             }
             upm[jpm][pm] = post_flux_limiter(t, upm[jpm][pm]);
             (upm[jpm][pm], tupm[jpm][pm]) = constraints(t, upm[jpm][pm]);
         }
     }
     let mut fpm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
-    let mut sdpm: [[[f64; SD]; 2]; 2] = [[[0.0; SD]; 2]; 2];
     for jpm in 0..2 {
         for pm in 0..2 {
             fpm[jpm][pm] = flux(t, tupm[jpm][pm]);
-            sdpm[jpm][pm] = secondary(t, tupm[jpm][pm]);
         }
     }
     let mut a: [f64; 2] = [0.0; 2];
@@ -94,13 +95,16 @@ pub fn kt<
     }
     let mut h: [[f64; F]; 2] = [[0.0; F]; 2];
     let mut sdh: [[f64; F]; 2] = [[0.0; F]; 2];
+    let cubic = [-0.0625, 0.5625, 0.5625, -0.0625]; // reconstruct secondary at the boundary using cubic polynomial
     for jpm in 0..2 {
         for n in 0..F {
             h[jpm][n] =
                 fpm[jpm][1][n] + fpm[jpm][0][n] - a[jpm] * (upm[jpm][1][n] - upm[jpm][0][n]);
         }
         for n in 0..SD {
-            sdh[jpm][n] = sdpm[jpm][1][n] + sdpm[jpm][0][n];
+            for i in 0..4 {
+                sdh[jpm][n] += cubic[i] * sd[i + jpm][n];
+            }
         }
     }
     let mut res: [f64; F] = [0.0; F];
@@ -109,7 +113,7 @@ pub fn kt<
         res[n] = (h[1][n] - h[0][n]) / (2.0 * dx);
     }
     for n in 0..SD {
-        sdres[n] = (sdh[1][n] - sdh[0][n]) / (2.0 * dx);
+        sdres[n] = (sdh[1][n] - sdh[0][n]) / dx;
     }
 
     (res, sdres)
