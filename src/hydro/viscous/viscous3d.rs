@@ -194,7 +194,7 @@ fn eigenvaluesz(
     t: f64,
     [_, _, dpde, ut, _, _, uz, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> f64 {
-    eigenvaluesk(dpde, ut, uz) / t
+    eigenvaluesk(dpde, ut, uz) / t // WARNING: is /t needed in this formalism?
 }
 
 pub fn fitutpi(
@@ -353,7 +353,7 @@ fn flux<const XY: usize, const Z: usize>(
         dx,
         theta,
     );
-    let (dzf, dzu) = diff(
+    let (mut dzf, mut dzu) = diff(
         (vs, trs),
         bound,
         pos,
@@ -368,6 +368,13 @@ fn flux<const XY: usize, const Z: usize>(
         dx,
         theta,
     );
+    // in this formalism `dz` becomes `(1/t)*dz`
+    for i in 0..dzf.len() {
+        dzf[i] /= t;
+    }
+    for i in 0..dzu.len() {
+        dzu[i] /= t;
+    }
 
     let z = pos[2] as usize;
     let y = pos[1] as usize;
@@ -445,7 +452,8 @@ fn flux<const XY: usize, const Z: usize>(
         zeta = 0.0;
     }
 
-    let ipi_g = [
+    // t * I^{\mu\nu}_{\pi,G}
+    let t_ipi_g = [
         [
             2.0 * uz * pimn[0][3],
             uz * pimn[3][1],
@@ -477,7 +485,7 @@ fn flux<const XY: usize, const Z: usize>(
                     - (0..4)
                         .map(|i| (u[a] * pimn[b][i] + u[b] * pimn[a][i]) * ddu[i] * g[i][i])
                         .sum::<f64>()
-                    + ipi_g[a][b];
+                    - t_ipi_g[a][b] / t;
 
                 spi[i] = -(pimn[a][b] - pi_ns) / taupi + ipi;
                 i += 1;
@@ -489,13 +497,12 @@ fn flux<const XY: usize, const Z: usize>(
         spi[i] = -(ppi - ppi_ns) / tauppi + ippi;
     }
 
-    let s00 = (e + pe + ppi) * uz * uz + (pe + ppi) + pi33;
-    let s03 = (e + pe + ppi) * ut * uz + pi03;
+    let smunu = |i: usize, j: usize| e * u[i] * u[j] - (pe + ppi) * delta[i][j] + pimn[i][j];
     [
-        -dxf[0] - dyf[0] - dzf[0] - dtpi[0] - s00,
+        -dxf[0] - dyf[0] - dzf[0] - dtpi[0] - smunu(3, 3),
         -dxf[1] - dyf[1] - dzf[1] - dtpi[1],
         -dxf[2] - dyf[2] - dzf[2] - dtpi[2],
-        -dxf[3] - dyf[3] - dzf[3] - dtpi[3] - s03,
+        -dxf[3] - dyf[3] - dzf[3] - dtpi[3] - smunu(0, 3),
         -dxf[4] - dyf[4] - dzf[4] + spi[4],
         -dxf[5] - dyf[5] - dzf[5] + spi[5],
         -dxf[6] - dyf[6] - dzf[6] + spi[6],
@@ -576,7 +583,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        boundary: &ghost, // TODO use better boundary
+        boundary: &ghost,
         post_constraints: None,
         local_interaction: [1, 1, 1], // use a distance of 0 to emulate 1D
         vstrs: (vs.clone(), trs.clone()),
@@ -597,7 +604,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 2e-3;
+    let e = 2e-2;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; Z],
                    _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; Z]| {

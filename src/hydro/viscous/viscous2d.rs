@@ -532,7 +532,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
     let context = Context {
         fun: &flux,
         constraints: &constraints,
-        boundary: &ghost, // TODO use better boundary
+        boundary: &ghost,
         post_constraints: None,
         local_interaction: [1, 1, 0], // use a distance of 0 to emulate 1D
         vstrs: (vs.clone(), trs.clone()),
