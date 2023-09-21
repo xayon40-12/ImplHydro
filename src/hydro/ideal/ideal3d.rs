@@ -69,8 +69,8 @@ fn eigenvaluesx(_t: f64, [_e, _pe, dpde, ut, ux, _uy, _uz]: [f64; C_IDEAL_3D]) -
 fn eigenvaluesy(_t: f64, [_e, _pe, dpde, ut, _ux, uy, _uz]: [f64; C_IDEAL_3D]) -> f64 {
     eigenvaluesk(dpde, ut, uy)
 }
-fn eigenvaluesz(t: f64, [_e, _pe, dpde, ut, _ux, _uy, uz]: [f64; C_IDEAL_3D]) -> f64 {
-    eigenvaluesk(dpde, ut, uz) / t
+fn eigenvaluesz(_t: f64, [_e, _pe, dpde, ut, _ux, _uy, uz]: [f64; C_IDEAL_3D]) -> f64 {
+    eigenvaluesk(dpde, ut, uz)
 }
 
 pub fn f0(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
@@ -100,12 +100,12 @@ fn f2(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D
     ]
 }
 
-fn f3(_t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
+fn f3(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
     [
-        (e + pe) * uz * ut,
-        (e + pe) * uz * ux,
-        (e + pe) * uz * uy,
-        (e + pe) * uz * uz + pe,
+        t * ((e + pe) * uz * ut),
+        t * ((e + pe) * uz * ux),
+        t * ((e + pe) * uz * uy),
+        t * ((e + pe) * uz * uz + pe),
     ]
 }
 
@@ -171,7 +171,7 @@ fn flux<const XY: usize, const Z: usize>(
         dx,
         theta,
     );
-    let (divf3, _) = diff(
+    let (mut divf3, _) = diff(
         (vs, trs),
         bound,
         pos,
@@ -186,6 +186,10 @@ fn flux<const XY: usize, const Z: usize>(
         dx,
         theta,
     );
+    // in this formalism `dz` becomes `(1/t)*dz`
+    for d in &mut divf3 {
+        *d /= t;
+    }
 
     let (tee, tte): (f64, f64) = match coord {
         Coordinate::Cartesian => (0.0, 0.0),

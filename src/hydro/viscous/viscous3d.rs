@@ -191,10 +191,10 @@ fn eigenvaluesy(
     eigenvaluesk(dpde, ut, uy)
 }
 fn eigenvaluesz(
-    t: f64,
+    _t: f64,
     [_, _, dpde, ut, _, _, uz, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> f64 {
-    eigenvaluesk(dpde, ut, uz) / t // WARNING: is /t needed in this formalism?
+    eigenvaluesk(dpde, ut, uz)
 }
 
 pub fn fitutpi(
@@ -604,7 +604,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 2e-2;
+    let e = 5e-3;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; Z],
                    _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; Z]| {

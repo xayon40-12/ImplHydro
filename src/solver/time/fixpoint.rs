@@ -293,7 +293,8 @@ pub fn fixpoint<
         .flat_map(|e| e.par_iter())
         .flat_map(|e| e.par_iter())
         .map(|v| *v)
-        .reduce(|| 0, |acc, a| acc + a)) as f64;
+        .reduce(|| 0, |acc, a| acc + a)) as f64
+        / (VX * VY * VZ) as f64;
     *ot = *t;
     *t += dt;
     *dto = maxdt.min(dt * 1.1);
@@ -321,5 +322,5 @@ pub fn fixpoint<
             }
         }
     }
-    Some((cost / (VX * VY * VZ) as f64, nbiter, failed - 1))
+    Some((cost, nbiter, failed - 1))
 }
