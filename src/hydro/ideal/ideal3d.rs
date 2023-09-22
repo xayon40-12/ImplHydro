@@ -277,7 +277,7 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
         freezeout_energy: None,
     };
 
-    let e = 1e-2;
+    let e = 5e-3;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_IDEAL_3D]; XY]; XY]; Z],
                    _trs: &[[[[f64; C_IDEAL_3D]; XY]; XY]; Z]| {

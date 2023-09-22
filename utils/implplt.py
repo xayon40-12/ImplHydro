@@ -88,6 +88,7 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     dirs = list(filter(lambda d: os.path.isdir(dird+"/"+d), os.listdir(dird)))
     ts = sorted(dirs, key=float) 
     maxt = ts[-1]
+    # maxt = ts[int(0.3*(len(ts)-1))]
 
     p = dird+"/"+maxt
     info = {k: convert(v.strip()) for [k, v] in np.loadtxt(p+"/info.txt", dtype=object, delimiter=":")}
@@ -175,7 +176,9 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     # extract zero rapidity part
     if dim == "3D":
         dim = "2D"
-        dataz0 = data[:,vid["z"]]==0
+        zs = sorted(set(data[:,vid["z"]]))
+        z = zs[int(len(zs)/2)]
+        dataz0 = data[:,vid["z"]]==z
         info["data3d"] = data
         if not diff is None:
             diff = diff[dataz0,:]
@@ -425,7 +428,7 @@ def plot1d(l, nds):
             return [a[0]]+common(a[1:],b[1:])
         else:
             return common(a,b[1:])
-    if len(dtss) > 0:
+    if len(dtss) > 1:
         dts = common(dtss[0],dtss[1])
     else:
         dts = dtss[0]
@@ -561,9 +564,12 @@ def plot1d(l, nds):
                 # h.set_linestyle('-')
                 handles += [p]
                 labels += [l]
-        handles = [line("black",lstyles2[0]),line("black",lstyles1[0])]+handles
         dxs.sort()
-        labels = [r"$\Delta x = {}$ fm".format(dxs[1]), r"$\Delta x = {}$ fm".format(dxs[0])]+labels
+        handles = [line("black",lstyles1[0])]+handles
+        labels = [r"$\Delta x = {}$ fm".format(dxs[0])]+labels
+        if len(dxs) > 1:
+            handles = [line("black",lstyles2[0])] + handles
+            labels = [r"$\Delta x = {}$ fm".format(dxs[1])] + labels
         axs[1].legend(handles, labels) #, loc="lower left", bbox_to_anchor=(0, 1.02, 1, 0.2), mode="expand",borderaxespad=0,ncol=3)
         axs[1].set_ylabel(r"$\Delta_\mathrm{exact}$")
         # axs[2].set_ylabel("cost")
@@ -668,19 +674,23 @@ def plot1d(l, nds):
 gref = defaultdict(lambda: None)
 greft = defaultdict(lambda: defaultdict(lambda: None))
 def plot2d(l, datadts):
-    [dim,name,visc,t0,tend,t,case,dxn,scheme] = l
+    # [dim,name,visc,t0,tend,t,case,dxn,scheme] = l
+    [dim,name,visc,t0,tend,t,case,dxn] = l
     if case > 0 and not manycases:
         return
     (dx,n) = dxn
+    expl = datadts["Heun"]
+    datadts = datadts["GL1"]
     maxdts = sorted([dt for dt in datadts])
-    (info, ref, diffref) = datadts[maxdts[0]]
-    vid = info["ID"]
-    cut = info["CUT"]
-    ref = mask(ref,vid,cut)
     fromref = defaultfromref
     if len(maxdts) == 1:
         fromref = 0
     dt = maxdts[fromref]
+    # (info, ref, diffref) = datadts[maxdts[0]]
+    (info, ref, diffref) = expl[dt]
+    vid = info["ID"]
+    cut = info["CUT"]
+    ref = mask(ref,vid,cut)
     (einfo, data, diff) = datadts[dt]
     vid = einfo["ID"]
     cut = einfo["CUT"]
@@ -689,8 +699,10 @@ def plot2d(l, datadts):
     case = einfo["case"]
     if (("Trento" in name and case == 0) or "Gubser" in name):
         datats = np.array(einfo["datats"], dtype=object)
+        refdatats = np.array(info["datats"], dtype=object)
     else:
         datats = [(t,data,diff)]
+        refdatats = [(t,ref,refdiff)]
 
     ld = len(datats)
     many = ld > 1
@@ -700,10 +712,10 @@ def plot2d(l, datadts):
         num = 5
         nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
         # nb = 5
-        nb = 1
-        if "Gubser" in info["name"]:
+        nb = 3
+        if "Gubser" in einfo["name"]:
             nb += 1
-        if "FixPoint" in info["integration"]:
+        if "FixPoint" in einfo["integration"]:
             nb += 1
         fig, axs = plt.subplots(nb,num, figsize=(2+num*4, nb*5)) #sharey = True, sharex=True)
         if not hasattr(axs[0], "__len__"):
@@ -732,18 +744,19 @@ def plot2d(l, datadts):
             ma = max(ma,zerr.max())
             zitermin = min(zitermin, ziter.min())
             zitermax = max(zitermax, ziter.max())
-        for (id, (t,data,diff)) in zip(range(num),datats[nums]):
+        for (id, (t,data,diff), (_,ref,refdiff)) in zip(range(num),datats[nums],refdatats[nums]):
             # global greft
             # if greft[case][t] is None:
             #     greft[case][t] = (data,scheme)
             # elif greft[case][t][1] != scheme:
             #     ref = greft[case][t][0]
             mdata = mask(data,vid,cut)
+            mref = mask(ref,vid,cut)
             n = einfo["nx"]
             x = mdata[:,vid["x"]]
             y = mdata[:,vid["y"]]
             z = mdata[:,vid["e"]]
-            zref = ref[:,vid["e"]]
+            zref = mref[:,vid["e"]]
             ziter = mdata[:,vid["iter"]]
             # print(name, case, scheme, dt, n, ziter.sum())
             # zpi00 = mdata[:,vid["pi00"]]
@@ -763,12 +776,13 @@ def plot2d(l, datadts):
             zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
             zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
             sgn = np.sign(zerrref)
-            zerrref = np.power(zerrref*sgn,0.5)*sgn
+            # zerrref = np.power(zerrref*sgn,0.5)*sgn
             nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
             nr = n-1-nl
             x = np.reshape(x, (n,n))[nl:nr,nl:nr]
             y = np.reshape(y, (n,n))[nl:nr,nl:nr]
             z = np.reshape(z, (n,n))[nl:nr,nl:nr]
+            zref = np.reshape(zref, (n,n))[nl:nr,nl:nr]
             ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
             zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
             zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
@@ -790,10 +804,11 @@ def plot2d(l, datadts):
             # all = [(r"$\epsilon$", z),("vy",zvy), ("err ref",zerrref), ("vx", zvx)]
             # all = [(r"$\epsilon$", z), ("ur", zur), ("ut", zut)]
             # all = [(r"$\epsilon$", z),(r"pi00", zpi00),(r"pi11", zpi11),(r"pi12", zpi12),(r"pi22", zpi22)]
-            all = [(r"$\epsilon$", z)]
-            if "Gubser" in info["name"]:
+            all = [(r"$\epsilon$", z), ("ref", zref), ("err ref",zerrref)]
+            # all = [(r"$\epsilon$", z)]
+            if "Gubser" in einfo["name"]:
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]
-            if "FixPoint" in info["integration"]:
+            if "FixPoint" in einfo["integration"]:
                 all += [("$\mathrm{iterations}$", ziter)]
             for (i, (n, z)) in zip(range(nb),all):
                 if "iterations" in n:
@@ -829,7 +844,7 @@ def plot2d(l, datadts):
                     # cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
                     fig.add_axes(cax)
                     cbar = fig.colorbar(im, cax=cax, orientation="horizontal")
-                    if "Gubser" in info["name"] and "epsilon" in n:
+                    if "Gubser" in einfo["name"] and "epsilon" in n:
                         # cbar.ax.set_xticklabels(cbar.ax.get_xticklabels(), rotation=20)
                         cbar.ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(nbins=2))
                     # cbar.formatter.set_powerlimits((0, 0))
@@ -843,7 +858,7 @@ def plot2d(l, datadts):
         # ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", transform=ax.transAxes, fontsize=22)
         # plt.title(r"$\Delta x = "+str(dx)+"$ fm")
         # plt.subplots_adjust(wspace=0)
-        plt.savefig("figures/many_best_e_{}.pdf".format(info2name(info)), dpi=100)
+        plt.savefig("figures/many_best_e_{}.pdf".format(info2name(einfo)), dpi=100)
         plt.close()
     
     if not animate:
@@ -856,7 +871,7 @@ def plot2d(l, datadts):
         # elif greft[case][t][1] != scheme:
         #     ref = greft[case][t][0]
         mdata = mask(data,vid,cut)
-        n = info["nx"]
+        n = einfo["nx"]
         x = mdata[:,vid["x"]]
         y = mdata[:,vid["y"]]
         z = mdata[:,vid["e"]]
@@ -894,9 +909,9 @@ def plot2d(l, datadts):
         # all = [("e", z), ("vy", zvy), ("err ref", zerrref),("vx",zvx)]
         all = [("e", z)]
         # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
-        if "Gubser" in info["name"] and not "Exponential" in info["name"]:
+        if "Gubser" in einfo["name"] and not "Exponential" in einfo["name"]:
             all += [("err", zerr)]
-        if "FixPoint" in info["integration"]:
+        if "FixPoint" in einfo["integration"]:
             all += [("iter", ziter)]
         nb = len(all)
         fig, axs = plt.subplots(1,nb, figsize=(2+nb*4, 5), sharey=True)
@@ -924,18 +939,18 @@ def plot2d(l, datadts):
             ax.text(0.075, 0.1, r"$\Delta x = "+str(dx)+"$ fm", color="white", #, bbox={"facecolor": "white", "pad": 10},
                 transform=ax.transAxes, fontsize=22)
         if many and animate:
-            figname = "figures/best_e_{}".format(info2name(info))
+            figname = "figures/best_e_{}".format(info2name(einfo))
             try:
                 os.mkdir(figname)
             except FileExistsError:
                 None
             plt.savefig(("{}/{:0>"+str(nid)+"}.pdf").format(figname, id), dpi=100)
         else:
-            plt.savefig("figures/best_e_{}.pdf".format(info2name(info)), dpi=100)
+            plt.savefig("figures/best_e_{}.pdf".format(info2name(einfo)), dpi=100)
         plt.close()
 
         if not diff is None:
-            n = info["nx"]
+            n = einfo["nx"]
             dt00 = np.reshape(diff[:,2], (n,n))
             dt01 = np.reshape(diff[:,3], (n,n))
             dt02 = np.reshape(diff[:,4], (n,n))
@@ -996,5 +1011,6 @@ except FileExistsError:
     None
     
 alldata(6, datas, convall)
-alldata(9, datas, plotall2D)
+alldata(8, datas, plotall2D)
+# alldata(9, datas, plotall2D)
 alldata(7, datas, plotall1D)
