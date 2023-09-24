@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 
-use crate::boxarray::boxarray;
+use boxarray::boxarray;
 
 use super::context::{Arr, BArr, DIM};
 

@@ -1,10 +1,8 @@
-use crate::{
-    boxarray::boxarray,
-    solver::{
-        context::Context,
-        utils::{pfor3d, Coord},
-    },
+use crate::solver::{
+    context::Context,
+    utils::{pfor3d, Coord},
 };
+use boxarray::boxarray;
 
 use super::schemes::Scheme;
 

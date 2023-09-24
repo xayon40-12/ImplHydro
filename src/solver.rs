@@ -1,11 +1,11 @@
 use crate::{
-    boxarray::boxarray,
     hydro::isosurface::{
         isosurface2d::IsoSurface2DHandler, isosurface3d::IsoSurface3DHandler, toiso,
         IsoSurfaceHandler,
     },
     solver::context::{Arr, BArr},
 };
+use boxarray::boxarray;
 use std::collections::HashMap;
 
 use crate::hydro::Viscosity;

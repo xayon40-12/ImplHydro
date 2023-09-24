@@ -3,9 +3,9 @@ use std::{
     io::{BufReader, Read},
 };
 
+use crate::solver::context::Arr;
+use boxarray::boxarray;
 use byteorder::{ByteOrder, LittleEndian};
-
-use crate::{boxarray::boxarray, solver::context::Arr};
 
 use super::{HydroOutput, FREESTREAM_2D};
 

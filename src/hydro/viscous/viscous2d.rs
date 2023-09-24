@@ -1,5 +1,4 @@
 use crate::{
-    boxarray::boxarray,
     hydro::{utils::eigenvaluesk, Viscosity, C_MILNE_BOTH_2D, FREESTREAM_2D, F_BOTH_2D, HBARC},
     solver::{
         context::{BArr, Boundary, Context, Integration, DIM},
@@ -10,6 +9,7 @@ use crate::{
         Constraint, Observable,
     },
 };
+use boxarray::boxarray;
 
 use crate::hydro::{Eos, Init2D, VOID};
 
