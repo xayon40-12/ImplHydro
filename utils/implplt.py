@@ -46,12 +46,20 @@ for arg in sys.argv:
         if arg in larg:
             act()
 
-CUT = 1e-4
 
 # crop = 9
 crop = 19
 crop_eta = crop/4
-defaultfromref = 0
+defaultfromref = 1
+maxerr = 1e-6
+num2D = 5
+compare_type = 0 # 0: absolute, 1: relative
+use_square = True
+use_average_ref = True
+plot_meanmax_dx = False
+plot_conv = True
+plot_1D = False
+plot_2D = False
 
 e0 = 10
 emin = 1
@@ -147,8 +155,12 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
         except FileNotFoundError:
             return None
     diff = find_diff(p)
+    
     if case == 0:
-        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),find_diff(dird+"/"+t)) for t in ts]
+        ld = len(ts)
+        num = num2D
+        nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
+        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),find_diff(dird+"/"+t)) for t in np.array(ts)[nums]]
         info["datats"] = datats
 
     e0 = data0[:,vid["e"]]
@@ -164,7 +176,6 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
 
     cut = 1
     err = abs(e.sum()-e[e>cut].sum())/e.sum()
-    maxerr = 1e-6
     while err > maxerr: # find the energy cut such that a relative 1e-6 of the total energy is discarded. This is done to discard the erroneous cell due to numerical diffusion in the vacuum
         cut *= 0.5
         err = abs(e.sum()-e[e>cut].sum())/e.sum()
@@ -195,25 +206,29 @@ with open("voidratio.txt", "w") as fv:
 print("finished loading")
 # sys.exit(0)
 
-def compare(i, cut, vss, wss):
+def compare(eid, i, cut, vss, wss):
     maxerr = 0
     meanerr = 0
-    varerr = 0
+    squareerr = 0
     count = 0
     for (vs, ws) in zip(vss,wss):
-        if  vs[i] > cut and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop and vs[2] >= -crop_eta and vs[2] <= crop_eta:
+        if  vs[eid] > cut and vs[0] >= -crop and vs[0] <= crop and vs[1] >= -crop and vs[1] <= crop and vs[2] >= -crop_eta and vs[2] <= crop_eta:
             count += 1
             a = vs[i]
             b = ws[i]
-            err = abs(a-b)/(max(abs(a),abs(b))+1e-100)
-            maxerr = max(err,maxerr)
+            if compare_type == 0:
+                err = abs(a-b)
+                squareerr += (a-b)**2
+            if compare_type == 1:
+                err = abs(a-b)/(max(abs(a),abs(b))+1e-100)
+                squareerr += ((a-b)/((abs(a)+abs(b))/2+1e-100))**2
+            maxerr = max(err,maxerr) # or maxerr += err**inf
             meanerr += err
-            varerr += err**2
     if count>0:
-        meanerr /= count
-        varerr /= count
-        varerr = varerr - meanerr**2
-    return (maxerr, meanerr, varerr)
+        meanerr = meanerr/count
+        squareerr = sqrt(squareerr/count)
+        # as we used max, there is no need for: maxerr = (maxerr/count)**(1/inf) -> where count**(1/inf) = 1
+    return (maxerr, meanerr, squareerr)
 
 def convergence(a, ref=None):
     maxdts = sorted(list(a))
@@ -232,10 +247,11 @@ def convergence(a, ref=None):
         avdt = (info["tend"]-info["t0"])/info["tsteps"]
         elapsed = info["elapsed"]
         vid = info["ID"]
+        eid = vid["e"]
         id = vid["e"]
         cut = info["CUT"]
-        (maxerr, meanerr, varerr) = compare(id, cut, r, v)
-        all += [(v, info, maxerr, meanerr, varerr, dt, cost, avdt, elapsed)]
+        (maxerr, meanerr, squareerr) = compare(eid, id, cut, r, v)
+        all += [(v, info, maxerr, meanerr, squareerr, dt, cost, avdt, elapsed)]
     
     return np.array(all, dtype=object)
 
@@ -261,7 +277,10 @@ def lighten(c):
 def convall(l, cnds):
     [dim,name,visc,t0,tend,t] = l
     # allx = [("dt", 5), ("cost", 6), ("avdt", 7), ("elapsed", 8)]
-    ally = [((1,0), "full", 2), ((5,5), "none", 3)]
+    ally = [((1,0), "full", 2)]
+    if use_square:
+        ally += [((2,2), "none", 4)]
+    ally += [((6,6), "none", 3)]
     allx = [("cost", 6)]
     # ally = [("max", 2)]
     fromref = defaultfromref
@@ -318,7 +337,14 @@ def convall(l, cnds):
                             schemetype = "Explicit"
                         if useschemename:
                             schemetype = info["scheme"]
-                        c = convergence(ds0,refs[s1])
+                        def fuse(r1,r2):
+                            (a1,b1,c1) = r1
+                            (a2,b2,c2) = r2
+                            return (a1, (b1+b2)/2, c1)
+                        if use_average_ref:
+                            c = convergence(ds0, fuse(refs[scs[0]], refs[scs[1]]))
+                        else:
+                            c = convergence(ds0, refs[s1])
                         c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
                         s = 30
@@ -355,12 +381,28 @@ def convall(l, cnds):
             for lh in leg.legendHandles:
                 lh.set_alpha(1)
         clean(axs[0])
-        labels = ["max", "mean"]
-        handles = [line("black",(0,(1,0))),line("black",(0,(5,5)))]
+        labels = ["max"]
+        if use_square:
+            labels += ["rms"]
+        labels += ["mean"]
+        handles = [line("black",(0,(1,0)))]
+        if use_square:
+            handles += [line("black",(0,(2,2)))]
+        handles += [line("black",(0,(6,6)))]
         axs[1].legend(handles, labels, loc="upper right")
         clean(ax2)
-        fig.savefig("figures/convergence_{}_meanmax_crop={}_{}.pdf".format(dtcost, crop, info2name(info, False)))
-        fig2.savefig("figures/convergence_{}_meanmax_dx_crop={}_{}.pdf".format(dtcost, crop, info2name(info, False)))
+        prefix = ""
+        if compare_type == 0:
+            prefix += "absolute_"
+        if compare_type == 1:
+            prefix += "relative_"
+        if use_average_ref:
+            prefix += "averageref_"
+        else:
+            prefix += "explicitref_"
+        fig.savefig("figures/{}convergence_{}_meanmax_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
+        if plot_meanmax_dx:
+            fig2.savefig("figures/{}convergence_{}_meanmax_dx_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
         plt.close()
 
 def pointstyle(info):
@@ -709,7 +751,7 @@ def plot2d(l, datadts):
     nid = ceil(log(ld)/log(10))
 
     if many:
-        num = 5
+        num = num2D
         nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
         # nb = 5
         nb = 3
@@ -725,7 +767,7 @@ def plot2d(l, datadts):
         mi = 1e100
         zitermax = 1e-100
         zitermin = 1e100
-        for (id, (t,data,diff)) in zip(range(num),datats[nums]):
+        for (id, (t,data,diff)) in zip(range(num),datats): #[nums]):
             mdata = mask(data,vid,cut)
             n = einfo["nx"]
             x = mdata[:,vid["x"]]
@@ -1010,7 +1052,10 @@ try:
 except FileExistsError:
     None
     
-alldata(6, datas, convall)
-alldata(8, datas, plotall2D)
-# alldata(9, datas, plotall2D)
-alldata(7, datas, plotall1D)
+if plot_conv:
+    alldata(6, datas, convall)
+if plot_1D:
+    alldata(7, datas, plotall1D)
+if plot_2D:
+    alldata(8, datas, plotall2D)
+    # alldata(9, datas, plotall2D)
