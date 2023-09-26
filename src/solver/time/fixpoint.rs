@@ -1,12 +1,10 @@
 use rayon::prelude::*;
 
-use crate::{
-    boxarray::boxarray,
-    solver::{
-        context::{Arr, Context},
-        utils::{pfor3d, pfor3d2, Coord},
-    },
+use crate::solver::{
+    context::{Arr, Context},
+    utils::{pfor3d, pfor3d2, Coord},
 };
+use boxarray::boxarray;
 
 use super::schemes::Scheme;
 

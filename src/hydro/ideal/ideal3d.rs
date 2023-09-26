@@ -1,5 +1,4 @@
 use crate::{
-    boxarray::boxarray,
     hydro::{
         utils::{eigenvaluesk, Coordinate},
         C_IDEAL_3D, F_IDEAL_3D,
@@ -13,6 +12,7 @@ use crate::{
         Constraint, Observable,
     },
 };
+use boxarray::boxarray;
 
 use crate::hydro::{solve_v, Eos, Init3D, VOID};
 

@@ -1,5 +1,4 @@
 use crate::{
-    boxarray::boxarray,
     hydro::{utils::eigenvaluesk, C_IDEAL_1D, F_IDEAL_1D},
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
@@ -10,6 +9,7 @@ use crate::{
         Constraint,
     },
 };
+use boxarray::boxarray;
 
 use crate::hydro::{solve_v, Eos, Init1D, VOID};
 

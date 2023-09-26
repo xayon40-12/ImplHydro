@@ -1,4 +1,4 @@
-use crate::boxarray::boxarray;
+use boxarray::boxarray;
 
 pub fn cubic(x: f64, p: &[f64; 4]) -> f64 {
     p[0] + x * (p[1] + x * (p[2] + x * p[3]))
