@@ -125,6 +125,7 @@ pub fn fixpoint<
             });
         }
 
+        let oerrs = errs.clone();
         let er = err_thr(*t, &vs, &trs);
         pfor3d2(&mut errs, &mut nbiter, &|(
             Coord { x, y, z },
@@ -183,7 +184,7 @@ pub fn fixpoint<
         for z in 0..VZ {
             for y in 0..VY {
                 for x in 0..VX {
-                    // if errs[z][y][x] {
+                    // if oerrs[z][y][x] { // TODO: try using this
                     for s in 0..S {
                         for f in 0..F {
                             let kk = k[s][z][y][x][f];
