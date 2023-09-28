@@ -182,17 +182,17 @@ pub fn fixpoint<
         for z in 0..VZ {
             for y in 0..VY {
                 for x in 0..VX {
-                    // if oerrs[z][y][x] { // TODO: try using this
-                    for s in 0..S {
-                        for f in 0..F {
-                            let kk = k[s][z][y][x][f];
-                            let ff = fu[s][z][y][x][f];
-                            let d = ff - kk;
-                            maxe = maxe.max(d.abs());
-                            k[s][z][y][x][f] = kk + alpha * d;
+                    if oerrs[z][y][x] {
+                        for s in 0..S {
+                            for f in 0..F {
+                                let kk = k[s][z][y][x][f];
+                                let ff = fu[s][z][y][x][f];
+                                let d = ff - kk;
+                                maxe = maxe.max(d.abs());
+                                k[s][z][y][x][f] = kk + alpha * d;
+                            }
                         }
                     }
-                    // }
                 }
             }
         }
