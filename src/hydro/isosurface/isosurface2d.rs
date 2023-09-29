@@ -3,7 +3,7 @@ use std::io::{Result, Write};
 
 use crate::solver::context::Arr;
 
-use super::IsoSurfaceHandler;
+use super::{Freezout, IsoSurfaceHandler};
 
 pub type IsoSurface2DFun<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize> =
     &'a dyn Fn(
@@ -72,7 +72,7 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         new_fields: &Arr<C, VX, VY, VZ>,
         ot: f64, // time for new_fields
         nt: f64, // where t+dt is the time of new_fields
-    ) {
+    ) -> Freezout {
         let surfaces = (self.iso_surface_fun)(
             fields,
             new_fields,
@@ -85,6 +85,16 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
             nt - ot,
             self.freezeout_energy,
         );
+        let freezout = if surfaces.len() == 0 {
+            if new_fields[0][0][0][self.e_id] > self.freezeout_energy {
+                Freezout::Above
+            } else {
+                Freezout::Below
+            }
+        } else {
+            Freezout::Above
+        };
+
         let bytes = surfaces
             .into_iter()
             .flat_map(|ss| ss.to_column_viscous().into_iter())
@@ -96,6 +106,8 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         if let Err(e) = self.file.flush() {
             eprintln!("Could not flush file: {}", e);
         }
+
+        freezout
     }
 }
 

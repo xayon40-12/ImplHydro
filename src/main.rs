@@ -36,7 +36,7 @@ enum Dim {
     Dim2 {
         #[arg(long, default_value_t = 0.48)]
         t0: f64,
-        #[arg(long, default_value_t = 15.0)]
+        #[arg(long, default_value_t = 0.0)]
         tend: f64,
         #[command(subcommand)]
         command: Hydro,
@@ -44,7 +44,7 @@ enum Dim {
     Dim3 {
         #[arg(long, default_value_t = 0.48)]
         t0: f64,
-        #[arg(long, default_value_t = 15.0)]
+        #[arg(long, default_value_t = 0.0)]
         tend: f64,
         #[command(subcommand)]
         command: Hydro,
@@ -116,9 +116,9 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
         }
     };
     let checkt = |t0: f64, tend: f64| {
-        if t0 >= tend {
-            panic!("The initial time 't0' must be smaller than the end time 'tend'.");
-        }
+        // if t0 > tend {
+        //     panic!("The initial time 't0' must be smaller than the end time 'tend'.");
+        // }
     };
     let dx = l / XY as f64;
     let solver = args.solver_type;

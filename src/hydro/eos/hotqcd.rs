@@ -1,7 +1,7 @@
 use crate::hydro::{eos::cubic_spline::cubic_spline_0, HBARC};
 use lazy_static::lazy_static;
 
-use super::cubic_spline::{cubic, cubic_diff};
+use super::cubic_spline::cubic;
 
 const N: usize = 100000;
 
@@ -60,7 +60,12 @@ pub fn p(e: f64) -> f64 {
 }
 
 pub fn dpde(e: f64) -> f64 {
-    hot_cubic(e, &HOTQCD_P, &cubic_diff)
+    let eps = 1e-10;
+    (p(e + eps) - p(e)) / eps
+    // let e0 = HOTQCD_FM[0][0];
+    // let e1 = HOTQCD_FM[1][0];
+    // let e1e0 = e1 - e0;
+    // hot_cubic(e, &HOTQCD_P, &cubic_diff) / e1e0
 }
 
 pub fn s(e: f64) -> f64 {
@@ -77,7 +82,7 @@ pub fn test_hotqcd() {
     let n = 10000;
     for i in 0..n {
         let x = i as f64 / n as f64;
-        let e = x * 1.4e0;
+        let e = x * 1e2;
         let p = p(e);
         let dpde = dpde(e);
         let s = s(e);
@@ -87,9 +92,8 @@ pub fn test_hotqcd() {
 }
 
 pub mod log {
-    use crate::hydro::eos::cubic_spline::{cubic_diff_log, cubic_log, cubic_spline};
-
     use super::*;
+    use crate::hydro::eos::cubic_spline::{cubic_log, cubic_spline};
 
     const M: usize = 1000;
 
@@ -123,7 +127,8 @@ pub mod log {
     }
 
     pub fn dpde(e: f64) -> f64 {
-        hot_cubic(e, &HOTQCD_P_LOG, &cubic_diff_log)
+        let eps = 1e-10;
+        (p(e + eps) - p(e)) / eps
     }
 
     pub fn s(e: f64) -> f64 {

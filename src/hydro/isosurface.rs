@@ -3,6 +3,11 @@ pub mod isosurface3d;
 
 use crate::solver::context::Arr;
 
+pub enum Freezout {
+    Below,
+    Above,
+}
+
 pub trait IsoSurfaceHandler<const C: usize, const VX: usize, const VY: usize, const VZ: usize> {
     fn find_surfaces(
         &mut self,
@@ -10,7 +15,7 @@ pub trait IsoSurfaceHandler<const C: usize, const VX: usize, const VY: usize, co
         new_fields: &Arr<C, VX, VY, VZ>,
         ot: f64, // time for new_fields
         nt: f64, // where t+dt is the time of new_fields
-    );
+    ) -> Freezout;
 }
 
 pub fn toiso<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>(

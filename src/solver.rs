@@ -1,6 +1,6 @@
 use crate::{
     hydro::isosurface::{
-        isosurface2d::IsoSurface2DHandler, isosurface3d::IsoSurface3DHandler, toiso,
+        isosurface2d::IsoSurface2DHandler, isosurface3d::IsoSurface3DHandler, toiso, Freezout,
         IsoSurfaceHandler,
     },
     solver::context::{Arr, BArr},
@@ -441,7 +441,9 @@ pub fn run<
     let m = 1e-13;
     let r = 1e10;
     let enable_save = true;
-    while context.t < context.tend + m {
+    let mut again = true;
+    let mut freezout = None;
+    while again {
         if do_save {
             let mut d = next_save - context.t;
             if d <= 2.0 * context.dt && enable_save {
@@ -480,12 +482,25 @@ pub fn run<
             if let Some(isosurface) = &mut isosurface {
                 let (_, otrs) = &context.ovstrs;
                 let (_, trs) = &context.vstrs;
-                isosurface.find_surfaces(otrs, trs, context.ot, context.t);
+                freezout = Some(isosurface.find_surfaces(otrs, trs, context.ot, context.t));
             }
         } else {
             eprintln!("Integration failed, abort current run.");
             eprintln!("");
             return None;
+        }
+        if context.tend <= 0.0 {
+            again = freezout
+                .as_ref()
+                .and_then(|f| {
+                    Some(match f {
+                        Freezout::Below => false,
+                        Freezout::Above => true,
+                    })
+                })
+                .unwrap_or(false);
+        } else {
+            again = context.t < context.tend + m;
         }
     }
     let elapsed = now.elapsed().as_secs_f64();

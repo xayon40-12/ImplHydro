@@ -1,4 +1,3 @@
-
 use crate::{
     hydro::{utils::eigenvaluesk, Viscosity, C_BOTH_3D, F_BOTH_3D, HBARC},
     solver::{
@@ -605,7 +604,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 5e-3;
+    let e = 2e-3;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; Z],
                    _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; Z]| {
