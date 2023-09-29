@@ -91,37 +91,31 @@ pub mod log {
 
     use super::*;
 
+    const M: usize = 1000;
+
+    static HOTQCD_FM_LOG: &[[f64; 4]; M] =
+        unsafe { &std::mem::transmute(*include_bytes!("hrg_hotqcd_eos_binary_log.dat")) };
     lazy_static! {
-        static ref HOTQCD_FM_LOG: Box<[[f64; 4]; N]> = {
-            let mut res: Box<[[f64; 4]; N]> = Box::new(*HOTQCD_GEV);
-
-            for i in 0..N {
-                res[i][0] /= HBARC;
-                res[i][1] /= HBARC;
-                res[i][3] /= HBARC;
-            }
-
-            for i in 0..N {
-                for j in 0..4 {
-                    res[i][j] = res[i][j].ln();
-                }
-            }
-
-            res
-        };
-        static ref HOTQCD_P_LOG: Box<[[f64; 4]; N]> = cubic_spline(HOTQCD_ID_P, &HOTQCD_FM_LOG);
-        static ref HOTQCD_S_LOG: Box<[[f64; 4]; N]> = cubic_spline(HOTQCD_ID_S, &HOTQCD_FM_LOG);
-        static ref HOTQCD_T_LOG: Box<[[f64; 4]; N]> = cubic_spline(HOTQCD_ID_T, &HOTQCD_FM_LOG);
+        static ref HOTQCD_P_LOG: Box<[[f64; 4]; M]> = cubic_spline(HOTQCD_ID_P, &HOTQCD_FM_LOG);
+        static ref HOTQCD_S_LOG: Box<[[f64; 4]; M]> = cubic_spline(HOTQCD_ID_S, &HOTQCD_FM_LOG);
+        static ref HOTQCD_T_LOG: Box<[[f64; 4]; M]> = cubic_spline(HOTQCD_ID_T, &HOTQCD_FM_LOG);
     }
 
-    fn hot_cubic(e: f64, spline: &[[f64; 4]; N], cubic: &dyn Fn(f64, &[f64; 4]) -> f64) -> f64 {
-        let e0 = HOTQCD_FM[0][0];
-        let e1 = HOTQCD_FM[1][0];
+    fn hot_cubic(e: f64, spline: &[[f64; 4]; M], cubic: &dyn Fn(f64, &[f64; 4]) -> f64) -> f64 {
+        let e0 = HOTQCD_FM_LOG[0][0];
+        let e1 = HOTQCD_FM_LOG[1][0];
         let e1e0 = e1 - e0;
-        let a = (e - e0) / e1e0;
-        let i = (a as usize).max(0).min(N - 1);
+        let a = (e.ln() - e0) / e1e0;
+        let i = (a as usize).max(0).min(M - 1);
         let x = a - i as f64;
-        cubic(x, &spline[i])
+        if x < 0.0 {
+            let eps = 1e-10;
+            let o = cubic(0.0, &spline[i]).ln();
+            let oeps = cubic(eps, &spline[i]).ln();
+            (o + x * ((oeps - o) / eps)).exp()
+        } else {
+            cubic(x, &spline[i])
+        }
     }
 
     pub fn p(e: f64) -> f64 {
@@ -130,8 +124,6 @@ pub mod log {
 
     pub fn dpde(e: f64) -> f64 {
         hot_cubic(e, &HOTQCD_P_LOG, &cubic_diff_log)
-        // let eps = 1e-10;
-        // (p(e + eps) - p(e)) / eps
     }
 
     pub fn s(e: f64) -> f64 {
@@ -144,11 +136,11 @@ pub mod log {
     }
 
     #[test]
-    pub fn test_hotqcd_log() {
+    pub fn test_log_hotqcd() {
         let n = 10000;
         for i in 0..n {
             let x = i as f64 / n as f64;
-            let e = x * 1.4e0;
+            let e = x * 1e2;
             let p = p(e);
             let dpde = dpde(e);
             let s = s(e);

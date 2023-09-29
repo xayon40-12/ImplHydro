@@ -23,6 +23,10 @@ pub fn cubic_log(x: f64, p: &[f64; 4]) -> f64 {
 pub fn cubic_diff_log(x: f64, p: &[f64; 4]) -> f64 {
     (p[1] + x * (2.0 * p[2] + x * 3.0 * p[3])) * cubic_log(x, p)
 }
+pub fn cubic_diff2_log(x: f64, p: &[f64; 4]) -> f64 {
+    (2.0 * p[2] + x * 3.0 * p[3]) * cubic_log(x, p)
+        + (p[1] + x * (2.0 * p[2] + x * 3.0 * p[3])) * cubic_diff_log(x, p)
+}
 
 pub fn cubic_spline_0<const N: usize, const M: usize>(
     idx: usize,
