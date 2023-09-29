@@ -12,11 +12,14 @@ nb_frzout = 10
 
 dim = 2
 particlize = False
+use_urqmd = False
 for arg in sys.argv[1:]:
    if arg == "-3d":
       dim = 3
    if arg == "-p":
       particlize = True
+   if arg == "-u":
+      use_urqmd = True
       
 
 def particlization():
@@ -79,19 +82,20 @@ def particlization():
    with open("particles_in.dat", "w") as f:
       f.write(lines)
 
-   # run urqmd
-   # git: jbernhard/urqmd-afterburner
-   #
-   # urqmd needs to be installed before. To compile with recent gcc-fortran,
-   # the following flags might be needed:
-   #   export FCFLAGS="-w -fallow-argument-mismatch -O2"
-   #   export FFLAGS="-w -fallow-argument-mismatch -O2"
+   if use_urqmd:
+      # run urqmd
+      # git: jbernhard/urqmd-afterburner
+      #
+      # urqmd needs to be installed before. To compile with recent gcc-fortran,
+      # the following flags might be needed:
+      #   export FCFLAGS="-w -fallow-argument-mismatch -O2"
+      #   export FFLAGS="-w -fallow-argument-mismatch -O2"
 
-   print("Running UrQMD:")
-   urqmd = os.popen("afterburner particles_in.dat particles_out.dat")
-   output = urqmd.read()
-   with open("urqmd.log", "w") as f:
-      f.write(output)
+      print("Running UrQMD:")
+      urqmd = os.popen("afterburner particles_in.dat particles_out.dat")
+      output = urqmd.read()
+      with open("urqmd.log", "w") as f:
+         f.write(output)
 
    print("done\n")
 
