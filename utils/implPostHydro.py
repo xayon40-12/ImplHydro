@@ -4,6 +4,7 @@ import os
 import sys
 import numpy as np
 import frzout
+import cmath
 
 # run frsout
 # git: Duke-QCD/trento
@@ -99,15 +100,42 @@ def particlization():
 
    print("done\n")
 
+def vn(n, events):
+   l = len(events)
+   ms = [len(e) for e in events]
+
+   qn = [sum([cmath.rect(1, n*v["phi"]) for v in p]) for p in events]
+   qn2 = [abs(z)**2 for z in qn]
+   
+   w2 = [m*(m-1) for m in ms]
+   
+   m2 = [(qn2[i]-ms[i])/w2[i] for i in range(l)]
+   
+   cn2_n = 0
+   cn2_d = 0
+   for i in range(l):
+      cn2_n += w2[i]*m2[i]
+      cn2_d += w2[i]
+   cn2 = cn2_n/cn2_d
+
+   vn2 = np.sqrt(cn2)
+
+   return vn2
+
+totiter = 20
 cwd = os.getcwd()
 dirs = os.listdir(cwd)
 if "results" in dirs:
    res = "{}/results".format(cwd)
    dirs = os.listdir(res)
-   allparts = {}
+   allevents = {}
    allcounts = {}
    allinfos = {}
+   iter = 0
    for d in dirs:
+      if iter >= totiter:
+         break
+      iter += 1
       d = "{}/{}".format(res,d)
       os.chdir(d)
       if particlize:
@@ -116,37 +144,39 @@ if "results" in dirs:
 
       info = {k: v.strip() for [k, v] in np.loadtxt("info.txt", dtype=object, delimiter=":")}
       info.pop("case")
+      events = []
       parts = []
-      current = []
       # each line: ID charge pT ET mT phi y eta
+      pnames = ["ID", "charge", "pT", "ET", "mT", "phi", "y", "eta"]
       with open("particles_out.dat", "r") as f:
          for p in f.read().split("\n"):
             if "#" in p:
-               if len(current) > 0:
-                  parts += [np.array(current)]
-               current = []
+               if len(parts) > 0:
+                  events += [np.array(parts)]
+               parts = []
             else:
                if len(p) > 0:
-                  vals = np.array([np.float64(i) for i in p.split()])
-                  current += [vals]
-         parts += [np.array(current)]
-      count = len(parts)
+                  vals = {name: np.float64(i) for name, i in zip(pnames, p.split())}
+                  parts += [vals]
+         events += [np.array(parts)]
+      count = len(events)
       id = str(info)
-      if id in allparts:
-         allparts[id] += parts
+      if id in allevents:
+         allevents[id] += events
          allcounts[id] += count
       else:
-         allparts[id] = parts
+         allevents[id] = events
          allcounts[id] = count
          allinfos[id] = info
    os.chdir(res)
-   for k in allparts:
+   for k in allevents:
       counts = allcounts[k]
-      parts = allparts[k]
+      events = allevents[k]
       info = allinfos[k]
-
-      # TODO: compute observables from the particles informations
       print(counts, info)
+
+      v2 = vn(2, events)
+      print(v2)
       
 else:
    print("No \"results\" folder found.")
