@@ -116,24 +116,37 @@ if "results" in dirs:
 
       info = {k: v.strip() for [k, v] in np.loadtxt("info.txt", dtype=object, delimiter=":")}
       info.pop("case")
-      parts = np.loadtxt("particles_out.dat")
-      count = nb_frzout
+      parts = []
+      current = []
+      # each line: ID charge pT ET mT phi y eta
+      with open("particles_out.dat", "r") as f:
+         for p in f.read().split("\n"):
+            if "#" in p:
+               if len(current) > 0:
+                  parts += [np.array(current)]
+               current = []
+            else:
+               if len(p) > 0:
+                  vals = np.array([np.float64(i) for i in p.split()])
+                  current += [vals]
+         parts += [np.array(current)]
+      count = len(parts)
       id = str(info)
       if id in allparts:
-         allparts[id] = np.append(allparts[id], parts, axis=0)
+         allparts[id] += parts
          allcounts[id] += count
       else:
          allparts[id] = parts
          allcounts[id] = count
          allinfos[id] = info
-
+   os.chdir(res)
    for k in allparts:
       counts = allcounts[k]
       parts = allparts[k]
       info = allinfos[k]
 
       # TODO: compute observables from the particles informations
-      print(count, parts.shape, info)
+      print(counts, info)
       
 else:
    print("No \"results\" folder found.")
