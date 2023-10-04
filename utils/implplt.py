@@ -54,12 +54,12 @@ defaultfromref = 1
 maxerr = 1e-6
 num2D = 5
 compare_type = 0 # 0: absolute, 1: relative
-use_square = True
-use_average_ref = True
+use_square = False
+use_average_ref = False
 plot_meanmax_dx = False
 plot_conv = True
-plot_1D = False
-plot_2D = False
+plot_1D = True
+plot_2D = True
 
 e0 = 10
 emin = 1
@@ -317,7 +317,7 @@ def convall(l, cnds):
                 if len(scs) <= 1:
                     plt.close()
                     return 
-                s1 = scs[0]
+                s1 = scs[-1]
                 ax.text(0.03, 0.05, r"$\Delta x = "+str(dx)+"$ fm", color="black", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 for (linestyle, fillstyle, mmi) in ally:
@@ -345,7 +345,8 @@ def convall(l, cnds):
                             c = convergence(ds0, fuse(refs[scs[0]], refs[scs[1]]))
                         else:
                             c = convergence(ds0, refs[s1])
-                        c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
+                        print(s0, (c[-1][2]-c[1][2])/(c[-1][5]-c[1][5]))
+                        # c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
                         s = 30
                         sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,5]]
@@ -816,7 +817,8 @@ def plot2d(l, datadts):
             zvy = np.power(zvy*sgn,0.5)*sgn
             zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)]
             zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
-            zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
+            # zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
+            zerrref = [(a-b) for (a,b) in zip(z,zref)]
             sgn = np.sign(zerrref)
             # zerrref = np.power(zerrref*sgn,0.5)*sgn
             nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)

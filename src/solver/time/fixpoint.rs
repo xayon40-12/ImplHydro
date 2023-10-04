@@ -109,6 +109,7 @@ pub fn fixpoint<
             pfor3d(&mut fu[s], &|(Coord { x, y, z }, fu)| {
                 if errs[z][y][x] {
                     *fu = fun(
+                        &k[s],
                         [&ovs, &vdtk],
                         [&otrs, &trdtk],
                         constraints,

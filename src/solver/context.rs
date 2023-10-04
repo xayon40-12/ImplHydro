@@ -25,6 +25,7 @@ pub type Fun<
     const VY: usize,
     const VZ: usize,
 > = &'a (dyn Fn(
+    &Arr<F, VX, VY, VZ>,
     [&Arr<F, VX, VY, VZ>; 2],
     [&Arr<C, VX, VY, VZ>; 2],
     Constraint<F, C>,

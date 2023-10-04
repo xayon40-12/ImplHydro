@@ -59,8 +59,10 @@ pub fn explicit<
                 }
             }
         }
+        let es = if s == 0 { S - 1 } else { s - 1 }; // index of last computed k
         pfor3d(&mut fu, &|(Coord { x, y, z }, fu)| {
             *fu = fun(
+                &k[es],
                 [&ovdtk, &vdtk],
                 [&otrdtk, &trdtk],
                 constraints,

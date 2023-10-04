@@ -44,6 +44,7 @@ fn f1(_t: f64, [e, pe, _, ut, ux]: [f64; C_IDEAL_1D]) -> [f64; F_IDEAL_1D] {
 }
 
 fn flux<const V: usize>(
+    _k: &Arr<F_IDEAL_1D, V, 1, 1>,
     [_ov, vs]: [&Arr<F_IDEAL_1D, V, 1, 1>; 2],
     [_otrs, trs]: [&Arr<C_IDEAL_1D, V, 1, 1>; 2],
     constraints: Constraint<F_IDEAL_1D, C_IDEAL_1D>,

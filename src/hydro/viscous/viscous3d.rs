@@ -1,7 +1,7 @@
 use crate::{
     hydro::{utils::eigenvaluesk, Viscosity, C_BOTH_3D, F_BOTH_3D, HBARC},
     solver::{
-        context::{BArr, Boundary, Context, Integration, DIM},
+        context::{Arr, BArr, Boundary, Context, Integration, DIM},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -283,8 +283,9 @@ fn u(
 }
 
 fn flux<const XY: usize, const Z: usize>(
-    [_ov, vs]: [&[[[[f64; F_BOTH_3D]; XY]; XY]; Z]; 2],
-    [otrs, trs]: [&[[[[f64; C_BOTH_3D]; XY]; XY]; Z]; 2],
+    _k: &Arr<F_BOTH_3D, XY, XY, Z>,
+    [_ov, vs]: [&Arr<F_BOTH_3D, XY, XY, Z>; 2],
+    [otrs, trs]: [&Arr<C_BOTH_3D, XY, XY, Z>; 2],
     constraints: Constraint<F_BOTH_3D, C_BOTH_3D>,
     bound: Boundary<F_BOTH_3D, XY, XY, Z>,
     pos: [i32; DIM],

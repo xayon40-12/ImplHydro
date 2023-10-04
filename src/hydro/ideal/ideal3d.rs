@@ -110,6 +110,7 @@ fn f3(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D
 }
 
 fn flux<const XY: usize, const Z: usize>(
+    _k: &Arr<F_IDEAL_3D, XY, XY, Z>,
     [_ov, vs]: [&Arr<F_IDEAL_3D, XY, XY, Z>; 2],
     [_otrs, trs]: [&Arr<C_IDEAL_3D, XY, XY, Z>; 2],
     constraints: Constraint<F_IDEAL_3D, C_IDEAL_3D>,

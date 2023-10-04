@@ -115,7 +115,7 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
             panic!("The smallest time interval 'dtmin={}' must be smaller than the largest 'dtmax={}'.", dtmin, dtmax);
         }
     };
-    let checkt = |t0: f64, tend: f64| {
+    let checkt = |_t0: f64, _tend: f64| {
         // if t0 > tend {
         //     panic!("The initial time 't0' must be smaller than the end time 'tend'.");
         // }

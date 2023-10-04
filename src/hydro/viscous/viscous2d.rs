@@ -1,7 +1,7 @@
 use crate::{
     hydro::{utils::eigenvaluesk, Viscosity, C_MILNE_BOTH_2D, FREESTREAM_2D, F_BOTH_2D, HBARC},
     solver::{
-        context::{BArr, Boundary, Context, Integration, DIM},
+        context::{Arr, BArr, Boundary, Context, Integration, DIM},
         run,
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
@@ -277,8 +277,9 @@ fn u(
 }
 
 fn flux<const V: usize>(
-    [_ov, vs]: [&[[[[f64; F_BOTH_2D]; V]; V]; 1]; 2],
-    [otrs, trs]: [&[[[[f64; C_MILNE_BOTH_2D]; V]; V]; 1]; 2],
+    k: &Arr<F_BOTH_2D, V, V, 1>,
+    [_ov, vs]: [&Arr<F_BOTH_2D, V, V, 1>; 2],
+    [otrs, trs]: [&Arr<C_MILNE_BOTH_2D, V, V, 1>; 2],
     constraints: Constraint<F_BOTH_2D, C_MILNE_BOTH_2D>,
     bound: Boundary<F_BOTH_2D, V, V, 1>,
     pos: [i32; DIM],
@@ -349,9 +350,11 @@ fn flux<const V: usize>(
     let z = 0;
     let y = pos[1] as usize;
     let x = pos[0] as usize;
-    let [_e, _pe, _dpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi] =
+    let [ktt00, ktt01, ktt02, kutpi11, kutpi12, kutpi22, kutppi] = k[z][y][x];
+    let [tt00, tt01, tt02, _utpi11, _utpi12, _utpi22, _utppi] = vs[z][y][x];
+    let [_oe, _ope, _odpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi] =
         otrs[z][y][x];
-    let [e, pe, _dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi] = trs[z][y][x];
+    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi] = trs[z][y][x];
     let pimn = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
 
     let g = [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]];
@@ -370,12 +373,92 @@ fn flux<const V: usize>(
         }
     }
 
-    let dtu = [(ut - out) / cdt, (ux - oux) / cdt, (uy - ouy) / cdt];
-    let dtpi = [
-        (t * (pi00 - ppi * delta[0][0]) - ot * (opi00 - oppi * odelta[0][0])) / cdt,
-        (t * (pi01 - ppi * delta[0][1]) - ot * (opi01 - oppi * odelta[0][1])) / cdt,
-        (t * (pi02 - ppi * delta[0][2]) - ot * (opi02 - oppi * odelta[0][2])) / cdt,
-    ];
+    let (dtu, dtpi) = {
+        const EXACT: bool = true;
+        if EXACT {
+            let ut2 = ut * ut;
+            let ux2 = ux * ux;
+            let uy2 = uy * uy;
+            let d0 = dpde * ut2 - dpde + ut2;
+            let dp0 = dpde * ut2 + dpde + ut2;
+            let d1 = d0 * ut2 - dp0 * ux2;
+            let d2 = d0 * ut2 - dp0 * uy2;
+            let d12 = d0 * ut2 - dp0 * ux2 - dp0 * uy2;
+            let ep = e + pe;
+            let u0ep = ut * ep;
+            let dpde1 = dpde + 1.0;
+
+            // V = (\epsilon, u^x, u^y)
+            // v = dV/dt
+            // k = d T^{t\nu}/dt = dk/dv * v    because k is linear in d/dt
+            // M = dk/dv
+            // k = M*v
+            // v = M^-1 k
+            // m = M^-1
+            // v = m k
+            //
+            //     ⎡    2     2     2                                        ⎤
+            //     ⎢  u₀  + u₁  + u₂         -2⋅u₀⋅u₁           -2⋅u₀⋅u₂     ⎥
+            //     ⎢  ───────────────        ─────────          ─────────    ⎥
+            //     ⎢        D₁₂                 D₁₂                D₁₂       ⎥
+            //     ⎢                                                         ⎥
+            //     ⎢   2                                                     ⎥
+            //     ⎢-u₀ ⋅u₁⋅(dpde + 1)           D₂             DP₀⋅u₁⋅u₂    ⎥
+            // m = ⎢───────────────────  ─────────────────  ─────────────────⎥
+            //     ⎢   D₁₂⋅(e + p(e))    D₁₂⋅u₀⋅(e + p(e))  D₁₂⋅u₀⋅(e + p(e))⎥
+            //     ⎢                                                         ⎥
+            //     ⎢   2                                                     ⎥
+            //     ⎢-u₀ ⋅u₂⋅(dpde + 1)       DP₀⋅u₁⋅u₂              D₁       ⎥
+            //     ⎢───────────────────  ─────────────────  ─────────────────⎥
+            //     ⎣   D₁₂⋅(e + p(e))    D₁₂⋅u₀⋅(e + p(e))  D₁₂⋅u₀⋅(e + p(e))⎦
+            let d12m = [
+                [ut2 + ux2 + uy2, -2.0 * ut * ux, -2.0 * ut * uy],
+                [-ut2 * ux * dpde1 / ep, d2 / u0ep, dp0 * ux * uy / u0ep],
+                [-ut2 * uy * dpde1 / ep, dp0 * ux * uy / u0ep, d1 / u0ep],
+            ];
+            // d_t (tT^{t\nu}) = T^{t\nu} + t d_t T^{t\nu}
+            let k = [
+                (ktt00 - tt00 / t) / t,
+                (ktt01 - tt01 / t) / t,
+                (ktt02 - tt02 / t) / t,
+            ];
+            let mut v = [0.0f64; 3];
+            for j in 0..3 {
+                for i in 0..3 {
+                    v[j] += d12m[j][i] / d12 * k[i];
+                }
+            }
+            let _dedt = v[0];
+            let dtu = [(ux * v[1] + uy * v[2]) / ut, v[1], v[2]];
+            // d_t(ut*Pi) = Pi*d_t ut + ut*d_t Pi
+            let dtppi = (kutppi - ppi * dtu[0]) / ut;
+            // d_t(ut*pi^{t\nu}) = pi^{t\nu}*d_t ut + ut*d_t pi^{t\nu}
+            let dtpi11 = (kutpi11 - pimn[1][1] * dtu[0]) / ut;
+            let dtpi12 = (kutpi12 - pimn[1][2] * dtu[0]) / ut;
+            let dtpi22 = (kutpi22 - pimn[2][2] * dtu[0]) / ut;
+            // utpi10 = uxpi11 + uypi12
+            // kutpi10 = uxdtpi11 + pi11dtux + uydtpi12 + pi12dtuy
+            let kutpi01 = ux * dtpi11 + pi11 * dtu[1] + uy * dtpi12 + pi12 * dtu[2];
+            let dtpi01 = (kutpi01 - pimn[1][0] * dtu[0]) / ut;
+            // utpi20 = uxpi21 + uypi22
+            let kutpi02 = ux * dtpi12 + pi12 * dtu[1] + uy * dtpi22 + pi22 * dtu[2];
+            let dtpi02 = (kutpi02 - pimn[2][0] * dtu[0]) / ut;
+            // utpi00 = uxpi10 + uypi20
+            let kutpi00 = ux * dtpi01 + pi01 * dtu[1] + uy * dtpi02 + pi02 * dtu[2];
+            let dtpi00 = (kutpi00 - pimn[0][0] * dtu[0]) / ut;
+            let dtpi = [dtpi00 - dtppi, dtpi01, dtpi02];
+
+            (dtu, dtpi)
+        } else {
+            let dtu = [(ut - out) / cdt, (ux - oux) / cdt, (uy - ouy) / cdt];
+            let dtpi = [
+                (t * (pi00 - ppi * delta[0][0]) - ot * (opi00 - oppi * odelta[0][0])) / cdt,
+                (t * (pi01 - ppi * delta[0][1]) - ot * (opi01 - oppi * odelta[0][1])) / cdt,
+                (t * (pi02 - ppi * delta[0][2]) - ot * (opi02 - oppi * odelta[0][2])) / cdt,
+            ];
+            (dtu, dtpi)
+        }
+    };
     let du = [dtu, dxu, dyu];
     let mut ddu = [0.0f64; 3];
     let mut dcuc = u[0] / t;

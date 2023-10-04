@@ -90,6 +90,7 @@ fn f2(t: f64, [e, pe, _, ut, ux, uy]: [f64; C_IDEAL_2D]) -> [f64; F_IDEAL_2D] {
 }
 
 fn flux<const V: usize>(
+    _k: &Arr<F_IDEAL_2D, V, V, 1>,
     [_ov, vs]: [&Arr<F_IDEAL_2D, V, V, 1>; 2],
     [_otrs, trs]: [&Arr<C_IDEAL_2D, V, V, 1>; 2],
     constraints: Constraint<F_IDEAL_2D, C_IDEAL_2D>,
