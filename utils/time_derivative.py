@@ -39,15 +39,19 @@ D1 = removet(DU0+DU1)
 D2 = removet(DU0+DU2)
 D3 = removet(DU0+DU3)
 D12 = removet(DU0+DU1+DU2)
+D13 = removet(DU0+DU1+DU3)
+D23 = removet(DU0+DU2+DU3)
 D123 = removet(DU0+DU1+DU2+DU3)
-Ds = [D0, DP0, D1, D2, D3, D12, D123]
-[D0e, DP0e, D1e, D2e, D3e, D12e, D123e] = [d.expand() for d in Ds]
+Ds = [D0, DP0, D1, D2, D3, D12, D13, D23, D123]
+[D0e, DP0e, D1e, D2e, D3e, D12e, D13e, D23e, D123e] = [d.expand() for d in Ds]
 D0s = symbols("D0", real=True)
 D0ps = symbols("DP0", real=True)
 D1s = symbols("D1", real=True)
 D2s = symbols("D2", real=True)
 D3s = symbols("D3", real=True)
 D12s = symbols("D12", real=True)
+D13s = symbols("D13", real=True)
+D23s = symbols("D23", real=True)
 D123s = symbols("D123", real=True)
 for d in Ds:
     if d == D0e or d == DP0e:
@@ -58,9 +62,5 @@ m2iv = mm[0:2,0:2].inv().applyfunc(factor).subs(D1e, D1s).subs(D0e, D0s)
 pprint(m2iv)
 m3iv = mm[0:3,0:3].inv().applyfunc(factor).subs(D12e, D12s).subs(D1e, D1s).subs(D2e, D2s).subs(D0e, D0s).subs(DP0e, D0ps)
 pprint(m3iv)
-m4iv = mm.inv().applyfunc(factor).subs(D123e, D123s).subs(D1e, D1s).subs(D2e, D2s).subs(D3e, D3s).subs(D0e, D0s).subs(DP0e, D0ps)
-
-# m2 = m.subs(u1*u1+1, u0t*u0t - u2*u2 - u3*u3).applyfunc(simplify).subs(2*u1*u1+1, u0t*u0t + u1*u1 - u2*u2 - u3*u3).applyfunc(simplify)
-# pprint(m2)
-# miv = m2.inv()
-# pprint(miv)
+m4iv = mm.inv().applyfunc(factor).subs(D123e, D123s).subs(D12e, D12s).subs(D13e, D13s).subs(D23e, D23s).subs(D1e, D1s).subs(D2e, D2s).subs(D3e, D3s).subs(D0e, D0s).subs(DP0e, D0ps)
+pprint(m4iv)
