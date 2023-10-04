@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from sympy import *
+import sys
 
 # $k^\nu = \partial_t T^{t\nu} = \partial_t ((\epsilon + p(\epsilon))u^t u^\nu - p g^{t\nu})$ 
 
@@ -58,9 +59,13 @@ for d in Ds:
         pprint(d)
     else:
         pprint(d.subs(D0e, D0s).subs(DP0e, D0ps))
+sys.stdout.flush()
 m2iv = mm[0:2,0:2].inv().applyfunc(factor).subs(D1e, D1s).subs(D0e, D0s)
 pprint(m2iv)
+sys.stdout.flush()
 m3iv = mm[0:3,0:3].inv().applyfunc(factor).subs(D12e, D12s).subs(D1e, D1s).subs(D2e, D2s).subs(D0e, D0s).subs(DP0e, D0ps)
 pprint(m3iv)
+sys.stdout.flush()
 m4iv = mm.inv().applyfunc(factor).subs(D123e, D123s).subs(D12e, D12s).subs(D13e, D13s).subs(D23e, D23s).subs(D1e, D1s).subs(D2e, D2s).subs(D3e, D3s).subs(D0e, D0s).subs(DP0e, D0ps)
 pprint(m4iv)
+sys.stdout.flush()

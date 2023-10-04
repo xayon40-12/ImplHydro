@@ -605,7 +605,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 2e-3;
+    let e = 1e-3;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; Z],
                    _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; Z]| {
@@ -615,7 +615,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
             .sum::<f64>()
             / (XY * XY * Z) as f64;
         let k = m / maxdt;
-        e * k * (maxdt / dx).powi(r.order)
+        e * k * (maxdt / dx).powi(r.order + 1)
     };
 
     let observables: [Observable<F_BOTH_3D, C_BOTH_3D, XY, XY, Z>; 0] = [];

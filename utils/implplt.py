@@ -50,7 +50,7 @@ for arg in sys.argv:
 # crop = 9
 crop = 19
 crop_eta = crop/4
-defaultfromref = 1
+defaultfromref = 0
 maxerr = 1e-6
 num2D = 5
 compare_type = 0 # 0: absolute, 1: relative
@@ -317,7 +317,8 @@ def convall(l, cnds):
                 if len(scs) <= 1:
                     plt.close()
                     return 
-                s1 = scs[-1]
+                s1 = scs[0]
+                # s1 = "GL2"
                 ax.text(0.03, 0.05, r"$\Delta x = "+str(dx)+"$ fm", color="black", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 for (linestyle, fillstyle, mmi) in ally:
@@ -345,7 +346,9 @@ def convall(l, cnds):
                             c = convergence(ds0, fuse(refs[scs[0]], refs[scs[1]]))
                         else:
                             c = convergence(ds0, refs[s1])
-                        print(s0, (c[-1][2]-c[1][2])/(c[-1][5]-c[1][5]))
+                        ln = np.log
+                        print("dt   \t{}\t{}".format(s0, (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[-1][5])-ln(c[1][5]))))
+                        print("count\t{}\t{}".format(s0, (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[1][6])-ln(c[-1][6]))))
                         # c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
                         s = 30
@@ -400,7 +403,7 @@ def convall(l, cnds):
         if use_average_ref:
             prefix += "averageref_"
         else:
-            prefix += "explicitref_"
+            prefix += "{}ref_".format(s1)
         fig.savefig("figures/{}convergence_{}_meanmax_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
         if plot_meanmax_dx:
             fig2.savefig("figures/{}convergence_{}_meanmax_dx_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))

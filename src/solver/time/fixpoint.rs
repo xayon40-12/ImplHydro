@@ -69,7 +69,7 @@ pub fn fixpoint<
     let mut maxe_count = 0;
     while iserr {
         if maxe > 1e50 || maxe_count > 4 {
-            eprintln!("fail {}", failed);
+            eprintln!("reset {}\t: {}", failed, t);
             failed += 1;
             alpha *= (*dx / dt).min(0.5);
             maxe = 1e50;
