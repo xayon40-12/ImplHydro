@@ -446,7 +446,19 @@ fn flux<const V: usize>(
             // utpi00 = uxpi10 + uypi20
             let kutpi00 = ux * dtpi01 + pi01 * dtu[1] + uy * dtpi02 + pi02 * dtu[2];
             let dtpi00 = (kutpi00 - pimn[0][0] * dtu[0]) / ut;
-            let dtpi = [dtpi00 - dtppi, dtpi01, dtpi02];
+            let dttpi00 = pi00 + t * dtpi00;
+            let dttpi01 = pi01 + t * dtpi01;
+            let dttpi02 = pi02 + t * dtpi02;
+            let mut dttppideltat = [0.0f64; 3];
+            for i in 0..3 {
+                dttppideltat[i] = ppi * delta[0][i]
+                    + t * (delta[0][i] * dtppi - ppi * (u[i] * dtu[0] + u[0] * dtu[i]));
+            }
+            let dtpi = [
+                dttpi00 - dttppideltat[0],
+                dttpi01 - dttppideltat[1],
+                dttpi02 - dttppideltat[2],
+            ];
 
             (dtu, dtpi)
         } else {
@@ -636,7 +648,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 1e-1;
+    let e = 5e-2;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_2D]; V]; V]; 1],
                    _trs: &[[[[f64; C_MILNE_BOTH_2D]; V]; V]; 1]| {

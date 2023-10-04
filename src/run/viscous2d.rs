@@ -174,13 +174,13 @@ pub fn run_trento_2d<const V: usize>(
     save_raw: bool,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento);
-    // let gl1 = gauss_legendre_1();
-    let gl1 = gauss_legendre_2();
+    let gl1 = gauss_legendre_1();
+    // let gl1 = gauss_legendre_2();
     let heun = heun();
     let dx = l / V as f64;
     let do_gl1 = |trento| {
-        // hydro2d::<V, 1>(
-        hydro2d::<V, 2>(
+        hydro2d::<V, 1>(
+            // hydro2d::<V, 2>(
             t0,
             tend,
             dx,
