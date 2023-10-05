@@ -352,7 +352,7 @@ def convall(l, cnds):
                         ln = np.log
                         dt_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[-1][5])-ln(c[1][5]))
                         cost_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[1][6])-ln(c[-1][6]))
-                        print("{: <15}\t{:.2}\t{:.2}".format(s0, dt_order, cost_order))
+                        print("{: <10}{: <10}\t{:.2}\t{:.2}".format(cname[mmi], s0, dt_order, cost_order))
                         c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
                         s = 30
