@@ -6,7 +6,7 @@ use crate::{
         space::{kt::kt, Dir, Eigenvalues},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
-        Constraint, Observable,
+        Constraint, Observable, EXACT,
     },
 };
 use boxarray::boxarray;
@@ -374,7 +374,6 @@ fn flux<const V: usize>(
     }
 
     let (dtu, dtpi) = {
-        const EXACT: bool = true;
         if EXACT {
             let ut2 = ut * ut;
             let ux2 = ux * ux;
@@ -649,6 +648,8 @@ pub fn viscous2d<const V: usize, const S: usize>(
     };
 
     let e = 5e-2;
+    // let e = 2e-1;
+    // let e = e.powf(1.0 / r.order as f64);
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_2D]; V]; V]; 1],
                    _trs: &[[[[f64; C_MILNE_BOTH_2D]; V]; V]; 1]| {

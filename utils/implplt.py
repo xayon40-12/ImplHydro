@@ -253,7 +253,7 @@ def convergence(a, ref=None):
         (maxerr, meanerr, squareerr) = compare(eid, id, cut, r, v)
         all += [(v, info, maxerr, meanerr, squareerr, dt, cost, avdt, elapsed)]
     
-    return np.array(all, dtype=object)
+    return np.array(all, dtype=object), ["v", "info", "maxerr", "meanerr", "squareerr", "dt", "cost", "avdt", "elapsed"]
 
 def info2name(info, scheme=True):
     visc = info["viscosity"]
@@ -318,7 +318,9 @@ def convall(l, cnds):
                     plt.close()
                     return 
                 # s1 = scs[0]
-                s1 = scs[-1]
+                # s1 = scs[-1]
+                # s1 = "RadauIIA2"
+                s1 = "GL1"
                 # s1 = "GL2"
                 ax.text(0.03, 0.05, r"$\Delta x = "+str(dx)+"$ fm", color="black", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
@@ -344,13 +346,14 @@ def convall(l, cnds):
                             (a2,b2,c2) = r2
                             return (a1, (b1+b2)/2, c1)
                         if use_average_ref:
-                            c = convergence(ds0, fuse(refs[scs[0]], refs[scs[1]]))
+                            c, cname = convergence(ds0, fuse(refs[scs[0]], refs[scs[1]]))
                         else:
-                            c = convergence(ds0, refs[s1])
+                            c, cname = convergence(ds0, refs[s1])
                         ln = np.log
-                        print("dt   \t{}\t{}".format(s0, (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[-1][5])-ln(c[1][5]))))
-                        print("count\t{}\t{}".format(s0, (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[1][6])-ln(c[-1][6]))))
-                        # c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
+                        dt_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[-1][5])-ln(c[1][5]))
+                        cost_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[1][6])-ln(c[-1][6]))
+                        print("{: <15}\t{:.2}\t{:.2}".format(s0, dt_order, cost_order))
+                        c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
                         s = 30
                         sizes = [4*s if abs(dt-dx/10)<1e-10 else s for dt in c[fromref:,5]]

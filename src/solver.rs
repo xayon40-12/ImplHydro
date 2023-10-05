@@ -25,6 +25,9 @@ use {
 use custom_derive::custom_derive;
 use enum_derive::{enum_derive_util, EnumDisplay, EnumFromStr};
 
+// pub const EXACT: bool = false;
+pub const EXACT: bool = true;
+
 custom_derive! {
     #[derive(Debug, Clone, Copy, EnumDisplay, EnumFromStr)]
     pub enum Solver {
@@ -78,7 +81,11 @@ pub fn save<
     let maxdt = context.maxdt;
     let (v, trs) = &context.vstrs;
     let diffv = &context.total_diff_vs;
-    let schemename = context.r.name;
+    let schemename = if EXACT {
+        format!("{}", context.r.name)
+    } else {
+        format!("{}_F", context.r.name)
+    };
     let integration = context.r.integration;
     let stages = S;
 
@@ -302,6 +309,11 @@ pub fn run<
     } else {
         3
     };
+    let schemename = if EXACT {
+        format!("{}", context.r.name)
+    } else {
+        format!("{}_F", context.r.name)
+    };
     let foldername = &format!(
         "results/{}{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
         name.0,
@@ -310,7 +322,7 @@ pub fn run<
         context.r.integration,
         dim,
         S,
-        &context.r.name,
+        &schemename,
         VX,
         context.maxdt,
         context.dx
