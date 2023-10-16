@@ -60,6 +60,12 @@ plot_meanmax_dx = False
 plot_conv = True
 plot_1D = True
 plot_2D = True
+def refName(srs):
+    # return scs[0]
+    # return scs[-1]
+    # return "RadauIIA2"
+    return "GL1"
+    # return "GL2"
 
 e0 = 10
 emin = 1
@@ -317,11 +323,7 @@ def convall(l, cnds):
                 if len(scs) <= 1:
                     plt.close()
                     return 
-                # s1 = scs[0]
-                # s1 = scs[-1]
-                # s1 = "RadauIIA2"
-                s1 = "GL1"
-                # s1 = "GL2"
+                s1 = refName(scs)
                 ax.text(0.03, 0.05, r"$\Delta x = "+str(dx)+"$ fm", color="black", #, bbox={"facecolor": "white", "pad": 10},
                     transform=ax.transAxes, fontsize=22)
                 for (linestyle, fillstyle, mmi) in ally:
@@ -350,9 +352,10 @@ def convall(l, cnds):
                         else:
                             c, cname = convergence(ds0, refs[s1])
                         ln = np.log
-                        dt_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[-1][5])-ln(c[1][5]))
-                        cost_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[1][6])-ln(c[-1][6]))
-                        print("{: <10}{: <10}\t{:.2}\t{:.2}".format(cname[mmi], s0, dt_order, cost_order))
+                        if len(c) > 2:
+                            dt_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[-1][5])-ln(c[1][5]))
+                            cost_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[1][6])-ln(c[-1][6]))
+                            print("{: <10}{: <10}\t{:.2}\t{:.2}".format(cname[mmi], s0, dt_order, cost_order))
                         c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha
                         s = 30

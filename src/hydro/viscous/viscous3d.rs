@@ -96,6 +96,7 @@ fn gen_constraints<'a>(
                 let pi13 = utpi13 / ut;
                 let pi22 = utpi22 / ut;
                 let pi23 = utpi23 / ut;
+                // let pi33 = (2.0*(ux*uy*pi12+ux*uz*pi13+uy*ux*pi12+uy*uz*pi23+uz*ux*pi13+uz*uy*pi23)+(ux*ux-ut*ut)*pi11+(uy*uy-ut*ut)*pi22)/(ut*ut-uz*uz);
                 let pi33 = utpi33 / ut;
                 let pi01 = (ux * pi11 + uy * pi12 + uz*pi13) / ut;
                 let pi02 = (ux * pi12 + uy * pi22 + uz*pi23) / ut;

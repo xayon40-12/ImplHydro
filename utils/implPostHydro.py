@@ -10,11 +10,13 @@ import cmath
 # git: Duke-QCD/trento
 
 nb_frzout = 10
-
+ymax = 0.5
 dim = 2
 particlize = False
 use_urqmd = False
 for arg in sys.argv[1:]:
+   if "-ymax=" in arg:
+      ymax = arg[6:]
    if arg == "-3d":
       dim = 3
    if arg == "-p":
@@ -66,7 +68,7 @@ def particlization():
 
    print("tend: {}".format(tend))
    # create Surface object
-   surface = frzout.Surface(x, sigma, v, pi=pi, Pi=Pi)
+   surface = frzout.Surface(x, sigma, v, ymax=ymax, pi=pi, Pi=Pi)
 
    hrg = frzout.HRG(.155, species='urqmd', res_width=True)
    lines = ""
@@ -122,7 +124,7 @@ def vn(n, events):
 
    return vn2
 
-totiter = 20
+totiter = 0
 cwd = os.getcwd()
 dirs = os.listdir(cwd)
 if "results" in dirs:
@@ -133,7 +135,7 @@ if "results" in dirs:
    allinfos = {}
    iter = 0
    for d in dirs:
-      if iter >= totiter:
+      if iter >= totiter and totiter != 0:
          break
       iter += 1
       d = "{}/{}".format(res,d)
@@ -168,7 +170,7 @@ if "results" in dirs:
          allevents[id] = events
          allcounts[id] = count
          allinfos[id] = info
-   os.chdir(res)
+   os.chdir(cwd)
    for k in allevents:
       counts = allcounts[k]
       events = allevents[k]
@@ -177,6 +179,8 @@ if "results" in dirs:
 
       v2 = vn(2, events)
       print(v2)
+      with open("v2.txt", "w") as fv:
+          fv.write("v2: {:e}\n".format(v2))
       
 else:
    print("No \"results\" folder found.")

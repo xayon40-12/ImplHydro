@@ -1,10 +1,12 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use rayon::prelude::*;
 
 use crate::solver::{
     context::{Arr, Context},
-    utils::{pfor3d, pfor3d2, Coord},
+    utils::{pfor3d, pfor3d2, pfor3d3, Coord},
 };
-use boxarray::boxarray;
+use boxarray::{boxarray, boxarray_};
 
 use super::schemes::Scheme;
 
@@ -52,6 +54,21 @@ pub fn fixpoint<
     err_thr: ErrThr<F, C, VX, VY, VZ>,
 ) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>, usize)> {
     let [sizex, sizey, sizez] = *local_interaction;
+    let dxyz: Vec<[i32; 3]> = {
+        let mut d = vec![];
+        for dx in -sizex..=sizex {
+            d.push([dx, 0, 0]);
+        }
+        for dy in -sizey..=sizey {
+            d.push([0, -dy, 0]);
+            d.push([0, dy, 0]);
+        }
+        for dz in 1..=sizez {
+            d.push([0, 0, -dz]);
+            d.push([0, 0, dz]);
+        }
+        d
+    };
     *dto = maxdt.min(*dto);
     let mut iserr = true;
     let _ko = k.clone();
@@ -125,10 +142,12 @@ pub fn fixpoint<
         }
 
         let oerrs = errs.clone();
+        let mut errr: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
         let er = err_thr(*t, &vs, &trs);
-        pfor3d2(&mut errs, &mut nbiter, &|(
+        pfor3d3(&mut errs, &mut errr, &mut nbiter, &|(
             Coord { x, y, z },
             errs,
+            errr,
             nbiter,
         )| {
             if *errs {
@@ -138,65 +157,59 @@ pub fn fixpoint<
                     for f in 0..F {
                         let fuf = fu[s][z][y][x][f];
                         let kf = k[s][z][y][x][f];
-                        let e = fuf - kf;
+                        let e = (fuf - kf).abs();
                         if e.is_nan() {
                             panic!(
                                 "\n\nNaN encountered in fixpoint iteration.\nfields: {:?}\n\n",
                                 fu[s][z][y][x]
                             );
                         }
-                        *errs |= e.abs() > er || e.is_nan();
+                        *errr = errr.max(e);
+                        *errs |= e > er || e.is_nan();
                     }
                 }
             }
         });
-
-        let mut tmperrs: Box<[[[bool; VX]; VY]; VZ]> = boxarray(false);
-        pfor3d(&mut tmperrs, &|(Coord { x, y, z }, tmperrs)| {
-            let mut update = |dx, dy, dz| {
-                let i = x as i32 + dx;
-                let j = y as i32 + dy;
-                let k = z as i32 + dz;
-                if i >= 0 && i < VX as i32 && j >= 0 && j < VY as i32 && k >= 0 && k < VZ as i32 {
-                    *tmperrs |= errs[k as usize][j as usize][i as usize];
-                }
-            };
-            for dz in -sizez..=sizez {
-                if dz == 0 {
-                    for dy in -sizey..=sizey {
-                        if dy == 0 {
-                            for dx in -sizex..=sizex {
-                                update(dx, 0, 0);
-                            }
-                        } else {
-                            update(0, dy, 0);
-                        }
-                    }
-                } else {
-                    update(0, 0, dz);
-                }
-            }
-        });
-        errs = tmperrs;
-
-        maxe = 0.0;
-        for z in 0..VZ {
-            for y in 0..VY {
-                for x in 0..VX {
-                    if oerrs[z][y][x] {
-                        for s in 0..S {
-                            for f in 0..F {
-                                let kk = k[s][z][y][x][f];
-                                let ff = fu[s][z][y][x][f];
-                                let d = ff - kk;
-                                maxe = maxe.max(d.abs());
-                                k[s][z][y][x][f] = kk + alpha * d;
-                            }
-                        }
+        for s in 0..S {
+            pfor3d(&mut k[s], &|(Coord { x, y, z }, k)| {
+                if oerrs[z][y][x] {
+                    for f in 0..F {
+                        let kk = k[f];
+                        let ff = fu[s][z][y][x][f];
+                        let d = ff - kk;
+                        k[f] = kk + alpha * d;
                     }
                 }
-            }
+            });
         }
+        let maxe = *errr
+            .par_iter()
+            .flat_map(|e| e.par_iter())
+            .flat_map(|e| e.par_iter())
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap();
+
+        let tmperrs: Box<[[[AtomicBool; VX]; VY]; VZ]> = boxarray_(|_| AtomicBool::new(false));
+        let dxyz_ref = &dxyz;
+        pfor3d(&mut errs, &|(Coord { x, y, z }, errs)| {
+            if *errs {
+                let update = |&[dx, dy, dz]: &[i32; 3]| {
+                    let i = x as i32 + dx;
+                    let j = y as i32 + dy;
+                    let k = z as i32 + dz;
+                    if i >= 0 && i < VX as i32 && j >= 0 && j < VY as i32 && k >= 0 && k < VZ as i32
+                    {
+                        tmperrs[z][y][x].store(true, Ordering::Relaxed);
+                    }
+                };
+                for d in dxyz_ref {
+                    update(d);
+                }
+            }
+        });
+        pfor3d(&mut errs, &|(Coord { x, y, z }, errs)| {
+            *errs = tmperrs[z][y][x].load(Ordering::Relaxed);
+        });
 
         iserr = maxe > er;
 
