@@ -16,8 +16,8 @@ struct Cli {
     #[arg(short, long, default_value_t = Solver::Both)]
     solver_type: Solver,
 
-    #[arg(short, long, default_value_t = false)]
-    raw_data: bool,
+    #[arg(short, long)]
+    raw_data_every: Option<f64>,
 
     #[command(subcommand)]
     command: Dim,
@@ -122,7 +122,7 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
     };
     let dx = l / XY as f64;
     let solver = args.solver_type;
-    let save_raw = args.raw_data;
+    let save_raw = args.raw_data_every;
     match args.command {
         Dim::Dim1 { t0, tend, command } => {
             checkt(t0, tend);

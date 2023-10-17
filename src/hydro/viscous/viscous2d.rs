@@ -574,7 +574,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
     zetaovers: (f64, f64, f64),
     shear_temp_cut: f64,
     freezeout_temp: f64,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> Option<(
     (BArr<F_BOTH_2D, V, V, 1>, BArr<C_MILNE_BOTH_2D, V, V, 1>),
     f64,

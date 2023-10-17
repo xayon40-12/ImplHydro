@@ -295,14 +295,14 @@ pub fn run<
     names: &([&str; F], [&str; C]),
     observables: &[Observable<F, C, VX, VY, VZ>],
     err_thr: ErrThr<F, C, VX, VY, VZ>,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> Option<(
     (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>),
     f64,
     usize,
     usize,
 )> {
-    let do_save = save_raw || observables.len() > 0;
+    let do_save = save_raw.is_some() || observables.len() > 0;
 
     let dim = if VY == 1 {
         1
@@ -415,7 +415,7 @@ pub fn run<
     let now = Instant::now();
 
     let integration = context.r.integration;
-    let save_every = 0.1f64.max(context.maxdt);
+    let save_every = save_raw.unwrap_or(f64::MAX).max(context.maxdt);
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
     let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
@@ -438,7 +438,7 @@ pub fn run<
             nbiter,
             fails,
             observables,
-            save_raw,
+            save_raw.is_some(),
         );
         match err {
             Err(e) => eprintln!("{}", e),

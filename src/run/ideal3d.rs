@@ -15,7 +15,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     maxdt: f64,
     r: Scheme<S>,
     init_e: (&[[[f64; XY]; XY]; Z], usize),
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> HydroOutput<XY, XY, Z, F_IDEAL_3D, C_IDEAL_3D> {
     let (es, i) = init_e;
 
@@ -34,7 +34,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     dtmax: f64,
     r: Scheme<S>,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
     let dx = l / XY as f64;
@@ -56,7 +56,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
     dtmin: f64,
     dtmax: f64,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let imp = gauss_legendre_1();
     const I: usize = 1;
@@ -84,7 +84,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     l: f64,
     dt: f64,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
     let imp = gauss_legendre_1();

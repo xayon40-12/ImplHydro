@@ -105,7 +105,7 @@ pub fn ideal1d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init1D<2>,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> Option<(
     (BArr<F_IDEAL_1D, V, 1, 1>, BArr<C_IDEAL_1D, V, 1, 1>),
     f64,

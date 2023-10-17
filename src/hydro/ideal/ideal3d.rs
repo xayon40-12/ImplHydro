@@ -203,7 +203,7 @@ pub fn ideal3d<const XY: usize, const VZ: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init3D<F_IDEAL_3D>,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> Option<(
     (BArr<F_IDEAL_3D, XY, XY, VZ>, BArr<C_IDEAL_3D, XY, XY, VZ>),
     f64,

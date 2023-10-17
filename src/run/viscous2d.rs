@@ -19,7 +19,7 @@ fn hydro2d<const V: usize, const S: usize>(
     freezeout_temp_gev: f64,
     r: Scheme<S>,
     init_s: (&[[f64; V]; V], usize),
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> HydroOutput<V, V, 1, F_BOTH_2D, C_MILNE_BOTH_2D> {
     let (s, i) = init_s;
     let name = ("InitTrento", i);
@@ -77,7 +77,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     freezeout_temp_mev: f64,
     r: impl Fn(f64) -> Scheme<S>,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento);
     let dx = l / V as f64;
@@ -113,7 +113,7 @@ pub fn run_2d<const V: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let do_gl1 = || {
         run_convergence_2d::<V, 1>(
@@ -171,7 +171,7 @@ pub fn run_trento_2d<const V: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento);
     let gl1 = gauss_legendre_1();

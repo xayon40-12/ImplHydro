@@ -17,7 +17,7 @@ fn hydro2d<const V: usize, const S: usize>(
     maxdt: f64,
     r: Scheme<S>,
     init_e: Option<(&[[f64; V]; V], usize)>,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> HydroOutput<V, V, 1, F_IDEAL_2D, C_IDEAL_2D> {
     let name = if let Some((_, i)) = init_e {
         ("InitTrento", i)
@@ -47,7 +47,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     r: Scheme<S>,
     gubser: bool,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento);
     let dx = l / V as f64;
@@ -75,7 +75,7 @@ pub fn run_2d<const V: usize>(
     dtmax: f64,
     gubser: bool,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let imp = gauss_legendre_1();
     const I: usize = 1;
@@ -103,7 +103,7 @@ pub fn run_trento_2d<const V: usize>(
     l: f64,
     dt: f64,
     nb_trento: usize,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento);
     let imp = gauss_legendre_1();

@@ -13,7 +13,7 @@ fn hydro1d<const V: usize, const S: usize>(
     maxdt: f64,
     r: Scheme<S>,
     use_void: bool,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> HydroOutput<V, 1, 1, F_IDEAL_1D, C_IDEAL_1D> {
     let void = if use_void { "Void" } else { "" };
     println!("Rieman{}", void);
@@ -41,7 +41,7 @@ pub fn run_convergence_1d<const V: usize, const S: usize>(
     dtmin: f64,
     dtmax: f64,
     r: Scheme<S>,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     let dx = l / V as f64;
     let dt0 = dtmax;
@@ -60,7 +60,7 @@ pub fn run_1d<const V: usize>(
     l: f64,
     dtmin: f64,
     dtmax: f64,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) {
     // let imp = implicit_euler(); const I: usize = 3;
     // let imp = radauiia2(); const I: usize = 2;

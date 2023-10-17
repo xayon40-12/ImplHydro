@@ -198,7 +198,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init2D<F_IDEAL_2D>,
-    save_raw: bool,
+    save_raw: Option<f64>,
 ) -> Option<(
     (BArr<F_IDEAL_2D, V, V, 1>, BArr<C_IDEAL_2D, V, V, 1>),
     f64,
