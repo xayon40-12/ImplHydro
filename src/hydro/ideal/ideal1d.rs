@@ -3,7 +3,7 @@ use crate::{
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
         run,
-        space::{kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Eigenvalues, FluxInfo, InDir::*},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint,
@@ -51,7 +51,7 @@ fn flux<const V: usize>(
     bound: Boundary<F_IDEAL_1D, V, 1, 1>,
     pos: [i32; DIM],
     dx: f64,
-    [_ot, _t]: [f64; 2],
+    [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     _opt: &(),
 ) -> [f64; 2] {
@@ -74,23 +74,25 @@ fn flux<const V: usize>(
 
     let diff = kt;
 
-    let (divf0, _) = diff(
+    let flux_infos = [X(FluxInfo {
+        flux: &f1,
+        secondary: &|_, _| [],
+        eigenvalues: Eigenvalues::Analytical(&eigenvalues),
+    })];
+    let [(dxf, _)] = diff(
         (vs, trs),
         bound,
         pos,
-        Dir::X,
-        1.0,
-        &f1,
-        &|_, _| [],
+        t,
+        flux_infos,
         constraints,
-        Eigenvalues::Analytical(&eigenvalues),
         pre,
         post,
         dx,
         theta,
     );
 
-    [-divf0[0], -divf0[1]]
+    [-dxf[0], -dxf[1]]
 }
 
 pub fn ideal1d<const V: usize, const S: usize>(

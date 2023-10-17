@@ -6,7 +6,7 @@ use crate::{
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
         run,
-        space::{kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Eigenvalues, FluxInfo, InDir::*},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint, Observable,
@@ -126,31 +126,25 @@ fn flux<const V: usize>(
     };
 
     let diff = kt;
-    let (divf1, _) = diff(
+    let flux_infos = [
+        X(FluxInfo {
+            flux: &f1,
+            secondary: &|_, _| [],
+            eigenvalues: *eigx,
+        }),
+        Y(FluxInfo {
+            flux: &f2,
+            secondary: &|_, _| [],
+            eigenvalues: *eigy,
+        }),
+    ];
+    let [(dxf, _), (dyf, _)] = diff(
         (vs, trs),
         bound,
         pos,
-        Dir::X,
         t,
-        &f1,
-        &|_, _| [],
+        flux_infos,
         constraints,
-        *eigx,
-        pre,
-        post,
-        dx,
-        theta,
-    );
-    let (divf2, _) = diff(
-        (vs, trs),
-        bound,
-        pos,
-        Dir::Y,
-        t,
-        &f2,
-        &|_, _| [],
-        constraints,
-        *eigy,
         pre,
         post,
         dx,
@@ -166,11 +160,7 @@ fn flux<const V: usize>(
             pe
         }
     };
-    [
-        -divf1[0] - divf2[0] - s,
-        -divf1[1] - divf2[1],
-        -divf1[2] - divf2[2],
-    ]
+    [-dxf[0] - dyf[0] - s, -dxf[1] - dyf[1], -dxf[2] - dyf[2]]
 }
 
 pub fn momentum_anisotropy<const VX: usize, const VY: usize>(

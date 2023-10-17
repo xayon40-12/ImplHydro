@@ -3,7 +3,7 @@ use crate::{
     solver::{
         context::{Arr, BArr, Boundary, Context, Integration, DIM},
         run,
-        space::{kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Eigenvalues, FluxInfo, InDir::*},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint, Observable, EXACT,
@@ -283,12 +283,12 @@ fn u(
     [ut, ux, uy, uz]
 }
 
-fn flux<const XY: usize, const Z: usize>(
-    k: &Arr<F_BOTH_3D, XY, XY, Z>,
-    [_ov, vs]: [&Arr<F_BOTH_3D, XY, XY, Z>; 2],
-    [otrs, trs]: [&Arr<C_BOTH_3D, XY, XY, Z>; 2],
+fn flux<const XY: usize, const VZ: usize>(
+    k: &Arr<F_BOTH_3D, XY, XY, VZ>,
+    [_ov, vs]: [&Arr<F_BOTH_3D, XY, XY, VZ>; 2],
+    [otrs, trs]: [&Arr<C_BOTH_3D, XY, XY, VZ>; 2],
     constraints: Constraint<F_BOTH_3D, C_BOTH_3D>,
-    bound: Boundary<F_BOTH_3D, XY, XY, Z>,
+    bound: Boundary<F_BOTH_3D, XY, XY, VZ>,
     pos: [i32; DIM],
     dx: f64,
     [ot, t]: [f64; 2],
@@ -325,46 +325,30 @@ fn flux<const XY: usize, const Z: usize>(
     };
 
     let diff = kt;
-    let (dxf, dxu) = diff(
+    let flux_infos = [
+        X(FluxInfo {
+            flux: &fxuxpi,
+            secondary: &u,
+            eigenvalues: Eigenvalues::Analytical(&eigenvaluesx),
+        }),
+        Y(FluxInfo {
+            flux: &fyuypi,
+            secondary: &u,
+            eigenvalues: Eigenvalues::Analytical(&eigenvaluesy),
+        }),
+        Z(FluxInfo {
+            flux: &fzuzpi,
+            secondary: &u,
+            eigenvalues: Eigenvalues::Analytical(&eigenvaluesz),
+        }),
+    ];
+    let [(dxf, dxu), (dyf, dyu), (mut dzf, mut dzu)] = diff(
         (vs, trs),
         bound,
         pos,
-        Dir::X,
         t,
-        &fxuxpi,
-        &u,
+        flux_infos,
         constraints,
-        Eigenvalues::Analytical(&eigenvaluesx),
-        pre,
-        post,
-        dx,
-        theta,
-    );
-    let (dyf, dyu) = diff(
-        (vs, trs),
-        bound,
-        pos,
-        Dir::Y,
-        t,
-        &fyuypi,
-        &u,
-        constraints,
-        Eigenvalues::Analytical(&eigenvaluesy),
-        pre,
-        post,
-        dx,
-        theta,
-    );
-    let (mut dzf, mut dzu) = diff(
-        (vs, trs),
-        bound,
-        pos,
-        Dir::Z,
-        t,
-        &fzuzpi,
-        &u,
-        constraints,
-        Eigenvalues::Analytical(&eigenvaluesz),
         pre,
         post,
         dx,
@@ -669,7 +653,7 @@ fn flux<const XY: usize, const Z: usize>(
 }
 
 // viscous hydro is in Milne coordinates
-pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
+pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     name: &(&str, usize),
     maxdt: f64,
     t: f64,
@@ -687,7 +671,7 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
     freezeout_temp: f64,
     save_raw: bool,
 ) -> Option<(
-    (BArr<F_BOTH_3D, XY, XY, Z>, BArr<C_BOTH_3D, XY, XY, Z>),
+    (BArr<F_BOTH_3D, XY, XY, VZ>, BArr<C_BOTH_3D, XY, XY, VZ>),
     f64,
     usize,
     usize,
@@ -698,8 +682,8 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);
 
-    let mut vs: Box<[[[[f64; F_BOTH_3D]; XY]; XY]; Z]> = boxarray(0.0);
-    let mut trs: Box<[[[[f64; C_BOTH_3D]; XY]; XY]; Z]> = boxarray(0.0);
+    let mut vs: Box<[[[[f64; F_BOTH_3D]; XY]; XY]; VZ]> = boxarray(0.0);
+    let mut trs: Box<[[[[f64; C_BOTH_3D]; XY]; XY]; VZ]> = boxarray(0.0);
     let names = (
         [
             "tt00", "tt01", "tt02", "tt03", "utpi11", "utpi12", "utpi13", "utpi22", "utpi23",
@@ -710,11 +694,11 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
             "pi12", "pi13", "pi22", "pi23", "pi33", "Pi",
         ],
     );
-    let k: Box<[[[[[f64; F_BOTH_3D]; XY]; XY]; Z]; S]> = boxarray(0.0);
+    let k: Box<[[[[[f64; F_BOTH_3D]; XY]; XY]; VZ]; S]> = boxarray(0.0);
     let v2 = ((XY - 1) as f64) / 2.0;
-    let v2z = ((Z - 1) as f64) / 2.0;
+    let v2z = ((VZ - 1) as f64) / 2.0;
     let mut max_e = 0.0;
-    for k in 0..Z {
+    for k in 0..VZ {
         for j in 0..XY {
             for i in 0..XY {
                 let x = (i as f64 - v2) * dx;
@@ -761,18 +745,18 @@ pub fn viscous3d<const XY: usize, const Z: usize, const S: usize>(
 
     let e = 1e-3;
     let err_thr = |_t: f64,
-                   vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; Z],
-                   _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; Z]| {
+                   vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; VZ],
+                   _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; VZ]| {
         let m = vs
             .iter()
             .flat_map(|v| v.iter().flat_map(|v| v.iter().map(|v| v[0])))
             .sum::<f64>()
-            / (XY * XY * Z) as f64;
+            / (XY * XY * VZ) as f64;
         let k = m / maxdt;
         e * k * (maxdt / dx).powi(r.order + 1)
     };
 
-    let observables: [Observable<F_BOTH_3D, C_BOTH_3D, XY, XY, Z>; 0] = [];
+    let observables: [Observable<F_BOTH_3D, C_BOTH_3D, XY, XY, VZ>; 0] = [];
 
     let temp_fm = shear_temp_cut / HBARC;
     let ecut = newton(

@@ -3,7 +3,7 @@ use crate::{
     solver::{
         context::{Arr, BArr, Boundary, Context, Integration, DIM},
         run,
-        space::{kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Eigenvalues, FluxInfo, InDir::*},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint, Observable, EXACT,
@@ -316,31 +316,25 @@ fn flux<const V: usize>(
     };
 
     let diff = kt;
-    let (dxf, dxu) = diff(
+    let flux_infos = [
+        X(FluxInfo {
+            flux: &fxuxpi,
+            secondary: &u,
+            eigenvalues: Eigenvalues::Analytical(&eigenvaluesx),
+        }),
+        Y(FluxInfo {
+            flux: &fyuypi,
+            secondary: &u,
+            eigenvalues: Eigenvalues::Analytical(&eigenvaluesy),
+        }),
+    ];
+    let [(dxf, dxu), (dyf, dyu)] = diff(
         (vs, trs),
         bound,
         pos,
-        Dir::X,
         t,
-        &fxuxpi,
-        &u,
+        flux_infos,
         constraints,
-        Eigenvalues::Analytical(&eigenvaluesx),
-        pre,
-        post,
-        dx,
-        theta,
-    );
-    let (dyf, dyu) = diff(
-        (vs, trs),
-        bound,
-        pos,
-        Dir::Y,
-        t,
-        &fyuypi,
-        &u,
-        constraints,
-        Eigenvalues::Analytical(&eigenvaluesy),
         pre,
         post,
         dx,
