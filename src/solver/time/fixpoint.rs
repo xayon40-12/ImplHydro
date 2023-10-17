@@ -5,6 +5,7 @@ use rayon::prelude::*;
 use crate::solver::{
     context::{Arr, Context},
     utils::{pfor3d, pfor3d2, pfor3d3, Coord},
+    DEBUG, ERROR_PROPAGATION,
 };
 use boxarray::{boxarray, boxarray_};
 
@@ -189,27 +190,34 @@ pub fn fixpoint<
             .max_by(|a, b| a.total_cmp(b))
             .unwrap();
 
-        let tmperrs: Box<[[[AtomicBool; VX]; VY]; VZ]> = boxarray_(|_| AtomicBool::new(false));
-        let dxyz_ref = &dxyz;
-        pfor3d(&mut errs, &|(Coord { x, y, z }, errs)| {
-            if *errs {
-                let update = |&[dx, dy, dz]: &[i32; 3]| {
-                    let i = x as i32 + dx;
-                    let j = y as i32 + dy;
-                    let k = z as i32 + dz;
-                    if i >= 0 && i < VX as i32 && j >= 0 && j < VY as i32 && k >= 0 && k < VZ as i32
-                    {
-                        tmperrs[z][y][x].store(true, Ordering::Relaxed);
+        if ERROR_PROPAGATION {
+            let tmperrs: Box<[[[AtomicBool; VX]; VY]; VZ]> = boxarray_(|_| AtomicBool::new(false));
+            let dxyz_ref = &dxyz;
+            pfor3d(&mut errs, &|(Coord { x, y, z }, errs)| {
+                if *errs {
+                    let update = |&[dx, dy, dz]: &[i32; 3]| {
+                        let i = x as i32 + dx;
+                        let j = y as i32 + dy;
+                        let k = z as i32 + dz;
+                        if i >= 0
+                            && i < VX as i32
+                            && j >= 0
+                            && j < VY as i32
+                            && k >= 0
+                            && k < VZ as i32
+                        {
+                            tmperrs[z][y][x].store(true, Ordering::Relaxed);
+                        }
+                    };
+                    for d in dxyz_ref {
+                        update(d);
                     }
-                };
-                for d in dxyz_ref {
-                    update(d);
                 }
-            }
-        });
-        pfor3d(&mut errs, &|(Coord { x, y, z }, errs)| {
-            *errs = tmperrs[z][y][x].load(Ordering::Relaxed);
-        });
+            });
+            pfor3d(&mut errs, &|(Coord { x, y, z }, errs)| {
+                *errs = tmperrs[z][y][x].load(Ordering::Relaxed);
+            });
+        }
 
         iserr = maxe > er;
 
@@ -220,7 +228,6 @@ pub fn fixpoint<
             omaxe = maxe;
         }
 
-        const DEBUG: bool = false;
         if DEBUG {
             let miter = nbiter
                 .iter()
