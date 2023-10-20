@@ -114,15 +114,21 @@ def vn(n, events):
    m2 = [(qn2[i]-ms[i])/w2[i] for i in range(l)]
    
    cn2_n = 0
+   cn2sq_n = 0
    cn2_d = 0
    for i in range(l):
       cn2_n += w2[i]*m2[i]
+      cn2sq_n += w2[i]*m2[i]**2
       cn2_d += w2[i]
    cn2 = cn2_n/cn2_d
+   cn2sq = cn2sq_n/cn2_d
+   sig = np.sqrt(cn2sq-cn2**2)
+   err = sig/np.sqrt(l)
 
-   vn2 = np.sqrt(cn2)
+   vn = np.sqrt(cn2)
+   errvn = err/(2*vn)
 
-   return vn2
+   return vn, errvn
 
 totiter = 0
 cwd = os.getcwd()
@@ -177,10 +183,10 @@ if "results" in dirs:
       info = allinfos[k]
       print(counts, info)
 
-      v2 = vn(2, events)
+      v2, errv2 = vn(2, events)
       print(v2)
       with open("v2.txt", "w") as fv:
-          fv.write("v2: {:e}\n".format(v2))
+          fv.write("v2: {:e}\nerr: {:e}\n".format(v2, errv2))
       
 else:
    print("No \"results\" folder found.")

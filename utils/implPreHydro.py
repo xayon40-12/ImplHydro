@@ -37,10 +37,13 @@ for arg in args:
     if "-n=" in arg:
         num = int(arg[3:])
 
-    # if '-m' is in the argument list, generate 'many' cases
-    if "-m" == arg:
+    # if '-mb' is in the argument list, generate 'many' impact parameters
+    if "-mb" == arg:
+        bs = [3.3,10.5,13.6] # centrality [5%, 45%, 75%]
+        
+    # if '-me' is in the argument list, generate 'many' collision energies
+    if "-me" == arg:
         sigs = [4.23, 6.4, 7.32]
-        bs = [0,3,7]
 
     if "-f" == arg:
         usefreestream = True

@@ -56,7 +56,7 @@ fn gen_constraints<'a>(
     _implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_3D]) -> ([f64; F_BOTH_3D], [f64; C_BOTH_3D]) + 'a + Sync> {
     Box::new(
-        move |t, cur @ [tt00, tt01, tt02, tt03, utpi11, utpi12, utpi13, utpi22, utpi23, utpi33, utppi]| {
+        move |t, cur @ [tt00, tt01, tt02, tt03, utpi11, utpi12, utpi13, utpi22, utpi23, utppi]| {
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
@@ -79,7 +79,11 @@ fn gen_constraints<'a>(
                 let ux = g * t01 / (e + pe);
                 let uy = g * t02 / (e + pe);
                 let uz = g * t03 / (e + pe);
-                let ut = (1.0 + ux * ux + uy * uy + uz * uz).sqrt();
+                let ux2 = ux * ux;
+                let uy2 = uy * uy;
+                let uz2 = uz * uz;
+                let ut2 = 1.0 + ux2 + uy2 + uz2;
+                let ut = ut2.sqrt();
 
                 // check that bulk viscosity does not make pressure negative
                 let ppi = g * utppi;
@@ -96,12 +100,20 @@ fn gen_constraints<'a>(
                 let pi13 = utpi13 / ut;
                 let pi22 = utpi22 / ut;
                 let pi23 = utpi23 / ut;
-                // let pi33 = (2.0*(ux*uy*pi12+ux*uz*pi13+uy*ux*pi12+uy*uz*pi23+uz*ux*pi13+uz*uy*pi23)+(ux*ux-ut*ut)*pi11+(uy*uy-ut*ut)*pi22)/(ut*ut-uz*uz);
-                let pi33 = utpi33 / ut;
-                let pi01 = (ux * pi11 + uy * pi12 + uz*pi13) / ut;
-                let pi02 = (ux * pi12 + uy * pi22 + uz*pi23) / ut;
-                let pi03 = (ux * pi13 + uy * pi23 + uz*pi33) / ut;
-                let pi00 = (ux * pi01 + uy * pi02 + uz*pi03) / ut;
+                let pi33 = (2.0
+                    * (ux * uy * pi12
+                        + ux * uz * pi13
+                        + uy * ux * pi12
+                        + uy * uz * pi23
+                        + uz * ux * pi13
+                        + uz * uy * pi23)
+                    + (ux2 - ut2) * pi11
+                    + (uy2 - ut2) * pi22)
+                    / (ut2 - uz2);
+                let pi01 = (ux * pi11 + uy * pi12 + uz * pi13) / ut;
+                let pi02 = (ux * pi12 + uy * pi22 + uz * pi23) / ut;
+                let pi03 = (ux * pi13 + uy * pi23 + uz * pi33) / ut;
+                let pi00 = (ux * pi01 + uy * pi02 + uz * pi03) / ut;
                 let pi33 = pi00 - pi11 - pi22;
 
                 let m = matrix![
@@ -141,7 +153,6 @@ fn gen_constraints<'a>(
                     pi13 * ut,
                     pi22 * ut,
                     pi23 * ut,
-                    pi33 * ut,
                     ppi * ut,
                 ];
 
@@ -200,7 +211,7 @@ fn eigenvaluesz(
 
 pub fn fitutpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     [
         t * ((e + pe) * ut * ut - pe), // no pi in Ttt because it is substracted in the flux
@@ -212,13 +223,12 @@ pub fn fitutpi(
         ut * pi13,
         ut * pi22,
         ut * pi23,
-        ut * pi33,
         ut * ppi,
     ]
 }
 fn fxuxpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
+    [e, pe, _, ut, ux, uy, uz, _pi00, pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
@@ -231,13 +241,12 @@ fn fxuxpi(
         ux * pi13,
         ux * pi22,
         ux * pi23,
-        ux * pi33,
         ux * ppi,
     ]
 }
 fn fyuypi(
     t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, pi02, _pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi]: [f64; C_BOTH_3D],
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
@@ -250,7 +259,6 @@ fn fyuypi(
         uy * pi13,
         uy * pi22,
         uy * pi23,
-        uy * pi33,
         uy * ppi,
     ]
 }
@@ -270,7 +278,6 @@ fn fzuzpi(
         uz * pi13,
         uz * pi22,
         uz * pi23,
-        uz * pi33,
         uz * ppi,
     ]
 }
@@ -365,10 +372,9 @@ fn flux<const XY: usize, const VZ: usize>(
     let z = pos[2] as usize;
     let y = pos[1] as usize;
     let x = pos[0] as usize;
-    let [ktt00, ktt01, ktt02, ktt03, kutpi11, kutpi12, kutpi13, kutpi22, kutpi23, kutpi33, kutppi] =
+    let [ktt00, ktt01, ktt02, ktt03, kutpi11, kutpi12, kutpi13, kutpi22, kutpi23, kutppi] =
         k[z][y][x];
-    let [tt00, tt01, tt02, tt03, _utpi11, _utpi12, _utpi13, _utpi22, _utpi23, _utpi33, _utppi] =
-        vs[z][y][x];
+    let [tt00, tt01, tt02, tt03, _utpi11, _utpi12, _utpi13, _utpi22, _utpi23, _utppi] = vs[z][y][x];
     let [_oe, _ope, _odpde, out, oux, ouy, ouz, opi00, opi01, opi02, opi03, _opi11, _opi12, _opi13, _opi22, _opi23, _opi33, oppi] =
         otrs[z][y][x];
     let [e, pe, dpde, ut, ux, uy, uz, pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi] =
@@ -487,6 +493,7 @@ fn flux<const XY: usize, const VZ: usize>(
             }
             let _dedt = v[0];
             let dtu = [(ux * v[1] + uy * v[2] + uz * v[3]) / ut, v[1], v[2], v[3]];
+            let udtu = [ut * dtu[0], ux * dtu[1], uy * dtu[2], uz * dtu[3]];
             // d_t(ut*Pi) = Pi*d_t ut + ut*d_t Pi
             let dtppi = (kutppi - ppi * dtu[0]) / ut;
             // d_t(ut*pi^{t\nu}) = pi^{t\nu}*d_t ut + ut*d_t pi^{t\nu}
@@ -495,7 +502,32 @@ fn flux<const XY: usize, const VZ: usize>(
             let dtpi13 = (kutpi13 - pimn[1][3] * dtu[0]) / ut;
             let dtpi22 = (kutpi22 - pimn[2][2] * dtu[0]) / ut;
             let dtpi23 = (kutpi23 - pimn[2][3] * dtu[0]) / ut;
-            let dtpi33 = (kutpi33 - pimn[3][3] * dtu[0]) / ut;
+            // let dtpi33 = (kutpi33 - pimn[3][3] * dtu[0]) / ut;
+            let dtcross = 2.0
+                * ((ux * uy * dtpi12
+                    + ux * uz * dtpi13
+                    + uy * ux * dtpi12
+                    + uy * uz * dtpi23
+                    + uz * ux * dtpi13
+                    + uz * uy * dtpi23)
+                    + (dtu[1] * uy * pi12
+                        + dtu[1] * uz * pi13
+                        + dtu[2] * ux * pi12
+                        + dtu[2] * uz * pi23
+                        + dtu[3] * ux * pi13
+                        + dtu[3] * uy * pi23)
+                    + (ux * dtu[2] * pi12
+                        + ux * dtu[3] * pi13
+                        + uy * dtu[1] * pi12
+                        + uy * dtu[3] * pi23
+                        + uz * dtu[1] * pi13
+                        + uz * dtu[2] * pi23)
+                    + (udtu[1] - udtu[0]) * pi11
+                    + (udtu[2] - udtu[0]) * pi22)
+                + (ux2 - ut2) * dtpi11
+                + (uy2 - ut2) * dtpi22;
+            let dtpi33 = (dtcross - pimn[3][3] * 2.0 * (udtu[0] - udtu[3])) / (ut2 - uz2);
+
             // utpi01 = uxpi11 + uypi12 + uzpi13
             // kutpi01 = uxdtpi11 + pi11dtux + uydtpi12 + pi12dtuy + uzdtpi13 + pi13dtuz
             let kutpi01 = ux * dtpi11
@@ -614,20 +646,22 @@ fn flux<const XY: usize, const VZ: usize>(
         // pi^munu
         for a in 0..4 {
             for b in a..4 {
-                let pi_ns = eta
-                    * ((0..4)
-                        .map(|i| delta[a][i] * du[i][b] + delta[b][i] * du[i][a])
-                        .sum::<f64>()
-                        - 2.0 / 3.0 * delta[a][b] * dcuc);
-                let ipi = -1.0 / 3.0 * pimn[a][b] * dcuc
-                    - pimn[a][b] * u[0] / t
-                    - (0..4)
-                        .map(|i| (u[a] * pimn[b][i] + u[b] * pimn[a][i]) * ddu[i] * g[i][i])
-                        .sum::<f64>()
-                    - t_ipi_g[a][b] / t;
+                if !(a == 3 && b == 3) {
+                    let pi_ns = eta
+                        * ((0..4)
+                            .map(|i| delta[a][i] * du[i][b] + delta[b][i] * du[i][a])
+                            .sum::<f64>()
+                            - 2.0 / 3.0 * delta[a][b] * dcuc);
+                    let ipi = -1.0 / 3.0 * pimn[a][b] * dcuc
+                        - pimn[a][b] * u[0] / t
+                        - (0..4)
+                            .map(|i| (u[a] * pimn[b][i] + u[b] * pimn[a][i]) * ddu[i] * g[i][i])
+                            .sum::<f64>()
+                        - t_ipi_g[a][b] / t;
 
-                spi[i] = -(pimn[a][b] - pi_ns) / taupi + ipi;
-                i += 1;
+                    spi[i] = -(pimn[a][b] - pi_ns) / taupi + ipi;
+                    i += 1;
+                }
             }
         }
         // Pi
@@ -648,7 +682,6 @@ fn flux<const XY: usize, const VZ: usize>(
         -dxf[7] - dyf[7] - dzf[7] + spi[7],
         -dxf[8] - dyf[8] - dzf[8] + spi[8],
         -dxf[9] - dyf[9] - dzf[9] + spi[9],
-        -dxf[10] - dyf[10] - dzf[10] + spi[10],
     ]
 }
 
@@ -687,7 +720,7 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     let names = (
         [
             "tt00", "tt01", "tt02", "tt03", "utpi11", "utpi12", "utpi13", "utpi22", "utpi23",
-            "utpi33", "utPi",
+            "utPi",
         ],
         [
             "e", "pe", "dpde", "ut", "ux", "uy", "uz", "pi00", "pi01", "pi02", "pi03", "pi11",
@@ -743,7 +776,7 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 1e-3;
+    let e = 5e-2;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; VZ],
                    _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; VZ]| {

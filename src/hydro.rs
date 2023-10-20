@@ -93,9 +93,9 @@ pub const F_BOTH_2D: usize =
     Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D2.value());
 pub const F_IDEAL_3D: usize = Viscosity::Ideal.nb_fields(Dim::D3.value());
 pub const F_BULK_3D: usize = Viscosity::Bulk(0.0, 0.0).nb_fields(Dim::D3.value());
-pub const F_SHEAR_3D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value());
+pub const F_SHEAR_3D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value()) - 1;
 pub const F_BOTH_3D: usize =
-    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value());
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value()) - 1;
 
 pub const C_IDEAL_1D: usize = Viscosity::Ideal.nb_transforms(Dim::D1.value());
 pub const C_BULK_1D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D1.value());

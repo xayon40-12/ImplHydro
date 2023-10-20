@@ -518,6 +518,9 @@ pub fn run<
         }
     }
     let elapsed = now.elapsed().as_secs_f64();
-    eprintln!("Elapsed: {:.4}", elapsed);
+    let hour = (elapsed / 3600.0) as u64;
+    let min = ((elapsed - hour as f64 * 3600.0) / 60.0) as u64;
+    let sec = (elapsed - hour as f64 * 3600.0 - min as f64 * 60.0) as u64;
+    eprintln!("Elapsed: {}h{}m{}s", hour, min, sec);
     Some((context.vstrs, context.t, cost as usize, tsteps))
 }
