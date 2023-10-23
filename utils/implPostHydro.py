@@ -5,11 +5,13 @@ import sys
 import numpy as np
 import frzout
 from cmath import exp
+from multiprocessing import Pool
 
 # run frsout
 # git: Duke-QCD/trento
 
 nb_frzout = 10
+nb_threads = 15
 ymax = 0.5
 dim = 2
 particlize = False
@@ -17,6 +19,8 @@ use_urqmd = False
 for arg in sys.argv[1:]:
    if "-ymax=" in arg:
       ymax = arg[6:]
+   if "-threads=" in arg:
+      nb_threads = int(arg[9:])
    if arg == "-3d":
       dim = 3
    if arg == "-p":
@@ -139,11 +143,7 @@ if "results" in dirs:
    allevents = {}
    allcounts = {}
    allinfos = {}
-   iter = 0
-   for d in dirs:
-      if iter >= totiter and totiter != 0:
-         break
-      iter += 1
+   def the_thing(d):
       d = "{}/{}".format(res,d)
       os.chdir(d)
       if particlize:
@@ -167,15 +167,18 @@ if "results" in dirs:
                   vals = {name: np.float64(i) for name, i in zip(pnames, p.split())}
                   parts += [vals]
          events += [np.array(parts)]
-      count = len(events)
       id = str(info)
-      if id in allevents:
-         allevents[id] += events
-         allcounts[id] += count
-      else:
-         allevents[id] = events
-         allcounts[id] = count
-         allinfos[id] = info
+      return events, info
+   with Pool(nb_threads) as p:
+      for events, info in p.map(the_thing, dirs):
+         count = len(events)
+         if id in allevents:
+            allevents[id] += events
+            allcounts[id] += count
+         else:
+            allevents[id] = events
+            allcounts[id] = count
+            allinfos[id] = info
    os.chdir(cwd)
    for k in allevents:
       counts = allcounts[k]
