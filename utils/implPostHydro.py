@@ -4,7 +4,7 @@ import os
 import sys
 import numpy as np
 import frzout
-import cmath
+from cmath import exp
 
 # run frsout
 # git: Duke-QCD/trento
@@ -70,7 +70,7 @@ def particlization():
    # create Surface object
    surface = frzout.Surface(x, sigma, v, ymax=ymax, pi=pi, Pi=Pi)
 
-   hrg = frzout.HRG(.155, species='urqmd', res_width=True)
+   hrg = frzout.HRG(.148, species='urqmd', res_width=True)
    lines = ""
    for i in range(nb_frzout):
       parts = frzout.sample(surface, hrg)
@@ -106,7 +106,7 @@ def vn(n, events):
    l = len(events)
    ms = [len(e) for e in events]
 
-   qn = [sum([cmath.rect(1, n*v["phi"]) for v in p]) for p in events]
+   qn = [sum(exp(1j*n*v["phi"]) for v in p) for p in events]
    qn2 = [abs(z)**2 for z in qn]
    
    w2 = [m*(m-1) for m in ms]
@@ -184,9 +184,13 @@ if "results" in dirs:
       print(counts, info)
 
       v2, errv2 = vn(2, events)
+      v3, errv3 = vn(3, events)
+      v4, errv4 = vn(4, events)
       print(v2)
       with open("v2.txt", "w") as fv:
           fv.write("v2: {:e}\nerr: {:e}\n".format(v2, errv2))
+          fv.write("v3: {:e}\nerr: {:e}\n".format(v3, errv3))
+          fv.write("v4: {:e}\nerr: {:e}\n".format(v4, errv4))
       
 else:
    print("No \"results\" folder found.")
