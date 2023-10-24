@@ -29,8 +29,8 @@ for arg in sys.argv[1:]:
 
 sigs = [7.0]
 energies = [5020] # GeV
-norms = [28.1] # GeV
-bs = [13.6]
+norms = [20] # GeV
+bs = [10.5]
 usefreestream = False
 use3d = False
 
@@ -56,7 +56,7 @@ for c in cells:
     dx = 2*half_size / float(c)
     for sig, energy, normi in zip(sigs,energies,norms):
         for b in bs:
-            dir = "norm{}/TeV{}/b{}/s{}".format(normi,energy, b, c)
+            dir = "TeV{}/b{}/s{}".format(energy, b, c)
             try:
                 os.makedirs(dir)
             except FileExistsError:
@@ -67,8 +67,8 @@ for c in cells:
             # git: Duke-QCD/frzout
 
             eta_c = int(float(c)/4)
-            eta_c -= eta_c%2
-            etam=eta_c*dx/2*0.999999 # trick to have odd number of cells
+            eta_c += 1-eta_c%2;
+            print("eta_c: ", eta_c)
             norm = normi/0.1973 # fm^-1
 
             if use3d:
@@ -76,7 +76,7 @@ for c in cells:
                 # executable: trento-3
                 #
                 # u [--form-width]: form width
-                # w [-w]: vucleon width
+                # w [-w]: nucleon width
                 # nc [-m]: constituent number
                 # ki: Structure
                 # v [-v]: constituent width ki*(w*nc**0.25)
@@ -97,7 +97,7 @@ for c in cells:
                 # u -> 0.88
                 # w -> 1.3
                 # nc -> 16.4
-                # ki -> 0.50     ---->  v: 1.308
+                # ki -> 0.50     ---->  v: 1.308 however v<=w so v: 1.3
                 # kt,min -> 0.33
                 # alpha -> 4.6
                 # beta -> 0.19
@@ -107,9 +107,8 @@ for c in cells:
                 # f -> 1.0
                 # tau0,Pb -> 1.3
                 # N -> 2.0       ----> Nscale: 2.0
-                trento_cmd = \
-                    "trento3d Pb Pb --eta-max {etam} --eta-step {dx} --random-seed {r} -p {p} -k {k} -w {w} -d {d} --b-min {b} --b-max {b} -e {e} --normalization {n} --xy-max {l} --xy-step {dx} {num} -o {dir}" \
-                    .format(etam=etam, r=random_seed, p=p, k=sigmafluct, w=rcp, d=dmin, e=energy, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
+                trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -w {w} -m {nc} -v {v} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
+                    .format(u=0.88, w=1.3, nc=16.4, v=1.3, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=1.713, pmid=0.333, k=0.104, f=1.0, Nscale=2.0, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
             else:
                 trento_cmd = \
                     "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \

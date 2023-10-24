@@ -142,12 +142,12 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
         })
         .collect::<Vec<Vec<_>>>();
 
-    let vxy = arr.len();
-    let vx = vxy / VY;
+    let vyz = arr.len();
+    let vz = vyz / VY;
     let vy = VY;
-    let vz = arr[0].len();
+    let vx = arr[0].len();
 
-    if vz != VZ || vxy != VX * VY {
+    if vx != VX || vyz != VY * VZ {
         panic!(
             "Wrong matrix size in load_matrix_3d: expected {}x{}x{}, found {}x{}x{}",
             VX, VY, VZ, vx, vy, vz
@@ -157,7 +157,7 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
     for k in 0..VZ {
         for j in 0..VY {
             for i in 0..VX {
-                mat[k][j][i] = arr[i + VX * j][k];
+                mat[k][j][i] = arr[j + VY * k][i];
             }
         }
     }
