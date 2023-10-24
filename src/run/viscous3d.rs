@@ -2,7 +2,7 @@ use crate::{
     hydro::{
         eos::{conformal_massless, hotqcd, wb, EOSs},
         utils::{converge, prepare_trento_3d},
-        viscous::viscous3d::{init_from_entropy_density_3d, viscous3d},
+        viscous::viscous3d::{init_from_energy_density_3d, viscous3d},
         Eos, HydroOutput, C_BOTH_3D, F_BOTH_3D,
     },
     solver::{time::schemes::*, Solver},
@@ -18,10 +18,10 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     r: Scheme<S>,
-    init_s: (&[[[f64; XY]; XY]; Z], usize),
+    init_e: (&[[[f64; XY]; XY]; Z], usize),
     save_raw: Option<f64>,
 ) -> HydroOutput<XY, XY, Z, F_BOTH_3D, C_BOTH_3D> {
-    let (s, i) = init_s;
+    let (e, i) = init_e;
     let name = ("InitTrento", i);
     let eos = EOSs::WB;
     // let eos = EOSs::HotQCD;
@@ -43,7 +43,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
         ),
     };
     println!("{}{}", name.0, name.1);
-    let init = init_from_entropy_density_3d(t0, s, p, dpde, entropy);
+    let init = init_from_energy_density_3d(t0, e, p, dpde, entropy);
     viscous3d::<XY, Z, S>(
         &name,
         maxdt,

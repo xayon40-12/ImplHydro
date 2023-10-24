@@ -1,7 +1,7 @@
 use crate::{
     hydro::{
         utils::{eigenvaluesk, Coordinate},
-        C_IDEAL_3D, F_IDEAL_3D,
+        C_IDEAL_3D, F_IDEAL_3D, HBARC,
     },
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
@@ -16,15 +16,14 @@ use boxarray::boxarray;
 
 use crate::hydro::{solve_v, Eos, Init3D, VOID};
 
-pub fn init_from_entropy_density_3d<'a, const VX: usize, const VY: usize, const VZ: usize>(
+pub fn init_from_energy_density_3d<'a, const VX: usize, const VY: usize, const VZ: usize>(
     t0: f64,
-    s: &'a [[[f64; VX]; VY]; VZ],
+    e: &'a [[[f64; VX]; VY]; VZ],
     p: Eos<'a>,
     dpde: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_IDEAL_3D] + 'a> {
     Box::new(move |(i, j, k), _| {
-        let s = s[k][j][i].max(VOID);
-        let e = s;
+        let e = e[k][j][i].max(VOID) / HBARC;
         let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0, 0.0];
         f0(t0, vars)
     })
