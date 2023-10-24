@@ -20,7 +20,6 @@ rcp = 0.88
 nc = 6
 wc = 0.53
 dmin = 1.12
-norm = 20/0.1973 # fm^-1
 tau_fs = 0.48 # fm
 
 # handle arguments
@@ -28,8 +27,10 @@ cells, args = [], []
 for arg in sys.argv[1:]:
     (args if arg.startswith("-") else cells).append(arg)
 
-sigs = [6.4]
-bs = [3]
+sigs = [7.0]
+energies = [5020] # GeV
+norms = [28.1] # GeV
+bs = [13.6]
 usefreestream = False
 use3d = False
 
@@ -37,14 +38,13 @@ for arg in args:
     if "-n=" in arg:
         num = int(arg[3:])
 
+    if "-norm=" in arg:
+        norms = [float(arg[6:])]
+
     # if '-mb' is in the argument list, generate 'many' impact parameters
     if "-mb" == arg:
         bs = [3.3,10.5,13.6] # centrality [5%, 45%, 75%]
         
-    # if '-me' is in the argument list, generate 'many' collision energies
-    if "-me" == arg:
-        sigs = [4.23, 6.4, 7.32]
-
     if "-f" == arg:
         usefreestream = True
 
@@ -54,9 +54,9 @@ for arg in args:
 
 for c in cells:
     dx = 2*half_size / float(c)
-    for sig in sigs:
+    for sig, energy, normi in zip(sigs,energies,norms):
         for b in bs:
-            dir = "sig{}/b{}/s{}".format(sig, b, c)
+            dir = "norm{}/TeV{}/b{}/s{}".format(normi,energy, b, c)
             try:
                 os.makedirs(dir)
             except FileExistsError:
@@ -69,11 +69,47 @@ for c in cells:
             eta_c = int(float(c)/4)
             eta_c -= eta_c%2
             etam=eta_c*dx/2*0.999999 # trick to have odd number of cells
+            norm = normi/0.1973 # fm^-1
 
             if use3d:
+                # Duke-QCD/trento3d-2.0
+                # executable: trento-3
+                #
+                # u [--form-width]: form width
+                # w [-w]: vucleon width
+                # nc [-m]: constituent number
+                # ki: Structure
+                # v [-v]: constituent width ki*(w*nc**0.25)
+                # kt,min [-t]: transverse mom scale
+                # alpha [--shape-alpha]: shape parameter
+                # betha [--shape-beta]: shape parameter
+                # Nmid [--mid-norm]: mid norm
+                # pmid [--mid-power]: mid power
+                # Nfb: fireball normalization Nfb = Nmid*mp*(sqrt(sNN)/mp)**pmid
+                # sqrt(sNN) [-s]: collision energy GeV
+                # mp: nucleon mass
+                # k [-k]: fluctuation
+                # f [--flatness]: flatness
+                # tau0,Pb: hydrodynamisation time
+                # Nscale [--overall-norm]: overall scale
+                #
+                # From arxiv 2306.08665
+                # u -> 0.88
+                # w -> 1.3
+                # nc -> 16.4
+                # ki -> 0.50     ---->  v: 1.308
+                # kt,min -> 0.33
+                # alpha -> 4.6
+                # beta -> 0.19
+                # N200 -> 9.6    ----\  Nmid: 1.713
+                # N5020 -> 28.1  ----/  pmid: 0.333
+                # k -> 0.104
+                # f -> 1.0
+                # tau0,Pb -> 1.3
+                # N -> 2.0       ----> Nscale: 2.0
                 trento_cmd = \
-                    "trento3d Pb Pb --eta-max {etam} --eta-step {dx} --random-seed {r} -p {p} -k {k} -w {w} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --xy-max {l} --xy-step {dx} {num} -o {dir}" \
-                    .format(etam=etam, r=random_seed, p=p, k=sigmafluct, w=rcp, d=dmin, sig=sig, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
+                    "trento3d Pb Pb --eta-max {etam} --eta-step {dx} --random-seed {r} -p {p} -k {k} -w {w} -d {d} --b-min {b} --b-max {b} -e {e} --normalization {n} --xy-max {l} --xy-step {dx} {num} -o {dir}" \
+                    .format(etam=etam, r=random_seed, p=p, k=sigmafluct, w=rcp, d=dmin, e=energy, b=b, l=half_size, dx=dx, n=norm, num=num, dir=dir)
             else:
                 trento_cmd = \
                     "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \

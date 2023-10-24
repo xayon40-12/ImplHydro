@@ -130,7 +130,8 @@ def vn(n, events):
    err = sig/np.sqrt(l)
 
    vn = np.sqrt(cn2)
-   errvn = err/(2*vn)
+   # errvn = err/(2*vn)
+   errvn = np.sqrt(err)
 
    return vn, errvn
 
@@ -187,13 +188,9 @@ if "results" in dirs:
       print(counts, info)
 
       v2, errv2 = vn(2, events)
-      v3, errv3 = vn(3, events)
-      v4, errv4 = vn(4, events)
       print(v2)
       with open("v2.txt", "w") as fv:
-          fv.write("v2: {:e}\nerr: {:e}\n".format(v2, errv2))
-          fv.write("v3: {:e}\nerr: {:e}\n".format(v3, errv3))
-          fv.write("v4: {:e}\nerr: {:e}\n".format(v4, errv4))
+          fv.write("{:e} {:e}\n".format(v2, errv2))
       
 else:
    print("No \"results\" folder found.")
