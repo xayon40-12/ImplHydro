@@ -42,7 +42,7 @@ enum Dim {
         command: Hydro,
     },
     Dim3 {
-        #[arg(long, default_value_t = 1.3)]
+        #[arg(long, default_value_t = 0.48)]
         t0: f64,
         #[arg(long, default_value_t = 0.0)]
         tend: f64,

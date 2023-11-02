@@ -68,7 +68,6 @@ for c in cells:
 
             eta_c = int(float(c)/4)
             eta_c += 1-eta_c%2;
-            print("eta_c: ", eta_c)
             norm = normi/0.1973 # fm^-1
 
             if use3d:

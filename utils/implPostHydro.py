@@ -107,33 +107,42 @@ def particlization():
    print("done\n")
 
 def vn(n, events):
-   l = len(events)
-   ms = [len(e) for e in events]
+   events = [[[v for v in f if abs(v["eta"])<0.8 and 0.2 < v["pT"] and v["pT"] < 5.0 and v["charge"] != 0] for f in e] for e in events]
+   mss = [[len(f) for f in e] for e in events]
 
-   qn = [sum(exp(1j*n*v["phi"]) for v in p) for p in events]
-   qn2 = [abs(z)**2 for z in qn]
+   qnss = [[sum(exp(1j*n*v["phi"]) for v in f) for f in e] for e in events]
+   qn2ss = [[abs(qn)**2 for qn in qns] for qns in qnss]
    
-   w2 = [m*(m-1) for m in ms]
+   w2ss = [[m*(m-1) for m in ms] for ms in mss]
    
-   m2 = [(qn2[i]-ms[i])/w2[i] for i in range(l)]
+   m2ss = [[(qn2-m)/w2 for qn2, m, w2 in zip(qn2s, ms, w2s)] for qn2s, ms, w2s in zip(qn2ss, mss, w2ss)]
    
-   cn2_n = 0
-   cn2sq_n = 0
-   cn2_d = 0
-   for i in range(l):
-      cn2_n += w2[i]*m2[i]
-      cn2sq_n += w2[i]*m2[i]**2
-      cn2_d += w2[i]
-   cn2 = cn2_n/cn2_d
-   cn2sq = cn2sq_n/cn2_d
-   sig = np.sqrt(cn2sq-cn2**2)
-   err = sig/np.sqrt(l)
+   n_cn2s = [sum(w2*m2 for w2, m2 in zip(w2s, m2s)) for w2s, m2s in zip(w2ss, m2ss)]
+   d_cn2s = [sum(w2s) for w2s in w2ss]
 
-   vn = np.sqrt(cn2)
-   # errvn = err/(2*vn)
-   errvn = np.sqrt(err)
+   def jackknife(fn, ns, ds):
+      n = sum(ns)
+      d = sum(ds)
+      value = fn(n, d)
 
-   return vn, errvn
+      l = len(ns)
+      fs = [fn(n-ni, d-di) for ni, di in zip(ns,ds)]
+      fh = sum(fs)/l
+      vh = sum((f-fh)**2 for f in fs)/l
+      error2 = (l-1)*vh
+      return value, np.sqrt(error2)
+
+   def fun(n, d):
+      return np.sqrt(n/d)
+
+   return jackknife(fun, n_cn2s, d_cn2s)
+
+def dch_deta(deta, events):
+   l = sum(len(e) for e in events)
+   dchdetas = [len([v for v in f if abs(v["eta"])<=deta and 0.2 < v["pT"] and v["pT"] < 5.0 and v["charge"] != 0])/(2*deta) for e in events for f in e]
+   dchdeta = sum(dchdetas)/l
+   errdchdeta = np.sqrt(sum(x**2 for x in dchdetas)/l-dchdeta**2)/np.sqrt(len(events))
+   return dchdeta, errdchdeta
 
 totiter = 0
 cwd = os.getcwd()
@@ -142,7 +151,6 @@ if "results" in dirs:
    res = "{}/results".format(cwd)
    dirs = os.listdir(res)
    allevents = {}
-   allcounts = {}
    allinfos = {}
    def the_thing(d):
       d = "{}/{}".format(res,d)
@@ -153,7 +161,7 @@ if "results" in dirs:
 
       info = {k: v.strip() for [k, v] in np.loadtxt("info.txt", dtype=object, delimiter=":")}
       info.pop("case")
-      events = []
+      freezeout_events = []
       parts = []
       # each line: ID charge pT ET mT phi y eta
       pnames = ["ID", "charge", "pT", "ET", "mT", "phi", "y", "eta"]
@@ -161,36 +169,39 @@ if "results" in dirs:
          for p in f.read().split("\n"):
             if "#" in p:
                if len(parts) > 0:
-                  events += [np.array(parts)]
+                  freezeout_events += [np.array(parts)]
                parts = []
             else:
                if len(p) > 0:
                   vals = {name: np.float64(i) for name, i in zip(pnames, p.split())}
                   parts += [vals]
-         events += [np.array(parts)]
+         freezeout_events += [np.array(parts)]
       id = str(info)
-      return events, info
+      return freezeout_events, info
    with Pool(nb_threads) as p:
-      for events, info in p.map(the_thing, dirs):
-         count = len(events)
+      for freezeout_events, info in p.map(the_thing, dirs):
+         count = len(freezeout_events)
          if id in allevents:
-            allevents[id] += events
-            allcounts[id] += count
+            allevents[id] += [freezeout_events]
          else:
-            allevents[id] = events
-            allcounts[id] = count
+            allevents[id] = [freezeout_events]
             allinfos[id] = info
    os.chdir(cwd)
    for k in allevents:
-      counts = allcounts[k]
       events = allevents[k]
       info = allinfos[k]
-      print(counts, info)
+      # print(len(events), info)
+      # print()
 
       v2, errv2 = vn(2, events)
-      print(v2)
-      with open("v2.txt", "w") as fv:
-          fv.write("{:e} {:e}\n".format(v2, errv2))
+      dchdeta, errdchdeta = dch_deta(0.25, events)
+      with open("observables.txt", "w") as fv:
+          msg = "v2: {:e} {:e}\n".format(v2, errv2)
+          print(msg, end="")
+          fv.write(msg)
+          msg = "dch_deta: {:e} {:e}\n".format(dchdeta, errdchdeta)
+          print(msg, end="")
+          fv.write(msg)
       
 else:
    print("No \"results\" folder found.")
