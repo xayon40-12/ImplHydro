@@ -157,8 +157,8 @@ pub fn zigzag3D<const C: usize, const VX: usize, const VY: usize, const VZ: usiz
 ) -> Vec<Surface3D> {
     let mut surfaces: Vec<Surface3D> = vec![];
 
-    let dtdx = dt * dx;
-    let dxdx = dx * dx;
+    let dtdxdx = dt * dx * dx;
+    let dxdxdx = dx * dx * dx;
 
     let vx2 = (VX - 1) as f64 * 0.5;
     let vy2 = (VY - 1) as f64 * 0.5;
@@ -190,10 +190,10 @@ pub fn zigzag3D<const C: usize, const VX: usize, const VY: usize, const VZ: usiz
                 let lbulk = bulk_id.and_then(|bid| Some(f[bid]));
 
                 for (fr, ht, hx, hy, hz, s, dir) in [
-                    (ft, 0.5, 0.0, 0.0, 0.0, dxdx, 0),
-                    (fx, 0.0, 0.5, 0.0, 0.0, dtdx, 1),
-                    (fy, 0.0, 0.0, 0.5, 0.0, dtdx, 2),
-                    (fz, 0.0, 0.0, 0.0, 0.5, dtdx, 3),
+                    (ft, 0.5, 0.0, 0.0, 0.0, dxdxdx, 0),
+                    (fx, 0.0, 0.5, 0.0, 0.0, dtdxdx, 1),
+                    (fy, 0.0, 0.0, 0.5, 0.0, dtdxdx, 2),
+                    (fz, 0.0, 0.0, 0.0, 0.5, dtdxdx, 3),
                 ] {
                     let er = fr[e_id] - freezeout_energy;
                     if e * er <= 0.0 {
