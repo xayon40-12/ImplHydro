@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import frzout
 from cmath import exp
+import math
 from multiprocessing import Pool
 
 # run frsout
@@ -17,6 +18,8 @@ dim = 2
 particlize = False
 use_urqmd = False
 for arg in sys.argv[1:]:
+   if "-nbfreezeout=" in arg:
+      nb_frzout = int(arg[13:])
    if "-ymax=" in arg:
       ymax = arg[6:]
    if "-threads=" in arg:
@@ -27,9 +30,65 @@ for arg in sys.argv[1:]:
       particlize = True
    if arg == "-u":
       use_urqmd = True
-      
 
-def particlization():
+def MilnetoCart_vector(eta, v):
+   sh = math.sh(eta)
+   ch = math.ch(eta)
+   at = v[0]*ch + v[3]*sh
+   az = v[0]*sh + v[3]*ch
+
+   v[0] = at
+   v[3] = az
+
+def MilnetoCart_tensor(eta, v): # simetric tensor
+   sh = math.sh(eta)
+   ch = math.ch(eta)
+   vtt = v[0][0]*ch*ch + 2.0*v[0][3]*sh*ch + v[3][3]*sh*sh
+   vtx = v[0][1]*ch + v[1][3]*sh
+   vty = v[0][2]*ch + v[2][3]*sh
+   vtz = v[0][0]*sh*ch + v[0][3]*(sh*sh + ch*ch) + v[3][3]*sh*ch
+   vxz = v[0][1]*sh + v[1][3]*ch
+   vyz = v[0][2]*sh + v[2][3]*ch
+   vzz = v[0][0]*sh*sh + 2.0*v[0][3]*sh*ch + v[3][3]*ch*ch
+
+   v[0][0] = vtt
+   v[0][1] = vtx
+   v[1][0] = vtx
+   v[0][2] = vty
+   v[2][0] = vty
+   v[0][3] = vtz
+   v[3][0] = vtz
+   v[1][3] = vxz
+   v[3][1] = vxz
+   v[2][3] = vyz
+   v[3][2] = vyz
+   v[3][3] = vzz
+
+def MilnetoCart_velocity(eta, v): # v: [vx,vy,veta]
+   sh = math.sinh(eta)
+   ch = math.cosh(eta)
+   vz = (sh+v[2]*ch)/(ch+v[2]*sh)
+   vx = v[0]*(ch-vz*sh)
+   vy = v[1]*(ch-vz*sh)
+
+   v[0] = vx
+   v[1] = vy
+   v[2] = vz
+
+def MilnetoCart_sigma_zigzag(eta, dtau, deta, v):
+   sh = math.sinh(eta)
+   ch = math.cosh(eta)
+   dx = deta
+   dt = dtau*ch + deta*sh
+   dz = dtau*sh + deta*ch
+   dzdeta = dz/deta
+   dtdtau = dt/dtau
+   v[0] *= dzdeta
+   v[1] *= dzdeta*dtdtau
+   v[2] *= dzdeta*dtdtau
+   v[3] *= dtdtau
+
+def particlization(info):
    print("Running frzout:")
    if dim == 2:
       # t x y sig_t sig_x sig_y vx vy pi00 pi01 pi02 pi11 pi12 pi22 pi33 Pi
@@ -37,14 +96,15 @@ def particlization():
       surface_data = np.fromfile('surface.dat', dtype='float64').reshape((-1, 16))
 
       # extract usual sub-arrays
-      x, sigma, v, _ = np.hsplit(surface_data, [3, 6, 8])
+      x, sigma, v, pi, _ = np.hsplit(surface_data, [3, 6, 8, 15])
       tend = x[-1][0]
+      pi = [[pi[0], pi[1], pi[2]], [pi[1], pi[3], pi[4]], [pi[2], pi[4], pi[5]]]
 
       # create mapping of pi components
       pi = dict(
-         xx=surface_data[:, 11],
-         xy=surface_data[:, 12],
-         yy=surface_data[:, 13]
+         xx=pi[1][1],
+         xy=pi[1][2],
+         yy=pi[2][2],
       )
 
       # extract bulk pressure
@@ -55,16 +115,28 @@ def particlization():
       surface_data = np.fromfile('surface.dat', dtype='float64').reshape((-1, 22))
 
       # extract usual sub-arrays
-      x, sigma, v, _ = np.hsplit(surface_data, [4, 8, 11])
+      x, sigma, v, pi, _ = np.hsplit(surface_data, [4, 8, 11, 21])
       tend = x[-1][0]
+      pi = [[pi[0], pi[1], pi[2], pi[3]]
+           ,[pi[1], pi[4], pi[5], pi[6]]
+           ,[pi[2], pi[5], pi[7], pi[8]]
+           ,[pi[3], pi[6], pi[8], pi[9]]]
+
+      eta = x[3]
+      deta = info["dx"]
+      dtau = info["dt"]
+      MilnetoCart_vector(eta, x)
+      MilnetoCart_sigma_zigzag(eta, dtau, deta, sigma)
+      MilnetoCart_velocity(eta, v)
+      MilnetoCart_tensor(eta, pi)
 
       # create mapping of pi components
       pi = dict(
-         xx=surface_data[:, 15],
-         xy=surface_data[:, 16],
-         xz=surface_data[:, 17],
-         yy=surface_data[:, 18],
-         yz=surface_data[:, 19]
+         xx=pi[1][1],
+         xy=pi[1][2],
+         xz=pi[1][3],
+         yy=pi[2][2],
+         yz=pi[2][3],
       )
 
       # extract bulk pressure
@@ -126,11 +198,14 @@ def vn(n, events):
       value = fn(n, d)
 
       l = len(ns)
-      fs = [fn(n-ni, d-di) for ni, di in zip(ns,ds)]
-      fh = sum(fs)/l
-      vh = sum((f-fh)**2 for f in fs)/l
-      error2 = (l-1)*vh
-      return value, np.sqrt(error2)
+      if l > 1:
+         fs = [fn(n-ni, d-di) for ni, di in zip(ns,ds)]
+         fh = sum(fs)/l
+         vh = sum((f-fh)**2 for f in fs)/l
+         error2 = (l-1)*vh
+         return value, np.sqrt(error2)
+      else:
+         return value, 0
 
    def fun(n, d):
       return np.sqrt(n/d)
@@ -155,12 +230,14 @@ if "results" in dirs:
    def the_thing(d):
       d = "{}/{}".format(res,d)
       os.chdir(d)
-      if particlize:
-         print(d)
-         particlization()
 
       info = {k: v.strip() for [k, v] in np.loadtxt("info.txt", dtype=object, delimiter=":")}
       info.pop("case")
+
+      if particlize:
+         print(d)
+         particlization(info)
+
       freezeout_events = []
       parts = []
       # each line: ID charge pT ET mT phi y eta
@@ -194,7 +271,7 @@ if "results" in dirs:
       # print()
 
       v2, errv2 = vn(2, events)
-      dchdeta, errdchdeta = dch_deta(0.25, events)
+      dchdeta, errdchdeta = dch_deta(0.5, events)
       with open("observables.txt", "w") as fv:
           msg = "v2: {:e} {:e}\n".format(v2, errv2)
           print(msg, end="")
