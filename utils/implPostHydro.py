@@ -32,8 +32,8 @@ for arg in sys.argv[1:]:
       use_urqmd = True
 
 def MilnetoCart_vector(eta, v):
-   sh = math.sh(eta)
-   ch = math.ch(eta)
+   sh = math.sinh(eta)
+   ch = math.cosh(eta)
    at = v[0]*ch + v[3]*sh
    az = v[0]*sh + v[3]*ch
 
@@ -41,8 +41,8 @@ def MilnetoCart_vector(eta, v):
    v[3] = az
 
 def MilnetoCart_tensor(eta, v): # simetric tensor
-   sh = math.sh(eta)
-   ch = math.ch(eta)
+   sh = math.sinh(eta)
+   ch = math.cosh(eta)
    vtt = v[0][0]*ch*ch + 2.0*v[0][3]*sh*ch + v[3][3]*sh*sh
    vtx = v[0][1]*ch + v[1][3]*sh
    vty = v[0][2]*ch + v[2][3]*sh
@@ -98,7 +98,7 @@ def particlization(info):
       # extract usual sub-arrays
       x, sigma, v, pi, _ = np.hsplit(surface_data, [3, 6, 8, 15])
       tend = x[-1][0]
-      pi = [[pi[0], pi[1], pi[2]], [pi[1], pi[3], pi[4]], [pi[2], pi[4], pi[5]]]
+      pi = [[pi[:,0], pi[:,1], pi[:,2]], [pi[:,1], pi[:,3], pi[:,4]], [pi[:,2], pi[:,4], pi[:,5]]]
 
       # create mapping of pi components
       pi = dict(
@@ -117,18 +117,19 @@ def particlization(info):
       # extract usual sub-arrays
       x, sigma, v, pi, _ = np.hsplit(surface_data, [4, 8, 11, 21])
       tend = x[-1][0]
-      pi = [[pi[0], pi[1], pi[2], pi[3]]
-           ,[pi[1], pi[4], pi[5], pi[6]]
-           ,[pi[2], pi[5], pi[7], pi[8]]
-           ,[pi[3], pi[6], pi[8], pi[9]]]
+      pi = np.array([[pi[:,0], pi[:,1], pi[:,2], pi[:,3]]
+           ,[pi[:,1], pi[:,4], pi[:,5], pi[:,6]]
+           ,[pi[:,2], pi[:,5], pi[:,7], pi[:,8]]
+           ,[pi[:,3], pi[:,6], pi[:,8], pi[:,9]]])
 
-      eta = x[3]
-      deta = info["dx"]
-      dtau = info["dt"]
-      MilnetoCart_vector(eta, x)
-      MilnetoCart_sigma_zigzag(eta, dtau, deta, sigma)
-      MilnetoCart_velocity(eta, v)
-      MilnetoCart_tensor(eta, pi)
+      deta = float(info["dx"])
+      dtau = float(info["maxdt"])
+      for i in range(len(x)):
+         eta = x[i][3]
+         MilnetoCart_vector(eta, x[i])
+         MilnetoCart_sigma_zigzag(eta, dtau, deta, sigma[i])
+         MilnetoCart_velocity(eta, v[i])
+         MilnetoCart_tensor(eta, pi[:,:,i])
 
       # create mapping of pi components
       pi = dict(
