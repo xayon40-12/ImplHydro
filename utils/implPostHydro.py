@@ -11,6 +11,9 @@ from multiprocessing import Pool
 # run frsout
 # git: Duke-QCD/trento
 
+
+HBARC = 0.1973 # GeV.fm
+
 nb_frzout = 10
 nb_threads = 15
 ymax = 0.5
@@ -30,6 +33,11 @@ for arg in sys.argv[1:]:
       particlize = True
    if arg == "-u":
       use_urqmd = True
+
+def contravariant_covariant(v):
+   v[1] *= -1
+   v[2] *= -1
+   v[3] *= -1
 
 def MilnetoCart_vector(eta, v):
    sh = math.sinh(eta)
@@ -75,19 +83,6 @@ def MilnetoCart_velocity(eta, v): # v: [vx,vy,veta]
    v[1] = vy
    v[2] = vz
 
-def MilnetoCart_sigma_zigzag(eta, dtau, deta, v):
-   sh = math.sinh(eta)
-   ch = math.cosh(eta)
-   dx = deta
-   dt = dtau*ch + deta*sh
-   dz = dtau*sh + deta*ch
-   dzdeta = dz/deta
-   dtdtau = dt/dtau
-   v[0] *= dzdeta
-   v[1] *= dzdeta*dtdtau
-   v[2] *= dzdeta*dtdtau
-   v[3] *= dtdtau
-
 def particlization(info):
    print("Running frzout:")
    if dim == 2:
@@ -97,6 +92,13 @@ def particlization(info):
 
       # extract usual sub-arrays
       x, sigma, v, pi, _ = np.hsplit(surface_data, [3, 6, 8, 15])
+      Pi = surface_data[:, 15]
+
+      # covert viscosity to GeV
+      Pi *= HBARC
+      for i in range(len(pi[0])):
+         pi[:,i] *= HBARC
+         
       tend = x[-1][0]
       pi = [[pi[:,0], pi[:,1], pi[:,2]], [pi[:,1], pi[:,3], pi[:,4]], [pi[:,2], pi[:,4], pi[:,5]]]
 
@@ -107,8 +109,6 @@ def particlization(info):
          yy=pi[2][2],
       )
 
-      # extract bulk pressure
-      Pi = surface_data[:, 15]
    elif dim == 3:
       # t x y z sig_t sig_x sig_y zig_z vx vy vz pi00 pi01 pi02 pi03 pi11 pi12 pi13 pi22 pi23 pi33 Pi
       # 0 1 2 3 4     5     6     7     8  9  10 11   12   13   14   15   16   17   18   19   20   21
@@ -116,18 +116,26 @@ def particlization(info):
 
       # extract usual sub-arrays
       x, sigma, v, pi, _ = np.hsplit(surface_data, [4, 8, 11, 21])
+      Pi = surface_data[:, 21]
+
+      # covert viscosity to GeV
+      Pi *= HBARC
+      for i in range(len(pi[0])):
+         pi[:,i] *= HBARC
+      
       tend = x[-1][0]
       pi = np.array([[pi[:,0], pi[:,1], pi[:,2], pi[:,3]]
-           ,[pi[:,1], pi[:,4], pi[:,5], pi[:,6]]
-           ,[pi[:,2], pi[:,5], pi[:,7], pi[:,8]]
-           ,[pi[:,3], pi[:,6], pi[:,8], pi[:,9]]])
+                    ,[pi[:,1], pi[:,4], pi[:,5], pi[:,6]]
+                    ,[pi[:,2], pi[:,5], pi[:,7], pi[:,8]]
+                    ,[pi[:,3], pi[:,6], pi[:,8], pi[:,9]]])
 
       deta = float(info["dx"])
       dtau = float(info["maxdt"])
       for i in range(len(x)):
          eta = x[i][3]
          MilnetoCart_vector(eta, x[i])
-         MilnetoCart_sigma_zigzag(eta, dtau, deta, sigma[i])
+         MilnetoCart_vector(eta, sigma[i])
+         contravariant_covariant(sigma[i])
          MilnetoCart_velocity(eta, v[i])
          MilnetoCart_tensor(eta, pi[:,:,i])
 
@@ -139,9 +147,6 @@ def particlization(info):
          yy=pi[2][2],
          yz=pi[2][3],
       )
-
-      # extract bulk pressure
-      Pi = surface_data[:, 21]
 
    print("tend: {}".format(tend))
    # create Surface object
