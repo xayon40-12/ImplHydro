@@ -136,11 +136,8 @@ def particlization(info):
                     ,[pi[:,2], pi[:,5], pi[:,7], pi[:,8]]
                     ,[pi[:,3], pi[:,6], pi[:,8], pi[:,9]]])
 
-      deta = float(info["dx"])
-      dtau = float(info["maxdt"])
       for i in range(len(x)):
          eta = x[i][3]
-         tau = x[i][0]
          MilnetoCart_coord(x[i])
          MilnetoCart_vector(-eta, sigma[i])
          MilnetoCart_velocity(eta, v[i])
@@ -159,7 +156,7 @@ def particlization(info):
    # create Surface object
    surface = frzout.Surface(x, sigma, v, ymax=ymax, pi=pi, Pi=Pi)
 
-   hrg = frzout.HRG(.148, species='urqmd')
+   hrg = frzout.HRG(.151, species='urqmd')
    lines = ""
    for i in range(nb_frzout):
       parts = frzout.sample(surface, hrg)
