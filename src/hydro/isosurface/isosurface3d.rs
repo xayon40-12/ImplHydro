@@ -142,42 +142,43 @@ impl Surface3D {
     }
 }
 
+/// Expect Milne coordinates
 #[allow(non_snake_case)]
-pub fn zigzag3D<const C: usize, const VX: usize, const VY: usize, const VZ: usize>(
-    fields: &Arr<C, VX, VY, VZ>,
-    new_fields: &Arr<C, VX, VY, VZ>,
+pub fn zigzag3D<const C: usize, const SX: usize, const SY: usize, const SETA: usize>(
+    fields: &Arr<C, SX, SY, SETA>,
+    new_fields: &Arr<C, SX, SY, SETA>,
     e_id: usize,
-    u_ids: [usize; 4],              // [ut,ux,uy,uz]
+    u_ids: [usize; 4],              // [utau,ux,uy,ueta]
     shear_ids: Option<[usize; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
     bulk_id: Option<usize>,
-    t: f64, // time for fields
+    tau: f64, // time for fields
     dx: f64,
-    dt: f64,               // where t+dt is the time of new_fields
+    dtau: f64,             // where t+dt is the time of new_fields
     freezeout_energy: f64, // fm^-4
 ) -> Vec<Surface3D> {
     let mut surfaces: Vec<Surface3D> = vec![];
 
-    let dtdxdx = dt * dx * dx;
-    let dxdxdx = dx * dx * dx;
+    let dy = dx;
+    let deta = tau * dx;
 
-    let vx2 = (VX - 1) as f64 * 0.5;
-    let vy2 = (VY - 1) as f64 * 0.5;
-    let vz2 = (VZ - 1) as f64 * 0.5;
+    let vx2 = (SX - 1) as f64 * 0.5;
+    let vy2 = (SY - 1) as f64 * 0.5;
+    let veta2 = (SETA - 1) as f64 * 0.5;
 
-    for lz in 0..VZ - 1 {
-        for ly in 0..VY - 1 {
-            for lx in 0..VX - 1 {
-                let f = fields[lz][ly][lx];
-                let fx = fields[lz][ly][lx + 1];
-                let fy = fields[lz][ly + 1][lx];
-                let fz = fields[lz + 1][ly][lx];
-                let ft = new_fields[lz][ly][lx];
+    for leta in 0..SETA - 1 {
+        for ly in 0..SY - 1 {
+            for lx in 0..SX - 1 {
+                let f = fields[leta][ly][lx];
+                let fx = fields[leta][ly][lx + 1];
+                let fy = fields[leta][ly + 1][lx];
+                let feta = fields[leta + 1][ly][lx];
+                let ftau = new_fields[leta][ly][lx];
                 let e = f[e_id] - freezeout_energy;
 
-                let lut = f[u_ids[0]];
-                let lvx = f[u_ids[1]] / lut;
-                let lvy = f[u_ids[2]] / lut;
-                let lvz = f[u_ids[3]] / lut;
+                let lutau = f[u_ids[0]];
+                let lvx = f[u_ids[1]] / lutau;
+                let lvy = f[u_ids[2]] / lutau;
+                let lveta = f[u_ids[3]] / lutau;
 
                 let lpi = shear_ids.and_then(|ids| {
                     let mut pi = [0.0; 10];
@@ -189,27 +190,28 @@ pub fn zigzag3D<const C: usize, const VX: usize, const VY: usize, const VZ: usiz
 
                 let lbulk = bulk_id.and_then(|bid| Some(f[bid]));
 
-                for (fr, ht, hx, hy, hz, s, dir) in [
-                    (ft, 0.5, 0.0, 0.0, 0.0, dxdxdx, 0),
-                    (fx, 0.0, 0.5, 0.0, 0.0, dtdxdx, 1),
-                    (fy, 0.0, 0.0, 0.5, 0.0, dtdxdx, 2),
-                    (fz, 0.0, 0.0, 0.0, 0.5, dtdxdx, 3),
+                // output in covariant form, so '-' for the space components
+                for (fr, htau, hx, hy, heta, s, dir) in [
+                    (ftau, 0.5, 0.0, 0.0, 0.0, dx * dy * deta, 0),
+                    (fx, 0.0, 0.5, 0.0, 0.0, -dtau * dy * deta, 1),
+                    (fy, 0.0, 0.0, 0.5, 0.0, -dtau * dx * deta, 2),
+                    (feta, 0.0, 0.0, 0.0, 0.5, -dtau * dx * dy, 3),
                 ] {
                     let er = fr[e_id] - freezeout_energy;
                     if e * er <= 0.0 {
-                        let rut = fr[u_ids[0]];
-                        let rvx = fr[u_ids[1]] / rut;
-                        let rvy = fr[u_ids[2]] / rut;
-                        let rvz = fr[u_ids[3]] / rut;
+                        let rutau = fr[u_ids[0]];
+                        let rvx = fr[u_ids[1]] / rutau;
+                        let rvy = fr[u_ids[2]] / rutau;
+                        let rveta = fr[u_ids[3]] / rutau;
 
-                        let t = t + ht * dt;
+                        let tau = tau + htau * dtau;
                         let x = (lx as f64 - vx2 + hx) * dx;
                         let y = (ly as f64 - vy2 + hy) * dx;
-                        let z = (lz as f64 - vz2 + hz) * dx;
+                        let eta = (leta as f64 - veta2 + heta) * dx;
 
                         let vx = (lvx + rvx) * 0.5;
                         let vy = (lvy + rvy) * 0.5;
-                        let vz = (lvz + rvz) * 0.5;
+                        let veta = (lveta + rveta) * 0.5;
 
                         let mut sigma = [0.0; 4];
                         sigma[dir] = e.signum() * s;
@@ -225,9 +227,9 @@ pub fn zigzag3D<const C: usize, const VX: usize, const VY: usize, const VZ: usiz
                         });
 
                         let surf = Surface3D {
-                            pos: [t, x, y, z],
+                            pos: [tau, x, y, eta],
                             sigma,
-                            v: [vx, vy, vz],
+                            v: [vx, vy, veta],
                             pi,
                             bulk,
                         };

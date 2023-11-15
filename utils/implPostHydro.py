@@ -17,7 +17,7 @@ HBARC = 0.1973 # GeV.fm
 nb_frzout = 10
 nb_threads = 15
 ymax = 0.5
-dim = 2
+dim = 3
 particlize = False
 use_urqmd = False
 for arg in sys.argv[1:]:
@@ -34,11 +34,18 @@ for arg in sys.argv[1:]:
    if arg == "-u":
       use_urqmd = True
 
-def contravariant_covariant(v):
+def cont_cov(v):
    v[1] *= -1
    v[2] *= -1
    v[3] *= -1
 
+def MilnetoCart_coord(v):
+   t = v[0]*math.cosh(v[3])
+   z = v[0]*math.sinh(v[3])
+
+   v[0] = t
+   v[3] = z
+   
 def MilnetoCart_vector(eta, v):
    sh = math.sinh(eta)
    ch = math.cosh(eta)
@@ -47,7 +54,7 @@ def MilnetoCart_vector(eta, v):
 
    v[0] = at
    v[3] = az
-
+   
 def MilnetoCart_tensor(eta, v): # simetric tensor
    sh = math.sinh(eta)
    ch = math.cosh(eta)
@@ -94,7 +101,7 @@ def particlization(info):
       x, sigma, v, pi, _ = np.hsplit(surface_data, [3, 6, 8, 15])
       Pi = surface_data[:, 15]
 
-      # covert viscosity to GeV
+      # convert viscosity to GeV
       Pi *= HBARC
       for i in range(len(pi[0])):
          pi[:,i] *= HBARC
@@ -118,7 +125,7 @@ def particlization(info):
       x, sigma, v, pi, _ = np.hsplit(surface_data, [4, 8, 11, 21])
       Pi = surface_data[:, 21]
 
-      # covert viscosity to GeV
+      # convert viscosity to GeV
       Pi *= HBARC
       for i in range(len(pi[0])):
          pi[:,i] *= HBARC
@@ -133,9 +140,9 @@ def particlization(info):
       dtau = float(info["maxdt"])
       for i in range(len(x)):
          eta = x[i][3]
-         MilnetoCart_vector(eta, x[i])
-         MilnetoCart_vector(eta, sigma[i])
-         contravariant_covariant(sigma[i])
+         tau = x[i][0]
+         MilnetoCart_coord(x[i])
+         MilnetoCart_vector(-eta, sigma[i])
          MilnetoCart_velocity(eta, v[i])
          MilnetoCart_tensor(eta, pi[:,:,i])
 
@@ -152,7 +159,7 @@ def particlization(info):
    # create Surface object
    surface = frzout.Surface(x, sigma, v, ymax=ymax, pi=pi, Pi=Pi)
 
-   hrg = frzout.HRG(.148, species='urqmd', res_width=True)
+   hrg = frzout.HRG(.148, species='urqmd')
    lines = ""
    for i in range(nb_frzout):
       parts = frzout.sample(surface, hrg)
@@ -220,7 +227,7 @@ def vn(n, events):
 
 def dch_deta(deta, events):
    l = sum(len(e) for e in events)
-   dchdetas = [len([v for v in f if abs(v["eta"])<=deta and 0.2 < v["pT"] and v["pT"] < 5.0 and v["charge"] != 0])/(2*deta) for e in events for f in e]
+   dchdetas = [len([v for v in f if abs(v["eta"])<=deta and v["charge"] != 0])/(2*deta) for e in events for f in e]
    dchdeta = sum(dchdetas)/l
    errdchdeta = np.sqrt(sum(x**2 for x in dchdetas)/l-dchdeta**2)/np.sqrt(len(events))
    return dchdeta, errdchdeta

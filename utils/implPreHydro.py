@@ -106,10 +106,10 @@ for c in cells:
                 # f -> 1.0
                 # tau0,Pb -> 1.3
                 # N -> 2.0       ----> Nscale: 2.0
-                # trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -w {w} -m {nc} -v {v} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
-                #     .format(u=0.88, w=1.3, nc=16.4, v=1.3, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=1.713, pmid=0.333, k=0.104, f=1.0, Nscale=2.0, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
-                trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -d {d} -w {w} -m {nc} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
-                    .format(u=rcp, d=dmin, w=wc, nc=nc, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=0.113, pmid=0.615, k=k, f=1.0, Nscale=1.0, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
+                trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -w {w} -m {nc} -v {v} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
+                    .format(u=0.88, w=1.3, nc=16.4, v=1.3, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=1.713, pmid=0.333, k=0.104, f=1.0, Nscale=2.0, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
+                # trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -d {d} -w {w} -m {nc} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
+                #     .format(u=rcp, d=dmin, w=wc, nc=nc, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=0.113, pmid=0.615, k=k, f=1.0, Nscale=2.0, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
             else:
                 trento_cmd = \
                     "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
