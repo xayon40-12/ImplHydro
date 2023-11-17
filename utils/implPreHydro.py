@@ -66,7 +66,7 @@ for c in cells:
             # run trento
             # git: Duke-QCD/frzout
 
-            eta_c = int(float(c)/4)
+            eta_c = int(float(c)/2)
             eta_c += 1-eta_c%2;
             norm = normi/0.1973 # fm^-1
 

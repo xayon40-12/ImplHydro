@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Result, Write};
 
-use crate::solver::context::Arr;
+use crate::solver::context::{Arr, DIM};
 
 use super::{Freezout, IsoSurfaceHandler};
 
@@ -14,7 +14,7 @@ pub type IsoSurface2DFun<'a, const C: usize, const VX: usize, const VY: usize, c
         Option<[usize; 7]>,  // ID [pitt,pitx,pity,pixx,pixy,piyy,pizz]
         Option<usize>,       // ID bulk
         f64,                 // time for fields
-        f64,                 // dx
+        [f64; DIM],          // [dx,dy,dz]
         f64,                 // dt
         f64,                 // freezeout energy fm^-4
     ) -> Vec<Surface2D>;
@@ -31,7 +31,7 @@ pub struct IsoSurface2DHandler<
     u_ids: [usize; 3],             // [ut,ux,uy]
     shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
     bulk_id: Option<usize>,
-    dx: f64,
+    dxs: [f64; DIM],
     freezeout_energy: f64, // fm^-4
     iso_surface_fun: IsoSurface2DFun<'a, C, VX, VY, VZ>,
 }
@@ -45,7 +45,7 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         u_ids: [usize; 3],             // [ut,ux,uy]
         shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
         bulk_id: Option<usize>,
-        dx: f64,
+        dxs: [f64; DIM],
         freezeout_energy: f64, // fm^-4
     ) -> Result<IsoSurface2DHandler<'a, C, VX, VY, VZ>> {
         let file = File::create(filename)?;
@@ -55,7 +55,7 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
             u_ids,
             shear_ids,
             bulk_id,
-            dx,
+            dxs,
             freezeout_energy,
             iso_surface_fun: &zigzag2D,
         };
@@ -81,7 +81,7 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
             self.shear_ids,
             self.bulk_id,
             ot,
-            self.dx,
+            self.dxs,
             nt - ot,
             self.freezeout_energy,
         );
@@ -152,14 +152,14 @@ pub fn zigzag2D<const C: usize, const VX: usize, const VY: usize, const VZ: usiz
     shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
     bulk_id: Option<usize>,
     t: f64, // time for fields
-    dx: f64,
+    dxs: [f64; DIM],
     dt: f64,               // where t+dt is the time of new_fields
     freezeout_energy: f64, // fm^-4
 ) -> Vec<Surface2D> {
     let mut surfaces: Vec<Surface2D> = vec![];
 
-    let dtdx = dt * dx;
-    let dxdx = dx * dx;
+    let dx = dxs[0];
+    let dy = dxs[1];
 
     let vx2 = (VX - 1) as f64 * 0.5;
     let vy2 = (VY - 1) as f64 * 0.5;
@@ -188,9 +188,9 @@ pub fn zigzag2D<const C: usize, const VX: usize, const VY: usize, const VZ: usiz
             let lbulk = bulk_id.and_then(|bid| Some(f[bid]));
 
             for (fr, ht, hx, hy, s, dir) in [
-                (ft, 0.5, 0.0, 0.0, dxdx, 0),
-                (fx, 0.0, 0.5, 0.0, dtdx, 1),
-                (fy, 0.0, 0.0, 0.5, dtdx, 2),
+                (ft, 0.5, 0.0, 0.0, dx * dy, 0),
+                (fx, 0.0, 0.5, 0.0, dt * dy, 1),
+                (fy, 0.0, 0.0, 0.5, dt * dx, 2),
             ] {
                 let er = fr[e_id] - freezeout_energy;
                 if e * er <= 0.0 {

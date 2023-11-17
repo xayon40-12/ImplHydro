@@ -31,7 +31,7 @@ pub type Fun<
     Constraint<F, C>,
     Boundary<F, VX, VY, VZ>,
     [i32; DIM], // position in index [x,y]
-    f64,        // dx
+    [f64; DIM], // [dx, dy, dz]
     [f64; 2],   // [old t, current t]
     [f64; 2],   // [dt, current dt]
     &Opt,
@@ -53,14 +53,14 @@ pub struct Context<
     pub constraints: Constraint<'a, F, C>,
     pub boundary: Boundary<'a, F, VX, VY, VZ>,
     pub post_constraints: Option<Constraint<'a, F, C>>,
-    pub local_interaction: [i32; 3],
+    pub local_interaction: [i32; DIM],
     pub vstrs: (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>),
     pub ovstrs: (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>), // old
     pub total_diff_vs: BArr<F, VX, VY, VZ>,
     pub k: Box<[Arr<F, VX, VY, VZ>; S]>,
     pub r: Scheme<S>,
     pub dt: f64,
-    pub dx: f64,
+    pub dxs: [f64; DIM],
     pub maxdt: f64,
     pub t: f64,
     pub ot: f64,

@@ -79,7 +79,9 @@ pub fn save<
     let t0 = context.t0;
     let tend = context.tend;
     let t = context.t;
-    let dx = context.dx;
+    let dx = context.dxs[0];
+    let dy = context.dxs[1];
+    let dz = context.dxs[2];
     let maxdt = context.maxdt;
     let (v, trs) = &context.vstrs;
     let diffv = &context.total_diff_vs;
@@ -126,8 +128,8 @@ pub fn save<
         for k in 0..VZ {
             for j in 0..VY {
                 for i in 0..VX {
-                    let z = (k as f64 - ((VZ - 1) as f64) / 2.0) * dx;
-                    let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dx;
+                    let z = (k as f64 - ((VZ - 1) as f64) / 2.0) * dz;
+                    let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dy;
                     let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
                     let v = v[k][j][i];
                     let vars = trs[k][j][i];
@@ -215,8 +217,8 @@ pub fn save<
             .collect::<Vec<&str>>()
             .join(" ");
         let info = format!(
-            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\nvariables: {}\n",
-            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, maxdt, integration, schemename, stages, name, case, viscosity, variables,
+            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\ndy: {:e}\ndz: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\nvariables: {}\n",
+            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, dy, dz, maxdt, integration, schemename, stages, name, case, viscosity, variables,
         );
         std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
     }
@@ -240,7 +242,9 @@ pub fn save_info<
 ) -> std::io::Result<()> {
     let t0 = context.t0;
     let tend = context.tend;
-    let dx = context.dx;
+    let dx = context.dxs[0];
+    let dy = context.dxs[1];
+    let dz = context.dxs[2];
     let maxdt = context.maxdt;
     let schemename = context.r.name;
     let integration = context.r.integration;
@@ -272,8 +276,8 @@ pub fn save_info<
         .collect::<Vec<&str>>()
         .join(" ");
     let info = format!(
-            "t0: {:e}\ntend: {:e}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\nvariables: {}\n",
-            t0, tend, VX, VY, VZ, dx, maxdt, integration, schemename, stages, name, case, viscosity, variables,
+            "t0: {:e}\ntend: {:e}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\ndy: {:e}\ndz: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\nvariables: {}\n",
+            t0, tend, VX, VY, VZ, dx, dy, dz, maxdt, integration, schemename, stages, name, case, viscosity, variables,
         );
     std::fs::write(&format!("{}/info.txt", foldername), info.as_bytes())?;
 
@@ -317,7 +321,7 @@ pub fn run<
         format!("{}_F", context.r.name)
     };
     let foldername = &format!(
-        "results/{}{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx",
+        "results/{}{}_{:?}_{:?}{}d{}_{}_{}c_{:e}dt_{:e}dx{:e}dy{:e}dz",
         name.0,
         name.1,
         viscosity,
@@ -327,7 +331,9 @@ pub fn run<
         &schemename,
         VX,
         context.maxdt,
-        context.dx
+        context.dxs[0],
+        context.dxs[1],
+        context.dxs[2],
     );
     let err = std::fs::create_dir_all(foldername);
     match err {
@@ -369,7 +375,7 @@ pub fn run<
                     [ids["ut"], ids["ux"], ids["uy"], ids["uz"]],
                     shear_ids,
                     bulk_id,
-                    context.dx,
+                    context.dxs,
                     freezeout_energy,
                 )
                 .map_or_else(
@@ -398,7 +404,7 @@ pub fn run<
                     [ids["ut"], ids["ux"], ids["uy"]],
                     shear_ids,
                     bulk_id,
-                    context.dx,
+                    context.dxs,
                     freezeout_energy,
                 )
                 .map_or_else(

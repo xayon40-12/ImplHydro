@@ -50,7 +50,7 @@ fn flux<const V: usize>(
     constraints: Constraint<F_IDEAL_1D, C_IDEAL_1D>,
     bound: Boundary<F_IDEAL_1D, V, 1, 1>,
     pos: [i32; DIM],
-    dx: f64,
+    dxs: [f64; DIM],
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     _opt: &(),
@@ -88,7 +88,7 @@ fn flux<const V: usize>(
         constraints,
         pre,
         post,
-        dx,
+        dxs,
         theta,
     );
 
@@ -135,7 +135,7 @@ pub fn ideal1d<const V: usize, const S: usize>(
         k,
         r,
         dt: 1e10,
-        dx,
+        dxs: [dx, 0.0, 0.0],
         maxdt,
         t,
         ot: t - 1.0,

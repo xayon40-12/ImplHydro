@@ -7,6 +7,7 @@ import frzout
 from cmath import exp
 import math
 from multiprocessing import Pool
+import matplotlib.pyplot as plt
 
 # run frsout
 # git: Duke-QCD/trento
@@ -188,8 +189,27 @@ def particlization(info):
 
    print("done\n")
 
+def jackknife(fn, ns, ds):
+   l = len(ns)
+   if l > 1:
+      n = sum(ns)
+      d = sum(ds)
+      value = fn(n, d)
+
+      fs = [fn(n-ni, d-di) for ni, di in zip(ns,ds)]
+      fh = sum(fs)/l
+      vh = sum((f-fh)**2 for f in fs)/l
+      error2 = (l-1)*vh
+      return value, np.sqrt(error2)
+   else:
+      return 0, 0
+
 def vn(n, events):
    events = [[[v for v in f if abs(v["eta"])<0.8 and 0.2 < v["pT"] and v["pT"] < 5.0 and v["charge"] != 0] for f in e] for e in events]
+
+   def fun(n, d):
+      return np.sqrt(n/d)
+
    mss = [[len(f) for f in e] for e in events]
 
    qnss = [[sum(exp(1j*n*v["phi"]) for v in f) for f in e] for e in events]
@@ -202,32 +222,25 @@ def vn(n, events):
    n_cn2s = [sum(w2*m2 for w2, m2 in zip(w2s, m2s)) for w2s, m2s in zip(w2ss, m2ss)]
    d_cn2s = [sum(w2s) for w2s in w2ss]
 
-   def jackknife(fn, ns, ds):
-      n = sum(ns)
-      d = sum(ds)
-      value = fn(n, d)
+   val, err = jackknife(fun, n_cn2s, d_cn2s)
 
-      l = len(ns)
-      if l > 1:
-         fs = [fn(n-ni, d-di) for ni, di in zip(ns,ds)]
-         fh = sum(fs)/l
-         vh = sum((f-fh)**2 for f in fs)/l
-         error2 = (l-1)*vh
-         return value, np.sqrt(error2)
-      else:
-         return value, 0
+   with open("v{}.txt".format(n), "w") as fv:
+       msg = "v{}: {:e} {:e}\n".format(n, val, err)
+       print(msg, end="")
+       fv.write(msg)
 
-   def fun(n, d):
-      return np.sqrt(n/d)
-
-   return jackknife(fun, n_cn2s, d_cn2s)
-
-def dch_deta(deta, events):
-   l = sum(len(e) for e in events)
-   dchdetas = [len([v for v in f if abs(v["eta"])<=deta and v["charge"] != 0])/(2*deta) for e in events for f in e]
-   dchdeta = sum(dchdetas)/l
-   errdchdeta = np.sqrt(sum(x**2 for x in dchdetas)/l-dchdeta**2)/np.sqrt(len(events))
-   return dchdeta, errdchdeta
+def dch_deta(events):
+   deta = 0.25
+   ran = np.arange(-5, 5, deta)
+   etas = [eta+deta/2 for eta in ran]
+   dchdetass = [[len([v for v in f if eta <= v["eta"] and v["eta"] <= eta+deta and v["charge"] != 0])/deta for e in events for f in e] for eta in ran]
+   dchdetas = [sum(dchdetas)/len(dchdetas) for dchdetas in dchdetass]
+   dchdetas2 = [sum(x**2 for x in dchdetas)/len(dchdetas) for dchdetas in dchdetass]
+   errdchdetas = [np.sqrt((d2-d**2)/len(events)) for d, d2 in zip(dchdetas,dchdetas2)]
+   plt.errorbar(etas, dchdetas, yerr=errdchdetas)
+   plt.ylim([0,1000])
+   plt.show()
+   return dchdetas, errdchdetas
 
 totiter = 0
 cwd = os.getcwd()
@@ -280,15 +293,7 @@ if "results" in dirs:
       # print(len(events), info)
       # print()
 
-      v2, errv2 = vn(2, events)
-      dchdeta, errdchdeta = dch_deta(0.5, events)
-      with open("observables.txt", "w") as fv:
-          msg = "v2: {:e} {:e}\n".format(v2, errv2)
-          print(msg, end="")
-          fv.write(msg)
-          msg = "dch_deta: {:e} {:e}\n".format(dchdeta, errdchdeta)
-          print(msg, end="")
-          fv.write(msg)
-      
+      dch_deta(events)
+      vn(2, events)
 else:
    print("No \"results\" folder found.")

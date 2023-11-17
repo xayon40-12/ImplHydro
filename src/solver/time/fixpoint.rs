@@ -41,7 +41,7 @@ pub fn fixpoint<
         k,
         r: Scheme { aij: a, bj: b, .. },
         dt: dto,
-        dx,
+        dxs,
         maxdt,
         t,
         ot,
@@ -89,7 +89,7 @@ pub fn fixpoint<
         if maxe > 1e50 || maxe_count > 4 {
             eprintln!("reset {}\t: {}", failed, t);
             failed += 1;
-            alpha *= (*dx / dt).min(0.5);
+            alpha *= 0.5;
             maxe = 1e50;
             omaxe = maxe;
             // *k = ko.clone();
@@ -133,7 +133,7 @@ pub fn fixpoint<
                         constraints,
                         boundary,
                         [x as i32, y as i32, z as i32],
-                        *dx,
+                        *dxs,
                         [*t, ct],
                         [dt, cdt],
                         opt,

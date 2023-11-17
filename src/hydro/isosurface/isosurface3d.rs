@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Result, Write};
 
-use crate::solver::context::Arr;
+use crate::solver::context::{Arr, DIM};
 
 use super::{Freezout, IsoSurfaceHandler};
 
@@ -14,7 +14,7 @@ pub type IsoSurface3DFun<'a, const C: usize, const VX: usize, const VY: usize, c
         Option<[usize; 10]>, // ID [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
         Option<usize>,       // ID bulk
         f64,                 // time for fields
-        f64,                 // dx
+        [f64; DIM],          // [dx, dy, dz]
         f64,                 // dt
         f64,                 // freezeout energy fm^-4
     ) -> Vec<Surface3D>;
@@ -31,7 +31,7 @@ pub struct IsoSurface3DHandler<
     u_ids: [usize; 4],              // [ut,ux,uy,uz]
     shear_ids: Option<[usize; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
     bulk_id: Option<usize>,
-    dx: f64,
+    dxs: [f64; DIM],
     freezeout_energy: f64, // fm^-4
     iso_surface_fun: IsoSurface3DFun<'a, C, VX, VY, VZ>,
 }
@@ -45,7 +45,7 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         u_ids: [usize; 4],              // [ut,ux,uy,uz]
         shear_ids: Option<[usize; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
         bulk_id: Option<usize>,
-        dx: f64,
+        dxs: [f64; DIM],
         freezeout_energy: f64, // fm^-4
     ) -> Result<IsoSurface3DHandler<'a, C, VX, VY, VZ>> {
         let file = File::create(filename)?;
@@ -55,7 +55,7 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
             u_ids,
             shear_ids,
             bulk_id,
-            dx,
+            dxs,
             freezeout_energy,
             iso_surface_fun: &zigzag3D,
         };
@@ -81,7 +81,7 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
             self.shear_ids,
             self.bulk_id,
             ot,
-            self.dx,
+            self.dxs,
             nt - ot,
             self.freezeout_energy,
         );
@@ -152,14 +152,15 @@ pub fn zigzag3D<const C: usize, const SX: usize, const SY: usize, const SETA: us
     shear_ids: Option<[usize; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
     bulk_id: Option<usize>,
     tau: f64, // time for fields
-    dx: f64,
+    dxs: [f64; DIM],
     dtau: f64,             // where t+dt is the time of new_fields
     freezeout_energy: f64, // fm^-4
 ) -> Vec<Surface3D> {
     let mut surfaces: Vec<Surface3D> = vec![];
 
-    let dy = dx;
-    let deta = tau * dx;
+    let dx = dxs[0];
+    let dy = dxs[1];
+    let deta = tau * dxs[2];
 
     let vx2 = (SX - 1) as f64 * 0.5;
     let vy2 = (SY - 1) as f64 * 0.5;

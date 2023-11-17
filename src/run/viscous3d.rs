@@ -12,6 +12,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     t0: f64,
     tend: f64,
     dx: f64,
+    detas: f64,
     maxdt: f64,
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
@@ -50,6 +51,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
         t0,
         tend,
         dx,
+        detas,
         r,
         p,
         dpde,
@@ -68,6 +70,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     t0: f64,
     tend: f64,
     l: f64,
+    etas_len: f64,
     dtmin: f64,
     dtmax: f64,
     etaovers: (f64, f64, f64),
@@ -80,6 +83,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
 ) {
     let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
     let dx = l / XY as f64;
+    let detas = etas_len / Z as f64;
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
         let trento = (trentos[i].as_ref(), i);
@@ -88,6 +92,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
                 t0,
                 tend,
                 dx,
+                detas,
                 dt,
                 etaovers,
                 zetaovers,
@@ -105,6 +110,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
     t0: f64,
     tend: f64,
     l: f64,
+    etas_len: f64,
     dtmin: f64,
     dtmax: f64,
     etaovers: (f64, f64, f64),
@@ -119,6 +125,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
             t0,
             tend,
             l,
+            etas_len,
             dtmin,
             dtmax,
             etaovers,
@@ -135,6 +142,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
             t0,
             tend,
             l,
+            etas_len,
             dtmin,
             dtmax,
             etaovers,
@@ -164,6 +172,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     t0: f64,
     tend: f64,
     l: f64,
+    etas_len: f64,
     dt: f64,
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
@@ -176,11 +185,13 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     let gl1 = gauss_legendre_1();
     let heun = heun();
     let dx = l / XY as f64;
+    let detas = etas_len / Z as f64;
     let do_gl1 = |trento| {
         hydro3d::<XY, Z, 1>(
             t0,
             tend,
             dx,
+            detas,
             dt,
             etaovers,
             zetaovers,
@@ -196,6 +207,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
             t0,
             tend,
             dx,
+            detas,
             dt,
             etaovers,
             zetaovers,

@@ -296,7 +296,7 @@ fn flux<const XY: usize, const VZ: usize>(
     constraints: Constraint<F_BOTH_3D, C_BOTH_3D>,
     bound: Boundary<F_BOTH_3D, XY, XY, VZ>,
     pos: [i32; DIM],
-    dx: f64,
+    dxs: [f64; DIM],
     [ot, t]: [f64; 2],
     [_dt, cdt]: [f64; 2],
     &(
@@ -357,7 +357,7 @@ fn flux<const XY: usize, const VZ: usize>(
         constraints,
         pre,
         post,
-        dx,
+        dxs,
         theta,
     );
     // in this formalism `dz` becomes `(1/t)*dz`
@@ -691,6 +691,7 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     t: f64,
     tend: f64,
     dx: f64,
+    detas: f64,
     r: Scheme<S>,
     p: Eos,
     dpde: Eos,
@@ -763,7 +764,7 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
         k,
         r,
         dt: 1e10,
-        dx,
+        dxs: [dx, dx, detas],
         maxdt,
         t,
         ot: t - 1.0,

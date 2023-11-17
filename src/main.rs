@@ -13,6 +13,9 @@ struct Cli {
     #[arg(short, long, default_value_t = 40.0)]
     physical_length: f64,
 
+    #[arg(short, long, default_value_t = 5020.0)]
+    sqrts: f64,
+
     #[arg(short, long, default_value_t = Solver::Both)]
     solver_type: Solver,
 
@@ -103,13 +106,15 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.cells {
-        100 => run::<100, 25>(cli),
-        200 => run::<200, 51>(cli),
+        100 => run::<100, 51>(cli),
+        200 => run::<200, 101>(cli),
         _ => panic!("The number of cells must be a value from the list {{100,200}}."),
     };
 }
 fn run<const XY: usize, const Z: usize>(args: Cli) {
-    let l = args.physical_length;
+    let sqrts = args.sqrts;
+    let xy_len = args.physical_length;
+    let etas_len = 2.0 * (0.5 * sqrts / 0.2).acosh();
     let checkdt = |dtmin: f64, dtmax: f64| {
         if dtmin >= dtmax {
             panic!("The smallest time interval 'dtmin={}' must be smaller than the largest 'dtmax={}'.", dtmin, dtmax);
@@ -120,7 +125,7 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
         //     panic!("The initial time 't0' must be smaller than the end time 'tend'.");
         // }
     };
-    let dx = l / XY as f64;
+    let dx = xy_len / XY as f64;
     let dtdx = 0.2f64;
     let solver = args.solver_type;
     let save_raw = args.raw_data_every;
@@ -139,7 +144,7 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                     } => {
                         let dtmax = dtmax.unwrap_or(dx * dtdx);
                         checkdt(dtmin, dtmax);
-                        ideal1d::run_1d::<XY>(solver, t0, tend, l, dtmin, dtmax, save_raw);
+                        ideal1d::run_1d::<XY>(solver, t0, tend, xy_len, dtmin, dtmax, save_raw);
                     }
                     ToSimulate::Trento { .. } => panic!("No 1D Trento case available."),
                 },
@@ -166,7 +171,7 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                             solver,
                             t0,
                             tend,
-                            l,
+                            xy_len,
                             dtmin,
                             dtmax,
                             enable_gubser,
@@ -176,7 +181,9 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                     }
                     ToSimulate::Trento { dt, nb_trento } => {
                         let dt = dt.unwrap_or(dx * dtdx);
-                        ideal2d::run_trento_2d::<XY>(solver, t0, tend, l, dt, nb_trento, save_raw);
+                        ideal2d::run_trento_2d::<XY>(
+                            solver, t0, tend, xy_len, dt, nb_trento, save_raw,
+                        );
                     }
                 },
                 Hydro::Viscous {
@@ -201,15 +208,15 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                             let dtmax = dtmax.unwrap_or(dx * dtdx);
                             checkdt(dtmin, dtmax);
                             viscous2d::run_2d::<XY>(
-                                solver, t0, tend, l, dtmin, dtmax, etaovers, zetaovers, tempcut,
-                                freezeout, nb_trento, save_raw,
+                                solver, t0, tend, xy_len, dtmin, dtmax, etaovers, zetaovers,
+                                tempcut, freezeout, nb_trento, save_raw,
                             );
                         }
                         ToSimulate::Trento { dt, nb_trento } => {
                             let dt = dt.unwrap_or(dx * dtdx);
                             viscous2d::run_trento_2d::<XY>(
-                                solver, t0, tend, l, dt, etaovers, zetaovers, tempcut, freezeout,
-                                nb_trento, save_raw,
+                                solver, t0, tend, xy_len, dt, etaovers, zetaovers, tempcut,
+                                freezeout, nb_trento, save_raw,
                             );
                         }
                     }
@@ -231,13 +238,13 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                         let dtmax = dtmax.unwrap_or(dx * dtdx);
                         checkdt(dtmin, dtmax);
                         ideal3d::run_3d::<XY, Z>(
-                            solver, t0, tend, l, dtmin, dtmax, nb_trento, save_raw,
+                            solver, t0, tend, xy_len, etas_len, dtmin, dtmax, nb_trento, save_raw,
                         );
                     }
                     ToSimulate::Trento { dt, nb_trento } => {
                         let dt = dt.unwrap_or(dx * dtdx);
                         ideal3d::run_trento_3d::<XY, Z>(
-                            solver, t0, tend, l, dt, nb_trento, save_raw,
+                            solver, t0, tend, xy_len, etas_len, dt, nb_trento, save_raw,
                         );
                     }
                 },
@@ -263,15 +270,15 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                             let dtmax = dtmax.unwrap_or(dx * dtdx);
                             checkdt(dtmin, dtmax);
                             viscous3d::run_3d::<XY, Z>(
-                                solver, t0, tend, l, dtmin, dtmax, etaovers, zetaovers, tempcut,
-                                freezeout, nb_trento, save_raw,
+                                solver, t0, tend, xy_len, etas_len, dtmin, dtmax, etaovers,
+                                zetaovers, tempcut, freezeout, nb_trento, save_raw,
                             );
                         }
                         ToSimulate::Trento { dt, nb_trento } => {
                             let dt = dt.unwrap_or(dx * dtdx);
                             viscous3d::run_trento_3d::<XY, Z>(
-                                solver, t0, tend, l, dt, etaovers, zetaovers, tempcut, freezeout,
-                                nb_trento, save_raw,
+                                solver, t0, tend, xy_len, etas_len, dt, etaovers, zetaovers,
+                                tempcut, freezeout, nb_trento, save_raw,
                             );
                         }
                     }

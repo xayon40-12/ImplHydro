@@ -20,7 +20,7 @@ pub fn kt<
     constraints: Constraint<F, C>,
     pre_flux_limiter: Transform<F>,
     post_flux_limiter: Transform<F>,
-    dx: f64,
+    dxs: [f64; DIM],
     theta: f64,
 ) -> [([f64; F], [f64; SD]); N] {
     let mut res = [([0.0f64; F], [0.0f64; SD]); N];
@@ -28,6 +28,11 @@ pub fn kt<
     // for i in 0..flux_infos.len() {
     for (i, flux_info) in flux_infos.into_iter().enumerate() {
         let dir = flux_info.dir();
+        let dx = match dir {
+            Dir::X => dxs[0],
+            Dir::Y => dxs[1],
+            Dir::Z => dxs[2],
+        };
         let FluxInfo {
             flux,
             secondary,
