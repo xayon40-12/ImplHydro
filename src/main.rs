@@ -13,8 +13,8 @@ struct Cli {
     #[arg(short, long, default_value_t = 40.0)]
     physical_length: f64,
 
-    #[arg(short, long, default_value_t = 5020.0)]
-    sqrts: f64,
+    #[arg(short, long, default_value_t = 5020.0)] // GeV
+    collision_energy: f64,
 
     #[arg(short, long, default_value_t = Solver::Both)]
     solver_type: Solver,
@@ -112,7 +112,7 @@ fn main() {
     };
 }
 fn run<const XY: usize, const Z: usize>(args: Cli) {
-    let sqrts = args.sqrts;
+    let sqrts = args.collision_energy;
     let xy_len = args.physical_length;
     let etas_len = 2.0 * (0.5 * sqrts / 0.2).acosh();
     let checkdt = |dtmin: f64, dtmax: f64| {
