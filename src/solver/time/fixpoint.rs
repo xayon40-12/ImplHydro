@@ -240,10 +240,10 @@ pub fn fixpoint<
                 t, alpha, maxe, omaxe, er, miter
             );
             let mut errr: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
-            for z in 0..VZ {
-                for y in 0..VY {
-                    for x in 0..VX {
-                        for s in 0..S {
+            for s in 0..S {
+                for z in 0..VZ {
+                    for y in 0..VY {
+                        for x in 0..VX {
                             for f in 0..F {
                                 let kk = k[s][z][y][x][f];
                                 let ff = fu[s][z][y][x][f];
@@ -297,11 +297,11 @@ pub fn fixpoint<
     *ovs = vs.clone();
     *otrs = trs.clone();
     let b = if let Some(b) = b { *b } else { a[S - 1] };
-    for f in 0..F {
+    for s in 0..S {
         for vz in 0..VZ {
             for vy in 0..VY {
                 for vx in 0..VX {
-                    for s in 0..S {
+                    for f in 0..F {
                         vs[vz][vy][vx][f] += dt * b[s] * k[s][vz][vy][vx][f];
                     }
                 }
