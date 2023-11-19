@@ -23,7 +23,7 @@ pub fn init_from_energy_density_3d<'a, const VX: usize, const VY: usize, const V
     _entropy: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_BOTH_3D] + 'a> {
     Box::new(move |(i, j, k), _| {
-        let e = e[k][j][i] / HBARC;
+        let e = e[k][j][i] / HBARC / t0;
         let vars = [
             e,
             p(e),
@@ -690,8 +690,7 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     maxdt: f64,
     t: f64,
     tend: f64,
-    dx: f64,
-    detas: f64,
+    dxs: [f64; DIM],
     r: Scheme<S>,
     p: Eos,
     dpde: Eos,
@@ -731,12 +730,15 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     let v2 = ((XY - 1) as f64) / 2.0;
     let v2z = ((VZ - 1) as f64) / 2.0;
     let mut max_e = 0.0;
+    let dx = dxs[0];
+    let dy = dxs[1];
+    let detas = dxs[2];
     for k in 0..VZ {
         for j in 0..XY {
             for i in 0..XY {
                 let x = (i as f64 - v2) * dx;
-                let y = (j as f64 - v2) * dx;
-                let z = (k as f64 - v2z) * dx;
+                let y = (j as f64 - v2) * dy;
+                let z = (k as f64 - v2z) * detas;
                 vs[k][j][i] = init((i, j, k), (x, y, z));
                 (vs[k][j][i], trs[k][j][i]) = constraints(t, vs[k][j][i]);
                 max_e = trs[k][j][i][0].max(max_e);
@@ -764,7 +766,7 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
         k,
         r,
         dt: 1e10,
-        dxs: [dx, dx, detas],
+        dxs,
         maxdt,
         t,
         ot: t - 1.0,

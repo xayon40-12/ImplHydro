@@ -197,8 +197,7 @@ pub fn ideal3d<const XY: usize, const VZ: usize, const S: usize>(
     maxdt: f64,
     t: f64,
     tend: f64,
-    dx: f64,
-    detas: f64,
+    dxs: [f64; DIM],
     r: Scheme<S>,
     p: Eos,
     dpde: Eos,
@@ -222,12 +221,15 @@ pub fn ideal3d<const XY: usize, const VZ: usize, const S: usize>(
     let k: Box<[[[[[f64; F_IDEAL_3D]; XY]; XY]; VZ]; S]> = boxarray(0.0);
     let v2 = ((XY - 1) as f64) / 2.0;
     let v2z = ((VZ - 1) as f64) / 2.0;
+    let dx = dxs[0];
+    let dy = dxs[1];
+    let dz = dxs[2];
     for k in 0..VZ {
         for j in 0..XY {
             for i in 0..XY {
                 let x = (i as f64 - v2) * dx;
-                let y = (j as f64 - v2) * dx;
-                let z = (k as f64 - v2z) * dx;
+                let y = (j as f64 - v2) * dy;
+                let z = (k as f64 - v2z) * dz;
                 vs[k][j][i] = init((i, j, k), (x, y, z));
                 (vs[k][j][i], trs[k][j][i]) = constraints(t, vs[k][j][i]);
             }
@@ -250,7 +252,7 @@ pub fn ideal3d<const XY: usize, const VZ: usize, const S: usize>(
         k,
         r,
         dt: 1e10,
-        dxs: [dx, dx, detas],
+        dxs,
         maxdt,
         t,
         ot: t - 1.0,

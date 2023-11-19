@@ -45,7 +45,7 @@ enum Dim {
         command: Hydro,
     },
     Dim3 {
-        #[arg(long, default_value_t = 1.3)]
+        #[arg(long, default_value_t = 0.37)]
         t0: f64,
         #[arg(long, default_value_t = 0.0)]
         tend: f64,
@@ -106,15 +106,15 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.cells {
-        100 => run::<100, 51>(cli),
-        200 => run::<200, 101>(cli),
+        100 => run::<100, 25>(cli),
+        200 => run::<200, 51>(cli),
         _ => panic!("The number of cells must be a value from the list {{100,200}}."),
     };
 }
 fn run<const XY: usize, const Z: usize>(args: Cli) {
-    let sqrts = args.collision_energy;
     let xy_len = args.physical_length;
-    let etas_len = 2.0 * (0.5 * sqrts / 0.2).acosh();
+    // let sqrts = args.collision_energy;
+    let etas_len = xy_len / 2.0; //2.0 * (0.5 * sqrts / 0.2).acosh();
     let checkdt = |dtmin: f64, dtmax: f64| {
         if dtmin >= dtmax {
             panic!("The smallest time interval 'dtmin={}' must be smaller than the largest 'dtmax={}'.", dtmin, dtmax);

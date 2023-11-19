@@ -5,14 +5,13 @@ use crate::{
         viscous::viscous3d::{init_from_energy_density_3d, viscous3d},
         Eos, HydroOutput, C_BOTH_3D, F_BOTH_3D,
     },
-    solver::{time::schemes::*, Solver},
+    solver::{context::DIM, time::schemes::*, Solver},
 };
 
 fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     t0: f64,
     tend: f64,
-    dx: f64,
-    detas: f64,
+    dxs: [f64; DIM],
     maxdt: f64,
     etaovers: (f64, f64, f64),
     zetaovers: (f64, f64, f64),
@@ -50,8 +49,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
         maxdt,
         t0,
         tend,
-        dx,
-        detas,
+        dxs,
         r,
         p,
         dpde,
@@ -81,9 +79,10 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     nb_trento: usize,
     save_raw: Option<f64>,
 ) {
-    let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
+    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento);
     let dx = l / XY as f64;
     let detas = etas_len / Z as f64;
+    let dxs = dxs.unwrap_or([dx, dx, detas]);
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
         let trento = (trentos[i].as_ref(), i);
@@ -91,8 +90,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
             hydro3d::<XY, Z, S>(
                 t0,
                 tend,
-                dx,
-                detas,
+                dxs,
                 dt,
                 etaovers,
                 zetaovers,
@@ -181,17 +179,17 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     nb_trento: usize,
     save_raw: Option<f64>,
 ) {
-    let trentos = prepare_trento_3d::<XY, Z>(nb_trento);
+    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento);
     let gl1 = gauss_legendre_1();
     let heun = heun();
     let dx = l / XY as f64;
     let detas = etas_len / Z as f64;
+    let dxs = dxs.unwrap_or([dx, dx, detas]);
     let do_gl1 = |trento| {
         hydro3d::<XY, Z, 1>(
             t0,
             tend,
-            dx,
-            detas,
+            dxs,
             dt,
             etaovers,
             zetaovers,
@@ -206,8 +204,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
         hydro3d::<XY, Z, 2>(
             t0,
             tend,
-            dx,
-            detas,
+            dxs,
             dt,
             etaovers,
             zetaovers,

@@ -190,19 +190,18 @@ def particlization(info):
    print("done\n")
 
 def jackknife(fn, ns, ds):
+   n = sum(ns)
+   d = sum(ds)
+   value = fn(n, d)
    l = len(ns)
    if l > 1:
-      n = sum(ns)
-      d = sum(ds)
-      value = fn(n, d)
-
       fs = [fn(n-ni, d-di) for ni, di in zip(ns,ds)]
       fh = sum(fs)/l
       vh = sum((f-fh)**2 for f in fs)/l
       error2 = (l-1)*vh
       return value, np.sqrt(error2)
    else:
-      return 0, 0
+      return value, 0
 
 def vn(n, events):
    events = [[[v for v in f if abs(v["eta"])<0.8 and 0.2 < v["pT"] and v["pT"] < 5.0 and v["charge"] != 0] for f in e] for e in events]
@@ -228,19 +227,29 @@ def vn(n, events):
        msg = "v{}: {:e} {:e}\n".format(n, val, err)
        print(msg, end="")
        fv.write(msg)
-
+   
 def dch_deta(events):
+   deta = 0.5
+   dchdetas = [len([v for v in f if abs(v["eta"]) <= deta and v["charge"] != 0])/(2*deta) for e in events for f in e]
+   dchdeta = sum(dchdetas)/len(dchdetas)
+   dchdeta2 = sum(x**2 for x in dchdetas)/len(dchdetas)
+   errdchdeta = np.sqrt((dchdeta2-dchdeta**2)/len(events))
+   with open("dchdeta.txt", "w") as fv:
+       msg = "dchdeta: {:e} {:e}\n".format(dchdeta, errdchdeta)
+       print(msg, end="")
+       fv.write(msg)
+
+def dch_deta_eta(events):
    deta = 0.25
-   ran = np.arange(-5, 5, deta)
+   ran = np.arange(0, 5, deta)
    etas = [eta+deta/2 for eta in ran]
-   dchdetass = [[len([v for v in f if eta <= v["eta"] and v["eta"] <= eta+deta and v["charge"] != 0])/deta for e in events for f in e] for eta in ran]
+   dchdetass = [[len([v for v in f if eta <= abs(v["eta"]) and abs(v["eta"]) <= eta+deta and v["charge"] != 0])/(2*deta) for e in events for f in e] for eta in ran] # abs and /2 because it is symetrized
    dchdetas = [sum(dchdetas)/len(dchdetas) for dchdetas in dchdetass]
    dchdetas2 = [sum(x**2 for x in dchdetas)/len(dchdetas) for dchdetas in dchdetass]
    errdchdetas = [np.sqrt((d2-d**2)/len(events)) for d, d2 in zip(dchdetas,dchdetas2)]
    plt.errorbar(etas, dchdetas, yerr=errdchdetas)
-   plt.ylim([0,1000])
-   plt.show()
-   return dchdetas, errdchdetas
+   plt.ylim([0,2500])
+   plt.savefig("dch_deta_eta.pdf")
 
 totiter = 0
 cwd = os.getcwd()
@@ -294,6 +303,7 @@ if "results" in dirs:
       # print()
 
       dch_deta(events)
+      dch_deta_eta(events)
       vn(2, events)
 else:
    print("No \"results\" folder found.")

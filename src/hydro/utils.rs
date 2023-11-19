@@ -1,9 +1,10 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::{BufReader, Read},
 };
 
-use crate::solver::context::Arr;
+use crate::solver::context::{Arr, DIM};
 use boxarray::boxarray;
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -147,17 +148,21 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
     let vy = VY;
     let vx = arr[0].len();
 
-    if vx != VX || vyz != VY * VZ {
+    if vz % 2 != VZ % 2 || VZ > vz {
+        panic!("Wrong matrix size in load_matrix_3d: the number of cells in z/eta direction must be smaller or equal to the loaded data and they should both be the same even or odd, expected {} found {}.", vz, VZ);
+    }
+    if vx != VX || vy != VY {
         panic!(
-            "Wrong matrix size in load_matrix_3d: expected {}x{}x{}, found {}x{}x{}",
+            "Wrong matrix size in load_matrix_3d: expected {}x{}x{}, found {}x{}x{} (the third component is allowed to be smaller)",
             VX, VY, VZ, vx, vy, vz
         );
     }
     let mut mat: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
+    let sk = (vz - VZ) / 2;
     for k in 0..VZ {
         for j in 0..VY {
             for i in 0..VX {
-                mat[k][j][i] = arr[j + VY * k][i];
+                mat[k][j][i] = arr[j + VY * (sk + k)][i];
             }
         }
     }
@@ -178,8 +183,9 @@ pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V];
 
 pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
     nb_trento: usize,
-) -> Vec<Box<[[[f64; XY]; XY]; Z]>> {
+) -> (Vec<Box<[[[f64; XY]; XY]; Z]>>, Option<[f64; DIM]>) {
     let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
+    let mut dxs = None;
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for i in 0..nb_trento {
         const LOAD2D: bool = false;
@@ -196,9 +202,24 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
             trentos[i] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
                 "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
             ));
+            if let Ok(str) = std::fs::read_to_string(&format!("s{XY}/info.txt")) {
+                let m: HashMap<String, f64> = str
+                    .trim()
+                    .split("\n")
+                    .map(|s| {
+                        let v = s.split(": ").collect::<Vec<_>>();
+                        (
+                            v[0].to_string(),
+                            v[1].parse()
+                                .expect("Could not parse lattice spacing for trento info.txt."),
+                        )
+                    })
+                    .collect();
+                dxs = Some([m["dx"], m["dy"], m["detas"]]);
+            }
         }
     }
-    trentos
+    (trentos, dxs)
 }
 
 pub fn prepare_trento_2d_freestream<const V: usize>(

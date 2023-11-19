@@ -33,6 +33,7 @@ norms = [20] # GeV
 bs = [10.5]
 usefreestream = False
 use3d = False
+Nscale = 2.6
 
 for arg in args:
     if "-n=" in arg:
@@ -40,6 +41,9 @@ for arg in args:
 
     if "-norm=" in arg:
         norms = [float(arg[6:])]
+
+    if "-Nscale=" in arg:
+        Nscale = float(arg[8:])
 
     # if '-mb' is in the argument list, generate 'many' impact parameters
     if "-mb" == arg:
@@ -106,10 +110,11 @@ for c in cells:
                 # f -> 1.0
                 # tau0,Pb -> 1.3
                 # N -> 2.0       ----> Nscale: 2.0
-                trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -w {w} -m {nc} -v {v} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
-                    .format(u=0.88, w=1.3, nc=16.4, v=1.3, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=1.713, pmid=0.333, k=0.104, f=1.0, Nscale=2.0, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
-                # trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -d {d} -w {w} -m {nc} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
-                #     .format(u=rcp, d=dmin, w=wc, nc=nc, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=0.113, pmid=0.615, k=k, f=1.0, Nscale=1.0, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
+
+                # trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -w {w} -m {nc} -v {v} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
+                #     .format(u=0.88, w=1.3, nc=16.4, v=1.3, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=1.713, pmid=0.333, k=0.104, f=1.0, Nscale=2.6, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
+                trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -d {d} -w {w} -m {nc} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
+                    .format(u=rcp, d=dmin, w=wc, nc=nc, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=0.113, pmid=0.615, k=k, f=1.0, Nscale=5, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
             else:
                 trento_cmd = \
                     "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} --b-min {b} --b-max {b} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
@@ -117,32 +122,8 @@ for c in cells:
             trento = os.popen(trento_cmd)
             output = trento.read()
             print("Trento:\n{}".format(output))
-
-            # run free streaming
-            # git: Duke-QCD/freestream
-            if usefreestream:
-                print("freestream")
-                for i in range(num):
-                    name = ("{}/{:0<"+str(pn)+"}.dat").format(dir,i)
-                    print(name)
-                    ic = np.loadtxt(name, dtype=np.float64)
-                    fs = freestream.FreeStreamer(ic, half_size, tau_fs)
-
-                    e = fs.energy_density()
-                    ut = fs.flow_velocity(0)
-                    ux = fs.flow_velocity(1)
-                    uy = fs.flow_velocity(2)
-                    def pi(u,v):
-                        return fs.shear_tensor(u,v)
-                    bulk = fs.bulk_pressure()  # fs.bulk_pressure(eos)
-                    arr = np.transpose(np.array([e, ut, ux, uy, pi(0,0), pi(0,1), pi(0,2), pi(1,1), pi(1,2), pi(2,2), bulk]).reshape((11,-1)))
-                    # np.set_printoptions(threshold=sys.maxsize)
-                    # print(arr)
-                    data = ("{}/data{:0<"+str(pn)+"}.dat").format(dir,i)
-                    arr.tofile(data)
-
-                    # etot = e.sum()*197*dx**3/1000 # GeV
-                    # em = e.max()*197/1000 # GeV fm^-3
-                    # print("e_tot: {} GeV".format(etot))
-                    # print("e_max: {} GeV fm^-3".format(em))
-
+            if use3d:
+                etas_len = 2.0 * np.arccosh(0.5 * energy / 0.2); # from github Duke-QCD/trento3d-2.0, commit 503a7d744df29aefbd2e31b7b623aff07abe2bf2, event.cxx line 63
+                detas = etas_len/eta_c
+                with open("{}/info.txt".format(dir), "w") as fv:
+                   fv.write("dx: {}\ndy: {}\ndetas: {}\n".format(dx,dx,detas))

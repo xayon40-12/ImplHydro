@@ -478,6 +478,10 @@ pub fn run<
                         };
                         if res.is_none() {
                             eprintln!("Integration failed, abort current run.");
+                            std::fs::remove_dir_all(foldername).expect(&format!(
+                                "Could not delete directory \"{}\" after abort.",
+                                foldername
+                            ));
                             eprintln!("");
                             return None;
                         }
