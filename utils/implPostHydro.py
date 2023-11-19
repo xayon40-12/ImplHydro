@@ -223,10 +223,7 @@ def vn(n, events):
 
    val, err = jackknife(fun, n_cn2s, d_cn2s)
 
-   with open("v{}.txt".format(n), "w") as fv:
-       msg = "v{}: {:e} {:e}\n".format(n, val, err)
-       print(msg, end="")
-       fv.write(msg)
+   return val, err
    
 def dch_deta(events):
    deta = 0.5
@@ -234,10 +231,8 @@ def dch_deta(events):
    dchdeta = sum(dchdetas)/len(dchdetas)
    dchdeta2 = sum(x**2 for x in dchdetas)/len(dchdetas)
    errdchdeta = np.sqrt((dchdeta2-dchdeta**2)/len(events))
-   with open("dchdeta.txt", "w") as fv:
-       msg = "dchdeta: {:e} {:e}\n".format(dchdeta, errdchdeta)
-       print(msg, end="")
-       fv.write(msg)
+
+   return dchdeta, errdchdeta
 
 def dch_deta_eta(events):
    deta = 0.25
@@ -302,8 +297,14 @@ if "results" in dirs:
       # print(len(events), info)
       # print()
 
-      dch_deta(events)
       dch_deta_eta(events)
-      vn(2, events)
+      dchdeta, errdchdeta = dch_deta(events)
+      v2, errv2 = vn(2, events)
+      with open("observables.txt", "w") as fv:
+          msgv2 = "v{}: {:e} {:e}\n".format(2, v2, errv2)
+          msgdchdeta = "dchdeta: {:e} {:e}\n".format(dchdeta, errdchdeta)
+          msg = msgv2+msgdchdeta
+          print(msg, end="")
+          fv.write(msg)
 else:
    print("No \"results\" folder found.")
