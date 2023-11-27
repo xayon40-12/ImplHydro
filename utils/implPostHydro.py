@@ -19,19 +19,20 @@ nb_frzout = 10
 nb_threads = 15
 ymax = 0.5
 dim = 3
-particlize = False
 use_urqmd = False
 for arg in sys.argv[1:]:
    if "-nbfreezeout=" in arg:
       nb_frzout = int(arg[13:])
+      
    if "-ymax=" in arg:
       ymax = arg[6:]
+      
    if "-threads=" in arg:
       nb_threads = int(arg[9:])
+
    if arg == "-3d":
       dim = 3
-   if arg == "-p":
-      particlize = True
+
    if arg == "-u":
       use_urqmd = True
 
@@ -91,6 +92,7 @@ def MilnetoCart_velocity(eta, v): # v: [vx,vy,veta]
    v[1] = vy
    v[2] = vz
 
+hrg = frzout.HRG(.151, species='urqmd')
 def particlization(info):
    print("Running frzout:")
    if dim == 2:
@@ -157,7 +159,6 @@ def particlization(info):
    # create Surface object
    surface = frzout.Surface(x, sigma, v, ymax=ymax, pi=pi, Pi=Pi)
 
-   hrg = frzout.HRG(.151, species='urqmd')
    lines = ""
    for i in range(nb_frzout):
       parts = frzout.sample(surface, hrg)
@@ -189,63 +190,6 @@ def particlization(info):
 
    print("done\n")
 
-def jackknife(fn, ns, ds):
-   n = sum(ns)
-   d = sum(ds)
-   value = fn(n, d)
-   l = len(ns)
-   if l > 1:
-      fs = [fn(n-ni, d-di) for ni, di in zip(ns,ds)]
-      fh = sum(fs)/l
-      vh = sum((f-fh)**2 for f in fs)/l
-      error2 = (l-1)*vh
-      return value, np.sqrt(error2)
-   else:
-      return value, 0
-
-def vn(n, events):
-   events = [[[v for v in f if abs(v["eta"])<0.8 and 0.2 < v["pT"] and v["pT"] < 5.0 and v["charge"] != 0] for f in e] for e in events]
-
-   def fun(n, d):
-      return np.sqrt(n/d)
-
-   mss = [[len(f) for f in e] for e in events]
-
-   qnss = [[sum(exp(1j*n*v["phi"]) for v in f) for f in e] for e in events]
-   qn2ss = [[abs(qn)**2 for qn in qns] for qns in qnss]
-   
-   w2ss = [[m*(m-1) for m in ms] for ms in mss]
-   
-   m2ss = [[(qn2-m)/w2 for qn2, m, w2 in zip(qn2s, ms, w2s)] for qn2s, ms, w2s in zip(qn2ss, mss, w2ss)]
-   
-   n_cn2s = [sum(w2*m2 for w2, m2 in zip(w2s, m2s)) for w2s, m2s in zip(w2ss, m2ss)]
-   d_cn2s = [sum(w2s) for w2s in w2ss]
-
-   val, err = jackknife(fun, n_cn2s, d_cn2s)
-
-   return val, err
-   
-def dch_deta(events):
-   deta = 0.5
-   dchdetas = [len([v for v in f if abs(v["eta"]) <= deta and v["charge"] != 0])/(2*deta) for e in events for f in e]
-   dchdeta = sum(dchdetas)/len(dchdetas)
-   dchdeta2 = sum(x**2 for x in dchdetas)/len(dchdetas)
-   errdchdeta = np.sqrt((dchdeta2-dchdeta**2)/len(events))
-
-   return dchdeta, errdchdeta
-
-def dch_deta_eta(events):
-   deta = 0.25
-   ran = np.arange(0, 5, deta)
-   etas = [eta+deta/2 for eta in ran]
-   dchdetass = [[len([v for v in f if eta <= abs(v["eta"]) and abs(v["eta"]) <= eta+deta and v["charge"] != 0])/(2*deta) for e in events for f in e] for eta in ran] # abs and /2 because it is symetrized
-   dchdetas = [sum(dchdetas)/len(dchdetas) for dchdetas in dchdetass]
-   dchdetas2 = [sum(x**2 for x in dchdetas)/len(dchdetas) for dchdetas in dchdetass]
-   errdchdetas = [np.sqrt((d2-d**2)/len(events)) for d, d2 in zip(dchdetas,dchdetas2)]
-   plt.errorbar(etas, dchdetas, yerr=errdchdetas)
-   plt.ylim([0,2500])
-   plt.savefig("dch_deta_eta.pdf")
-
 totiter = 0
 cwd = os.getcwd()
 dirs = os.listdir(cwd)
@@ -261,50 +205,12 @@ if "results" in dirs:
       info = {k: v.strip() for [k, v] in np.loadtxt("info.txt", dtype=object, delimiter=":")}
       info.pop("case")
 
-      if particlize:
-         print(d)
-         particlization(info)
+      print(d)
+      particlization(info)
 
-      freezeout_events = []
-      parts = []
-      # each line: ID charge pT ET mT phi y eta
-      pnames = ["ID", "charge", "pT", "ET", "mT", "phi", "y", "eta"]
-      with open("particles_out.dat", "r") as f:
-         for p in f.read().split("\n"):
-            if "#" in p:
-               if len(parts) > 0:
-                  freezeout_events += [np.array(parts)]
-               parts = []
-            else:
-               if len(p) > 0:
-                  vals = {name: np.float64(i) for name, i in zip(pnames, p.split())}
-                  parts += [vals]
-         freezeout_events += [np.array(parts)]
-      id = str(info)
-      return freezeout_events, info
    with Pool(nb_threads) as p:
-      for freezeout_events, info in p.map(the_thing, dirs):
-         count = len(freezeout_events)
-         if id in allevents:
-            allevents[id] += [freezeout_events]
-         else:
-            allevents[id] = [freezeout_events]
-            allinfos[id] = info
+      p.map(the_thing, dirs)
    os.chdir(cwd)
-   for k in allevents:
-      events = allevents[k]
-      info = allinfos[k]
-      # print(len(events), info)
-      # print()
 
-      dch_deta_eta(events)
-      dchdeta, errdchdeta = dch_deta(events)
-      v2, errv2 = vn(2, events)
-      with open("observables.txt", "w") as fv:
-          msgv2 = "v{}: {:e} {:e}\n".format(2, v2, errv2)
-          msgdchdeta = "dchdeta: {:e} {:e}\n".format(dchdeta, errdchdeta)
-          msg = msgv2+msgdchdeta
-          print(msg, end="")
-          fv.write(msg)
 else:
    print("No \"results\" folder found.")
