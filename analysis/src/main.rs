@@ -80,7 +80,7 @@ pub fn vn(n: f64, events: &Vec<&Event>) -> (f64, f64) {
                     let m = particles.len() as f64;
                     let qn2 = particles
                         .iter()
-                        .map(|p| Complex::new(0.0, n * p.phi))
+                        .map(|p| Complex::from_polar(1.0, n * p.phi))
                         .sum::<Complex<f64>>()
                         .norm_sqr();
 
