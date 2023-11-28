@@ -57,7 +57,7 @@ pub fn jacknife<F: Fn(f64, f64) -> f64>(f: F, aa: Vec<f64>, bb: Vec<f64>) -> (f6
         let fh = fs.iter().cloned().sum::<f64>() / l as f64;
         let vh = fs.iter().map(|f| (f - fh).powi(2)).sum::<f64>() / l as f64;
         let err = (l - 1) as f64 * vh;
-        (val, err)
+        (val, err.sqrt())
     } else {
         (val, 0.0)
     }
@@ -221,7 +221,7 @@ fn main() {
 
     // Choose the number of bins
     let l = mults.len();
-    let sizes = repeat(l / 40).take(4).chain(repeat(l / 10).take(9));
+    let sizes = repeat(l / 40).take(4).chain(repeat(l / 10).take(7));
     let percent = |i| i as f64 / l as f64 * 100.0;
 
     let mut msg = vec![String::new(); 3];
