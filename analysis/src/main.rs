@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, iter::repeat};
 
 #[derive(Debug)]
 pub struct Particle {
@@ -75,6 +75,37 @@ impl Event {
 //    plt.errorbar(etas, dchdetas, yerr=errdchdetas)
 //    plt.ylim([0,2500])
 //    plt.savefig("dch_deta_eta.pdf")
+
+// Simetrized dn/deta os function of eta
+pub fn dn_deta_eta(events: &Vec<&Event>) -> Vec<(f64, f64, f64)> {
+    let deta = 0.25;
+    let etas = (0..(5.0 / deta) as usize).map(|i| i as f64 * deta);
+
+    etas.map(|eta| {
+        let dndetas: Vec<f64> = events
+            .iter()
+            .map(|e| {
+                e.freezeouts
+                    .iter()
+                    .map(|f| {
+                        f.particles
+                            .iter()
+                            .filter(|p| eta <= p.eta.abs() && p.eta.abs() <= eta + deta)
+                            .count() as f64
+                    })
+                    .fold(0.0, |acc, a| acc + a)
+                    / e.freezeouts.len() as f64
+                    / (2.0 * deta)
+            })
+            .collect();
+        let dndeta: f64 = dndetas.iter().fold(0.0, |acc, a| acc + a) / dndetas.len() as f64;
+        let dndeta2 = dndetas.iter().fold(0.0, |acc, a| acc + a * a) / dndetas.len() as f64;
+        let errdndeta = ((dndeta2 - dndeta * dndeta) / events.len() as f64).sqrt();
+
+        (eta + deta / 2.0, dndeta, errdndeta)
+    })
+    .collect()
+}
 
 pub fn dn_deta(events: &Vec<&Event>) -> (f64, f64) {
     let deta = 0.5;
@@ -168,24 +199,38 @@ fn main() {
     mults.sort_by(|a, b| b.cmp(a));
 
     // Choose the number of bins
-    let mult_bin = 10;
     let l = mults.len();
-    let bin_size = l / mult_bin;
+    let sizes = repeat(l / 40).take(4).chain(repeat(l / 10).take(7));
+    let percent = |i| i as f64 / l as f64 * 100.0;
 
+    let mut msg = String::new();
+    let mut j = 0;
     // For each bin
-    for j in 0..mult_bin {
+    for size in sizes {
         // Multiplicity range
-        let bin = (j * mult_bin, (j + 1) * mult_bin);
+        let bin = (percent(j), percent(j + size));
 
         // Take all the events corresponding to the current multiplicity bin
-        let events: Vec<&Event> = (0..bin_size)
-            .map(|k| &events[mults[k + j * bin_size].1])
-            .collect();
+        let events: Vec<&Event> = (0..size).map(|k| &events[mults[j + k].1]).collect();
 
         let (dndeta, errdndeta) = dn_deta(&events);
-        println!(
-            "dn/deta {}-{}%: {:.0} {:.1}",
-            bin.0, bin.1, dndeta, errdndeta
+        msg = format!(
+            "{}dn/deta-mid|{:.1}-{:.1}|{:.0}:{:.1}\n",
+            msg, bin.0, bin.1, dndeta, errdndeta
         );
+        let dndetaetas = dn_deta_eta(&events);
+        let dndetaetas_data = dndetaetas
+            .iter()
+            .map(|(eta, dndeta, errdndeta)| format!("{:.3}:{:.0}:{:.1}", eta, dndeta, errdndeta))
+            .collect::<Vec<_>>()
+            .join(" ");
+        msg = format!(
+            "{}dn/deta|{:.1}-{:.1}|{}\n",
+            msg, bin.0, bin.1, dndetaetas_data
+        );
+
+        j += size;
     }
+    println!("{}", msg);
+    std::fs::write("observables.txt", msg).expect("Could not write to observables.txt");
 }
