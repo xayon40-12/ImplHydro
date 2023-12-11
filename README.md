@@ -58,3 +58,26 @@ Many useful scripts are located in the `utils` directory.
 | `implPreHydro.py` | Call [`trento`](https://github.com/Duke-QCD/trento) or [`trento3d-2.0`](https://github.com/Duke-QCD/trento3d-2.0) to generate the initial condition. The flag `-3d` can be used to enable 3d `trento`. The `-f` flag can be used to use the [`freestream`](https://github.com/Duke-QCD/freestream) pre-hydrodynamics. |
 | `implPostHydro.py` | Call [`frzout`](https://github.com/Duke-QCD/frzout) on the `surface.dat` hyper-surface output (must be called directly next to such file in the `results`), and then call the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner. |
 | `plt_setting.py` | Settings for matplotlib from [Saizensen](https://github.com/MasakiyoK/Saizensen) |
+
+## File formats
+
+### Input format
+
+The `implhydro` code expect the input data to be formated in the same way that `trento` output its readable format (hdf5 is not supported). The data files should be stored in a folder that starts by the letter 's' followed by the number of cells in the X-Y directions, where the X and Y directions must have the same number of cells. For instance, for a 100 by 100 cells lattice, the data files should be stored in a folder called `s100`. The data files should be named by a number with left zero padding followed by the `.dat` file extension. For instance, in the case where 100 initial conditions are stored, the first file would be `00.dat` and the last one `99.dat`.  
+
+#### 2+1D matrix format
+
+For the 2+1D case, the columns correpsond to the X direction and the lines to the Y direction, where the X-Y plane correspond to the collision plane or transverse plane in a heavy-ion collision.
+
+#### 3+1D matrix format
+
+For the 3+1D case, the columns correspond to the X direction and the lines to the Y and Z/$\eta$ direction, where the X-Y plane correspond to the collision plane or tranverse plone in a heavy-ion collision. The Y direction comes first and is repeated for each cells in the Z/$\eta$ direction:  
+
+- line: Z, Y
+-   01: 0, 0
+-   02: 0, 1
+- ...
+-   10: 0, 9
+-   11: 1, 0
+-   12: 1, 2
+- ...
