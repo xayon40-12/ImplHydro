@@ -14,18 +14,18 @@ The simplest way to have both is to use the official installer called `rustup` a
 
 ### implhydro
 Once `rust` is installed, you can clone this `ImplHydro` project and go inside its directory:  
-```sh
+```bash
 git clone https://github.com/xayon40-12/ImplHydro.git
 cd ImplHydro
 ```
 
 If you installed `rust` with `rustup`, then you should have a `.cargo` directory in your home folder. Furthermore, you should have been asked to add `$HOME/.cargo/bin` to you `PATH` environement variable. If so, you can install the `implhydro` executable and the other useful scripts located in the `utils` folder by executing the `install` script:  
-```sh
+```bash
 ./install
 ```
 
 If you do not want to install, you can simply build the project with
-```sh
+```bash
 cargo build --release
 ```
 and then acces the executable in `target/release/implhydro`
@@ -35,14 +35,14 @@ and then acces the executable in `target/release/implhydro`
 ### Run simulations
 
 Once the `implhydro` executable is compiled and available, you can simply call it with the `--help` flag
-```sh
+```bash
 implhydro --help
 ```
 and it will show a help message that explain the available options with their default values and the different commands that are to be used.
 Every command has it own options and commands. The same `--help` flag can be used to obtain explanations for every sub-commands.  
 
 To reproduce the 1-dimensional case results and then generate the figures, you can run:
-```sh
+```bash
 implhydro -c 200 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
 implhydro -c 100 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
 implplt.py -r
@@ -71,16 +71,7 @@ For the 2+1D case, the columns correpsond to the X direction and the lines to th
 
 #### 3+1D matrix format
 
-For the 3+1D case, the columns correspond to the X direction and the lines to the Y and Z/$\eta$ direction, where the X-Y plane correspond to the collision plane or tranverse plone in a heavy-ion collision. The Y direction comes first and is repeated for each cells in the Z/$\eta$ direction:  
-
-- line: Z, Y
--   01: 0, 0
--   02: 0, 1
-- ...
--   10: 0, 9
--   11: 1, 0
--   12: 1, 2
-- ...
+For the 3+1D case, the columns correspond to the X direction and the lines to the Y and Z/$\eta$ direction, where the X-Y plane correspond to the collision plane or tranverse plone in a heavy-ion collision. The Y direction comes first and is repeated for each cells in the Z/$\eta$ direction.
 
 ### Output format
 
@@ -94,6 +85,14 @@ All the data of one cell are stored together and every cell come in order where 
 
 #### Hypersurface data
 
-In the case of 2+1D and 3+1D viscous with TrENTO initial conditions, the hypersurface data are stored in binary format in the `surface.dat` file.
-      # t x y sig_t sig_x sig_y vx vy pi00 pi01 pi02 pi11 pi12 pi22 pi33 Pi
-      # t x y z sig_t sig_x sig_y zig_z vx vy vz pi00 pi01 pi02 pi03 pi11 pi12 pi13 pi22 pi23 pi33 Pi
+In the case of 2+1D and 3+1D viscous with TrENTO initial conditions, the hypersurface data needed for the freezeout are stored in binary format in the `surface.dat` file. The data are stored in oreder as double precision floating point numbers: time $t$, space coordinate $x-y-\eta$, covariant normal vector $\sigma_\mu$ with length equal to the transverse volume, velocity $v^i$, shear tensor upper triangle $\pi^{\mu\nu}$, shear pressure.  
+In 2+1D it corresponds to:  
+
+
+| $\tau$ | $x$ | $y$ | $\sigma_\tau$ | $\sigma_x$ | $\sigma_y$ | $v^x$ | $v^y$ | $\pi^{\tau\tau}$ | $\pi^{\tau x}$ | $\pi^{\tau y}$ | $\pi^{x x}$ | $\pi^{xy}$ | $\pi^{yy}$ | $\pi^{\eta\eta}$ | $\Pi$ |
+|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+
+In 3+1D it correpsonds to:  
+
+| $\tau$ | $x$ | $y$ | $\eta$ | $\sigma_\tau$ | $\sigma_x$ | $\sigma_y$ | $\sigma_\eta$ | $v^x$ | $v^y$ | $v^\eta$ | $\pi^{\tau\tau}$ | $\pi^{\tau x}$ | $\pi^{\tau y}$ | $\pi^{\tau\eta}$ | $\pi^{xx}$ | $\pi^{xy}$ | $\pi^{x\eta}$ | $\pi^{yy}$ | $\pi^{y\eta}$ | $\pi^{\eta\eta}$ | $\Pi$ |
+|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
