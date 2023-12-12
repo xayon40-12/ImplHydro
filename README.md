@@ -55,8 +55,8 @@ Many useful scripts are located in the `utils` directory.
 | Name | Description |
 |------|-------------|
 | `implplt.py` | If executed in the same folder as the `results` folder, creates a `figures` folder and generates all the figures. The `-r` flag can be used to remove failed points, the `-s` flag show scheme names, the `-a` flag save a time animation, the `-m` flag save figures for all the Trento results and not only the one labeled `0`. |
-| `implPreHydro.py` | Call [`trento`](https://github.com/Duke-QCD/trento) or [`trento3d-2.0`](https://github.com/Duke-QCD/trento3d-2.0) to generate the initial condition. The flag `-3d` can be used to enable 3d `trento`. The `-f` flag can be used to use the [`freestream`](https://github.com/Duke-QCD/freestream) pre-hydrodynamics. |
-| `implPostHydro.py` | Call [`frzout`](https://github.com/Duke-QCD/frzout) on the `surface.dat` hyper-surface output (must be called directly next to such file in the `results`), and then call the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner. |
+| `implPreHydro.py` | Call [`trento`](https://github.com/Duke-QCD/trento) or [`trento3d-2.0`](https://github.com/Duke-QCD/trento3d-2.0) to generate the initial condition. The flag `-3d` can be used to enable 3d `trento`. |
+| `implPostHydro.py` | Must be used next to the `results` folder. It will execute [`frzout`](https://github.com/Duke-QCD/frzout) on all the `surface.dat` hyper-surface outputs, then it will execute the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner, and finally it will compute physical observables and store them in the `observables` folder that will be created next to the `results` folder. |
 | `plt_setting.py` | Settings for matplotlib from [Saizensen](https://github.com/MasakiyoK/Saizensen) |
 
 ## File formats
@@ -81,3 +81,19 @@ For the 3+1D case, the columns correspond to the X direction and the lines to th
 -   11: 1, 0
 -   12: 1, 2
 - ...
+
+### Output format
+
+The generated data are outputed in a folder named after the case simulated and the main parameters values. This folder is itself stored in the `result` folder.  
+A file named `info.txt` is stored next to the outputed data. It contains all the informations involved such as initial time, lattice spacing, ...
+
+#### Raw data
+
+The raw data can be outputed by using the `-r <every>` flag where `<every>` is the physical time between each save. The raw data is binary file of double precison floating point numbers.   
+All the data of one cell are stored together and every cell come in order where the X direction is first, Y second and Z/$\eta$ last. The `variables:` field of the `info.txt` file contains the name of the variables stored in every cells. There will be one double precision floating point number for each of these variables. As the first variables for each cells are the coordinates x, y, z, it is not necessary to take care about the order in which each cells are stored
+
+#### Hypersurface data
+
+In the case of 2+1D and 3+1D viscous with TrENTO initial conditions, the hypersurface data are stored in binary format in the `surface.dat` file.
+      # t x y sig_t sig_x sig_y vx vy pi00 pi01 pi02 pi11 pi12 pi22 pi33 Pi
+      # t x y z sig_t sig_x sig_y zig_z vx vy vz pi00 pi01 pi02 pi03 pi11 pi12 pi13 pi22 pi23 pi33 Pi
