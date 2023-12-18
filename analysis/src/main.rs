@@ -29,20 +29,6 @@ impl Event {
     }
 }
 
-// def jackknife(fn, ns, ds):
-//    n = sum(ns)
-//    d = sum(ds)
-//    value = fn(n, d)
-//    l = len(ns)
-//    if l > 1:
-//       fs = [fn(n-ni, d-di) for ni, di in zip(ns,ds)]
-//       fh = sum(fs)/l
-//       vh = sum((f-fh)**2 for f in fs)/l
-//       error2 = (l-1)*vh
-//       return value, np.sqrt(error2)
-//    else:
-//       return value, 0
-
 pub fn jacknife<F: Fn(f64, f64) -> f64>(f: F, aa: Vec<f64>, bb: Vec<f64>) -> (f64, f64) {
     let a: f64 = aa.iter().sum();
     let b: f64 = bb.iter().sum();
@@ -224,7 +210,8 @@ fn main() {
     let sizes = repeat(l / 40).take(4).chain(repeat(l / 10).take(7));
     let percent = |i| i as f64 / l as f64 * 100.0;
 
-    let mut msg = vec![String::new(); 3];
+    let nb_obs = 5;
+    let mut msg = vec![String::new(); nb_obs];
     let mut j = 0;
     // For each bin
     for size in sizes {
@@ -253,6 +240,16 @@ fn main() {
         msg[2] = format!(
             "{}v2|{:.1}-{:.1}|{:.3}:{:.3}\n",
             msg[2], bin.0, bin.1, v2, errv2
+        );
+        let (v3, errv3) = vn(3.0, &events);
+        msg[3] = format!(
+            "{}v3|{:.1}-{:.1}|{:.3}:{:.3}\n",
+            msg[3], bin.0, bin.1, v3, errv3
+        );
+        let (v4, errv4) = vn(4.0, &events);
+        msg[4] = format!(
+            "{}v4|{:.1}-{:.1}|{:.3}:{:.3}\n",
+            msg[4], bin.0, bin.1, v4, errv4
         );
 
         j += size;
