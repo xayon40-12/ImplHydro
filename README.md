@@ -56,8 +56,10 @@ Many useful scripts are located in the `utils` directory.
 |------|-------------|
 | `implplt.py` | If executed in the same folder as the `results` folder, creates a `figures` folder and generates all the figures. The `-r` flag can be used to remove failed points, the `-s` flag show scheme names, the `-a` flag save a time animation, the `-m` flag save figures for all the Trento results and not only the one labeled `0`. |
 | `implPreHydro.py` | Call [`trento`](https://github.com/Duke-QCD/trento) or [`trento3d-2.0`](https://github.com/Duke-QCD/trento3d-2.0) to generate the initial condition. The flag `-3d` can be used to enable 3d `trento`. |
-| `implPostHydro.py` | Must be used next to the `results` folder. It will execute [`frzout`](https://github.com/Duke-QCD/frzout) on all the `surface.dat` hyper-surface outputs, then it will execute the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner, and finally it will compute physical observables and store them in the `observables` folder that will be created next to the `results` folder. |
+| `implPostHydro.py` | Must be used next to the `results` folder. It will execute [`frzout`](https://github.com/Duke-QCD/frzout) on all the `surface.dat` hyper-surface outputs, then it will execute the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner|
 | `plt_setting.py` | Settings for matplotlib from [Saizensen](https://github.com/MasakiyoK/Saizensen) |
+
+In addition, there is another rust program that is install with the `./install` command called `analysis`. After running the `implPostHydro.py` script, the `analysis` progam can be executed next to the `results` folder to generate a file named `observables.txt` which will contains the observables $\mathrm{dN}_\mathrm{ch}/\mathrm{d}\eta$ and $v_2\{2\}$ as function of centrality.  
 
 ## File formats
 
