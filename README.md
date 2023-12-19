@@ -1,6 +1,6 @@
 # ImplHydro
 
-ImplHydro is a 1+1D and 2+1D implicit in time relativistic hydrodynamics solver.  
+ImplHydro is a 1+1D, 2+1D and 3+1D implicit in time relativistic hydrodynamics solver. It also includes an explicit solver for completeness.  
 Its purpose is to compare the efficiency of explicit and implicit Runge-Kutta 
 method used to integrate the conservation equation of the energy momentum tensor $T^{\mu\nu}$.
 
@@ -54,9 +54,9 @@ Many useful scripts are located in the `utils` directory.
 
 | Name | Description |
 |------|-------------|
-| `implplt.py` | If executed in the same folder as the `results` folder, creates a `figures` folder and generates all the figures. The `-r` flag can be used to remove failed points, the `-s` flag show scheme names, the `-a` flag save a time animation, the `-m` flag save figures for all the Trento results and not only the one labeled `0`. |
+| `implplt.py` | If executed in the same folder as the `results` folder, creates a `figures` folder and generates all the figures. The `-r` flag can be used to remove failed points, the `-s` flag shows scheme names, the `-a` flag save a time animation, the `-m` flag save figures for all the Trento results and not only the one labeled `0`. |
 | `implPreHydro.py` | Call [`trento`](https://github.com/Duke-QCD/trento) or [`trento3d-2.0`](https://github.com/Duke-QCD/trento3d-2.0) to generate the initial condition. The flag `-3d` can be used to enable 3d `trento`. |
-| `implPostHydro.py` | Must be used next to the `results` folder. It will execute [`frzout`](https://github.com/Duke-QCD/frzout) on all the `surface.dat` hyper-surface outputs, then it will execute the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner|
+| `implPostHydro.py` | Must be used next to the `results` folder. It will execute [`frzout`](https://github.com/Duke-QCD/frzout) on all the `surface.dat` hyper-surface outputs to create a `particles_in.dat` file, then it will execute the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner to create the `particles_out.dat` file which contains the final particles.|
 | `plt_setting.py` | Settings for matplotlib from [Saizensen](https://github.com/MasakiyoK/Saizensen) |
 
 In addition, there is another rust program that is install with the `./install` command called `analysis`. After running the `implPostHydro.py` script, the `analysis` progam can be executed next to the `results` folder to generate a file named `observables.txt` which will contains the observables $\mathrm{dN}_\mathrm{ch}/\mathrm{d}\eta$ and $v_2\{2\}$ as function of centrality.  
@@ -65,7 +65,7 @@ In addition, there is another rust program that is install with the `./install` 
 
 ### Input format
 
-The `implhydro` code expect the input data to be formated in the same way that `trento` output its readable format (hdf5 is not supported). The data files should be stored in a folder that starts by the letter 's' followed by the number of cells in the X-Y directions, where the X and Y directions must have the same number of cells. For instance, for a 100 by 100 cells lattice, the data files should be stored in a folder called `s100`. The data files should be named by a number with left zero padding followed by the `.dat` file extension. For instance, in the case where 100 initial conditions are stored, the first file would be `00.dat` and the last one `99.dat`.  
+The `implhydro` code expect the input data to be formated in the same way that `trento` outputs its readable format (hdf5 is not supported). The data files should be stored in a folder that starts by the letter 's' followed by the number of cells in the X-Y directions, where the X and Y directions must have the same number of cells. For instance, for a 100 by 100 cells lattice, the data files should be stored in a folder called `s100`. The data files should be named by a number with left zero padding followed by the `.dat` file extension. For instance, in the case where 100 initial conditions are stored, the first file would be `00.dat` and the last one `99.dat`.  
 
 #### 2+1D matrix format
 
@@ -82,12 +82,12 @@ A file named `info.txt` is stored next to the outputed data. It contains all the
 
 #### Raw data
 
-The raw data can be outputed by using the `-r <every>` flag where `<every>` is the physical time between each save. The raw data is binary file of double precison floating point numbers.   
+The raw data can be outputed by using the `-r <every>` flag where `<every>` is the physical time between each save. The raw data is a binary file of double precison floating point numbers.   
 All the data of one cell are stored together and every cell come in order where the X direction is first, Y second and Z/$\eta$ last. The `variables:` field of the `info.txt` file contains the name of the variables stored in every cells. There will be one double precision floating point number for each of these variables. As the first variables for each cells are the coordinates x, y, z, it is not necessary to take care about the order in which each cells are stored
 
 #### Hypersurface data
 
-In the case of 2+1D and 3+1D viscous with TrENTO initial conditions, the hypersurface data needed for the freezeout are stored in binary format in the `surface.dat` file. The data are stored in oreder as double precision floating point numbers: time $t$, space coordinate $x-y-\eta$, covariant normal vector $\sigma_\mu$ with length equal to the transverse volume, velocity $v^i$, shear tensor upper triangle $\pi^{\mu\nu}$, shear pressure.  
+In the case of 2+1D and 3+1D viscous with TrENTO initial conditions, the hypersurface data needed for the freezeout are stored in binary format in the `surface.dat` file. The data are stored in order as double precision floating point numbers: time $\tau$, space coordinate $x-y-\eta$, covariant normal vector $\sigma_\mu$ with length equal to the transverse volume, velocity $v^i$,  upper triangle part of the shear tensor$\pi^{\mu\nu}$, shear pressure.  
 In 2+1D it corresponds to:  
 
 
