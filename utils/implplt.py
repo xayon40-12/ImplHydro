@@ -138,18 +138,17 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     vid = {n: i for (i,n) in enumerate(info["variables"])}
     info["ID"] = vid
     visc = info["viscosity"]
-    match visc:
-        case "Ideal":
-            visc = ()
-        case "Shear":
-            visc = (info["etaovers"])
-            cut = info["energycut"]
-        case "Bulk":
-            visc = (info["zetaovers"])
-            cut = info["energycut"]
-        case "Both":
-            visc = (info["etaovers"],info["zetaovers"])
-            cut = info["energycut"]
+    if visc == "Ideal":
+        visc = ()
+    if visc == "Shear":
+        visc = (info["etaovers"])
+        cut = info["energycut"]
+    if visc == "Bulk":
+        visc = (info["zetaovers"])
+        cut = info["energycut"]
+    if visc == "Both":
+        visc = (info["etaovers"],info["zetaovers"])
+        cut = info["energycut"]
     info["visc"] = visc
 
     # data = np.loadtxt(p+"/data.txt")
@@ -263,15 +262,14 @@ def convergence(a, ref=None):
 
 def info2name(info, scheme=True):
     visc = info["viscosity"]
-    match visc:
-        case "Ideal":
-            visc = "Ideal"
-        case "Shear":
-            visc = "Shear({})".format(info["etaovers"])
-        case "Bulk":
-            visc = "Bulk({})".format(info["zeta"])
-        case "Both":
-            visc = "Both({},{})".format(info["etaovers"],info["zetaovers"])
+    if visc == "Ideal":
+        visc = "Ideal"
+    if visc == "Shear":
+        visc = "Shear({})".format(info["etaovers"])
+    if visc == "Bulk":
+        visc = "Bulk({})".format(info["zeta"])
+    if visc == "Both":
+        visc = "Both({},{})".format(info["etaovers"],info["zetaovers"])
     if scheme:
         return "{}_{}{}_{}_{}_{}_{}_{}_{}_{:.4e}".format(info["dim"],info["name"],info["case"],visc,info["scheme"],info["t0"],info["tend"],info["dx"],info["nx"],info["t"])
     else:

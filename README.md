@@ -43,10 +43,14 @@ Every command has it own options and commands. The same `--help` flag can be use
 
 To reproduce the 1-dimensional case results and then generate the figures, you can run:
 ```bash
-implhydro -c 200 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
-implhydro -c 100 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
+implhydro -c 200 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
+implhydro -c 100 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
 implplt.py -r
 ```
+
+TODO:  
+- detail the subcommands as the default values do not detail what is available (and some defaults are not cli defaults).
+- give an exemple of Trento3D
 
 ### Usefull scripts
 
