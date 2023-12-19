@@ -56,6 +56,9 @@ TODO:
 
 Many useful scripts are located in the `utils` directory.  
 
+TODO:  
+- detail the necessary python packages
+
 | Name | Description |
 |------|-------------|
 | `implplt.py` | If executed in the same folder as the `results` folder, creates a `figures` folder and generates all the figures. The `-r` flag can be used to remove failed points, the `-s` flag shows scheme names, the `-a` flag save a time animation, the `-m` flag save figures for all the Trento results and not only the one labeled `0`. |
