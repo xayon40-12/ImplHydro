@@ -36,13 +36,14 @@ def plot_dndeta_eta(dndeta_eta):
     max_c = 60
     for [cl,cr], (pos, value, err) in zip(centralities, valuess):
         if cl < max_c:
-            plt.plot(pos, value, label="{}%-{}%".format(cl,cr))
+            plt.errorbar(pos, value, err, label="{}%-{}%".format(cl,cr))
     fst = True
     for [cl,cr], (pos, value, err) in alice5020["dndeta-eta"]:
         if cl < max_c:
+            pi = len([p for p in pos if p < 0])
             name = fst and "ALICE 5.02TeV" or ""
             fst = False
-            plt.plot(pos, value, "o", color="black", label=name)
+            plt.errorbar(pos[pi:], value[pi:], err[pi:], linestyle="", marker="o", color="black", label=name)
     plt.xlabel("$\eta$")
     plt.ylabel("$\mathrm{dN}_{\mathrm{ch}}/\mathrm{d}\eta$")
     plt.legend()
@@ -55,13 +56,13 @@ def plot_dndeta_mid(dndeta_mid):
     centralities_c = [(l+r)/2 for [l,r] in centralities]
     values = [v[0] for v in valuess]
     errs = [v[1] for v in valuess]
-    plt.plot(centralities_c, values, "-", label="numerics")
+    plt.errorbar(centralities_c, values, errs, label="numerics")
 
     centralities, valuess = alice5020["dndeta"]
     centralities_c = [(l+r)/2 for [l,r] in centralities]
     values = [v[0] for v in valuess]
     errs = [v[1] for v in valuess]
-    plt.plot(centralities_c, values, "o", color="black", label="ALICE 5.02TeV")
+    plt.errorbar(centralities_c, values, errs, linestyle="", marker="o", color="black", label="ALICE 5.02TeV")
 
     plt.xlabel("centrality (%)")
     plt.ylabel("$\mathrm{dN}_{\mathrm{ch}}/\mathrm{d}\eta$")
@@ -70,13 +71,13 @@ def plot_dndeta_mid(dndeta_mid):
 
 def plot_vn(vns):
     alice = [alice5020[n] for (n, _, _) in vns]
-    vns = [("$v_{{{}}}${{2}}".format(n[1]), "-", c, v) for (n, c, v) in vns]
+    vns = [("$v_{{{}}}${{2}}".format(n[1]), c, v) for (n, c, v) in vns]
     plt.close()
-    for name, shape, centralities, valuess in vns:
+    for name, centralities, valuess in vns:
         centralities_c = [(l+r)/2 for [l,r] in centralities]
         values = [v[0] for v in valuess]
         errs = [v[1] for v in valuess]
-        plt.plot(centralities_c, values, shape, label=name)
+        plt.errorbar(centralities_c, values, errs, label=name)
     fst = True
     for centralities, valuess in alice:
         centralities_c = [(l+r)/2 for [l,r] in centralities]
@@ -84,7 +85,7 @@ def plot_vn(vns):
         errs = [v[1] for v in valuess]
         name = fst and name or ""
         fst = False
-        plt.plot(centralities_c, values, "o", color="black", label=name)
+        plt.errorbar(centralities_c, values, errs, linestyle="", marker="o", color="black", label=name)
     plt.xlabel("centrality (%)")
     plt.ylabel("$v_n${2}")
     plt.legend()
