@@ -205,13 +205,14 @@ fn main() {
     // Sort multiplicity to be able to bin. Larger multiplicity first
     mults.sort_by(|a, b| b.cmp(a));
 
-    // Choose the number of bins
     let l = mults.len();
-    let sizes = repeat(l / 40).take(4).chain(repeat(l / 10).take(7));
     let percent = |i| i as f64 / l as f64 * 100.0;
 
     let nb_obs = 5;
     let mut msg = vec![String::new(); nb_obs];
+
+    // Choose the number of bins
+    let sizes = repeat(l / 40).take(4).chain(repeat(l / 10).take(7));
     let mut j = 0;
     // For each bin
     for size in sizes {
@@ -225,16 +226,6 @@ fn main() {
         msg[0] = format!(
             "{}dn/deta-mid|{:.1}-{:.1}|{:.0}:{:.1}\n",
             msg[0], bin.0, bin.1, dndeta, errdndeta
-        );
-        let dndetaetas = dn_deta_eta(&events);
-        let dndetaetas_data = dndetaetas
-            .iter()
-            .map(|(eta, dndeta, errdndeta)| format!("{:.3}:{:.0}:{:.1}", eta, dndeta, errdndeta))
-            .collect::<Vec<_>>()
-            .join(" ");
-        msg[1] = format!(
-            "{}dn/deta|{:.1}-{:.1}|{}\n",
-            msg[1], bin.0, bin.1, dndetaetas_data
         );
         let (v2, errv2) = vn(2.0, &events);
         msg[2] = format!(
@@ -250,6 +241,25 @@ fn main() {
         msg[4] = format!(
             "{}v4|{:.1}-{:.1}|{:.3}:{:.3}\n",
             msg[4], bin.0, bin.1, v4, errv4
+        );
+
+        j += size;
+    }
+    // Same as before but with larger bins for dndeta-eta
+    let sizes = repeat(l / 20).take(2).chain(repeat(l / 10).take(7));
+    let mut j = 0;
+    for size in sizes {
+        let bin = (percent(j), percent(j + size));
+        let events: Vec<&Event> = (0..size).map(|k| &events[mults[j + k].1]).collect();
+        let dndetaetas = dn_deta_eta(&events);
+        let dndetaetas_data = dndetaetas
+            .iter()
+            .map(|(eta, dndeta, errdndeta)| format!("{:.3}:{:.0}:{:.1}", eta, dndeta, errdndeta))
+            .collect::<Vec<_>>()
+            .join(" ");
+        msg[1] = format!(
+            "{}dn/deta|{:.1}-{:.1}|{}\n",
+            msg[1], bin.0, bin.1, dndetaetas_data
         );
 
         j += size;
