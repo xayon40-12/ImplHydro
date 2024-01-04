@@ -227,21 +227,6 @@ fn main() {
             "{}dn/deta-mid|{:.1}-{:.1}|{:.0}:{:.1}\n",
             msg[0], bin.0, bin.1, dndeta, errdndeta
         );
-        let (v2, errv2) = vn(2.0, &events);
-        msg[2] = format!(
-            "{}v2|{:.1}-{:.1}|{:.3}:{:.3}\n",
-            msg[2], bin.0, bin.1, v2, errv2
-        );
-        let (v3, errv3) = vn(3.0, &events);
-        msg[3] = format!(
-            "{}v3|{:.1}-{:.1}|{:.3}:{:.3}\n",
-            msg[3], bin.0, bin.1, v3, errv3
-        );
-        let (v4, errv4) = vn(4.0, &events);
-        msg[4] = format!(
-            "{}v4|{:.1}-{:.1}|{:.3}:{:.3}\n",
-            msg[4], bin.0, bin.1, v4, errv4
-        );
 
         j += size;
     }
@@ -260,6 +245,21 @@ fn main() {
         msg[1] = format!(
             "{}dn/deta|{:.1}-{:.1}|{}\n",
             msg[1], bin.0, bin.1, dndetaetas_data
+        );
+        let (v2, errv2) = vn(2.0, &events);
+        msg[2] = format!(
+            "{}v2|{:.1}-{:.1}|{:.3}:{:.3}\n",
+            msg[2], bin.0, bin.1, v2, errv2
+        );
+        let (v3, errv3) = vn(3.0, &events);
+        msg[3] = format!(
+            "{}v3|{:.1}-{:.1}|{:.3}:{:.3}\n",
+            msg[3], bin.0, bin.1, v3, errv3
+        );
+        let (v4, errv4) = vn(4.0, &events);
+        msg[4] = format!(
+            "{}v4|{:.1}-{:.1}|{:.3}:{:.3}\n",
+            msg[4], bin.0, bin.1, v4, errv4
         );
 
         j += size;
