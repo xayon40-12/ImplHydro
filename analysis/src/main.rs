@@ -1,5 +1,5 @@
 use num::Complex;
-use std::{collections::HashMap, iter::repeat};
+use std::iter::repeat;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Particle {
@@ -143,53 +143,56 @@ fn main() {
             println!("dir: {}", p.display());
         }
 
-        let info: HashMap<String, String> = std::fs::read_to_string(p.join("info.txt"))
-            .expect("Could not read info.txt")
-            .trim()
-            .split("\n")
-            .map(|l| {
-                let v: Vec<_> = l.split(": ").collect();
-                (v[0].to_string(), v[1].to_string())
-            })
-            .collect();
-        if DEBUG {
-            println!("info: {:?}", info);
-        }
+        if let Ok(freezeouts_file) = std::fs::read_to_string(p.join("particles_out.dat")) {
+            // let info: HashMap<String, String> = std::fs::read_to_string(p.join("info.txt"))
+            //     .expect("Could not read info.txt")
+            //     .trim()
+            //     .split("\n")
+            //     .map(|l| {
+            //         let v: Vec<_> = l.split(": ").collect();
+            //         (v[0].to_string(), v[1].to_string())
+            //     })
+            //     .collect();
+            // if DEBUG {
+            //     println!("info: {:?}", info);
+            // }
 
-        let freezeouts: Vec<FreezeOut> = std::fs::read_to_string(p.join("particles_out.dat"))
-            .expect("Cloud not read particles_out.dat")
-            .trim()
-            .split("\n")
-            .map(|l| l)
-            .fold(vec![], |mut acc, l| {
-                if l.starts_with("#") {
-                    acc.push(FreezeOut { particles: vec![] });
-                } else {
-                    let last = acc.len() - 1;
-                    // vals: ID charge pT ET mT phi y eta
-                    //       0    1    2  3  4   5  6  7
-                    let vals: Vec<f64> = l
-                        .trim()
-                        .split(" ")
-                        .filter(|v| !v.is_empty())
-                        .map(|v| v.parse().unwrap())
-                        .collect();
-                    if vals[1] != 0.0 {
-                        // remove charless particles
-                        acc[last].particles.push(Particle {
-                            eta: vals[7],
-                            pt: vals[2],
-                            phi: vals[5],
-                        });
-                    }
-                }
-                acc
-            });
-        if DEBUG {
-            println!("partirles: {:?}", freezeouts[0].particles[0]);
-        }
+            let freezeouts: Vec<FreezeOut> =
+                freezeouts_file
+                    .trim()
+                    .split("\n")
+                    .map(|l| l)
+                    .fold(vec![], |mut acc, l| {
+                        if l.starts_with("#") {
+                            acc.push(FreezeOut { particles: vec![] });
+                        } else {
+                            let last = acc.len() - 1;
+                            // vals: ID charge pT ET mT phi y eta
+                            //       0    1    2  3  4   5  6  7
+                            let vals: Vec<f64> = l
+                                .trim()
+                                .split(" ")
+                                .filter(|v| !v.is_empty())
+                                .map(|v| v.parse().unwrap())
+                                .collect();
+                            if vals[1] != 0.0 {
+                                // remove charless particles
+                                acc[last].particles.push(Particle {
+                                    eta: vals[7],
+                                    pt: vals[2],
+                                    phi: vals[5],
+                                });
+                            }
+                        }
+                        acc
+                    });
 
-        events.push(Event { freezeouts });
+            if DEBUG {
+                println!("partirles: {:?}", freezeouts[0].particles[0]);
+            }
+
+            events.push(Event { freezeouts });
+        }
 
         if DEBUG {
             println!("");
