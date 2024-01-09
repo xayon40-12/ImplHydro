@@ -40,6 +40,7 @@ implhydro --help
 ```
 and it will show a help message that explain the available options with their default values and the different commands that are to be used.
 Every command has it own options and commands. The same `--help` flag can be used to obtain explanations for every sub-commands.  
+For a detailed explanation of the commands, see `commands.md`.  
 
 To reproduce the 1-dimensional case results and then generate the figures, you can run:
 ```bash
@@ -48,9 +49,15 @@ implhydro -c 100 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
 implplt.py -r
 ```
 
-TODO:  
-- detail the subcommands as the default values do not detail what is available (and some defaults are not cli defaults).
-- give an exemple of Trento3D
+To reproduce the (3+1)-dimensional results including the $\mathrm{dN}/\mathrm{d}\eta$ and $v_n$, you can run (warning: this will take many days on an 16-cores processor):
+```bash
+implPreHydro.py -3d 100 -n=1000 -rb
+cd TeV5020/b_random
+implhydro -c 100 -s Implicit dim3 viscous trento -n 1000 --dt 0.2
+implPostHydro.py -3d -u -nbfreezeout=20
+analysis
+observables.py
+```
 
 ### Usefull scripts
 
@@ -58,6 +65,12 @@ Many useful scripts are located in the `utils` directory.
 
 TODO:  
 - detail the necessary python packages
+
+Python libraries needed:
+- numpy
+- matplotlib
+- scipy
+- yaml
 
 | Name | Description |
 |------|-------------|

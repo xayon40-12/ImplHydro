@@ -14,7 +14,7 @@ struct Cli {
     physical_length: f64,
 
     #[arg(short, long, default_value_t = 5020.0)] // GeV
-    collision_energy: f64,
+    energy: f64,
 
     #[arg(short, long, default_value_t = Solver::Both)]
     solver_type: Solver,

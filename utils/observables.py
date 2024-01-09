@@ -83,7 +83,7 @@ def plot_vn(vns):
         centralities_c = [(l+r)/2 for [l,r] in centralities]
         values = [v[0] for v in valuess]
         errs = [v[1] for v in valuess]
-        name = fst and name or ""
+        name = fst and "ALICE 5.02TeV" or ""
         fst = False
         plt.errorbar(centralities_c, values, errs, linestyle="", marker="o", color="black", label=name)
     plt.xlabel("centrality (%)")
