@@ -40,7 +40,7 @@ implhydro --help
 ```
 and it will show a help message that explain the available options with their default values and the different commands that are to be used.
 Every command has it own options and commands. The same `--help` flag can be used to obtain explanations for every sub-commands.  
-For a detailed explanation of the commands, see `commands.md`.  
+For a detailed explanation of the commands, see [`COMMANDS.md`](/COMMANDS.md).  
 
 To reproduce the 1-dimensional case results and then generate the figures, you can run:
 ```bash
