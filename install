@@ -1,7 +1,7 @@
 #!/bin/sh
 
 cargo install --path .
-cargo install --path ./analysis
-for n in implplt.py implPreHydro.py implPostHydro.py riemann.py gubser.py plt_setting.py observables.py; do
+cargo install --path ./impl_analysis
+for n in impl_plt.py impl_pre_hydro.py impl_post_hydro.py riemann.py gubser.py plt_setting.py impl_observables.py; do
 	cp utils/$n $HOME/.cargo/bin
 done

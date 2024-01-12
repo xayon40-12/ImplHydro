@@ -3,9 +3,9 @@
 This program use the convetion where a program can first have named arguments that start with a hyphen "-", and then one or many commands that are plain names without hyphen. Each command can recursively have named arguments and commands.  
 
 Calling the program will have the following shape:  
-`implhydro [general args] <Dim1|Dim2|Dim3> [Dim args] <Ideal|Viscous> [Hydro args] <Benchmark|Trento> [Sumilation args]`
+`impl_hydro [general args] <Dim1|Dim2|Dim3> [Dim args] <Ideal|Viscous> [Hydro args] <Benchmark|Trento> [Sumilation args]`
 
-where `implhydro` is the name of the program, the parts in square brackets `[...]` are optional arguments, and the parts in angle brackets `<...>` are the commands choices separated by pipes `|`. Although all argements (which starts with a hyphen `-`) are optional, the commands must be specified. Currently, not all the 3x2x2 combinatsions of commands are available. If you try to use an invalid combinasion, the program will output an error message.
+where `impl_hydro` is the name of the program, the parts in square brackets `[...]` are optional arguments, and the parts in angle brackets `<...>` are the commands choices separated by pipes `|`. Although all argements (which starts with a hyphen `-`) are optional, the commands must be specified. Currently, not all the 3x2x2 combinatsions of commands are available. If you try to use an invalid combinasion, the program will output an error message.
 
 When actually using the program, the square and angle brackets should not be used. See the [Example](#Example) section.
 
@@ -16,7 +16,7 @@ In this document, the program and commands will be surrounded by angle brackets 
 ---
 ## ImplHydro
 
-### `<implhydro>` : [`Dim`](#Dim)
+### `<impl_hydro>` : [`Dim`](#Dim)
 The main command.
 
 | argument | description | default value | unit |
@@ -116,5 +116,5 @@ Run the simulation for a fixed $\Delta t$.
 ## Example
 To run a (1+1)-dimensional benchmark fo the Riemann problem by saving the data every fm of time:  
 ```bash
-implhydro -c 200 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
+impl_hydro -c 200 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
 ```

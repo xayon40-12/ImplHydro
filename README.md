@@ -12,14 +12,14 @@ In order to execute this project, you will need a working `rust` compiler along 
 The simplest way to have both is to use the official installer called `rustup` available at [rustup.rs](https://rustup.rs).  
 
 
-### implhydro
+### impl_hydro
 Once `rust` is installed, you can clone this `ImplHydro` project and go inside its directory:  
 ```bash
 git clone https://github.com/xayon40-12/ImplHydro.git
 cd ImplHydro
 ```
 
-If you installed `rust` with `rustup`, then you should have a `.cargo` directory in your home folder. Furthermore, you should have been asked to add `$HOME/.cargo/bin` to you `PATH` environement variable. If so, you can install the `implhydro` executable and the other useful scripts located in the `utils` folder by executing the `install` script:  
+If you installed `rust` with `rustup`, then you should have a `.cargo` directory in your home folder. Furthermore, you should have been asked to add `$HOME/.cargo/bin` to you `PATH` environement variable. If so, you can install the `impl_hydro` executable and the other useful scripts located in the `utils` folder by executing the `install` script:  
 ```bash
 ./install
 ```
@@ -28,15 +28,15 @@ If you do not want to install, you can simply build the project with
 ```bash
 cargo build --release
 ```
-and then acces the executable in `target/release/implhydro`
+and then acces the executable in `target/release/impl_hydro`
 
 ## Usage
 
 ### Run simulations
 
-Once the `implhydro` executable is compiled and available, you can simply call it with the `--help` flag
+Once the `impl_hydro` executable is compiled and available, you can simply call it with the `--help` flag
 ```bash
-implhydro --help
+impl_hydro --help
 ```
 and it will show a help message that explain the available options with their default values and the different commands that are to be used.
 Every command has it own options and commands. The same `--help` flag can be used to obtain explanations for every sub-commands.  
@@ -44,19 +44,19 @@ For a detailed explanation of the commands, see [`COMMANDS.md`](/COMMANDS.md).
 
 To reproduce the 1-dimensional case results and then generate the figures, you can run:
 ```bash
-implhydro -c 200 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
-implhydro -c 100 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
-implplt.py -r
+impl_hydro -c 200 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
+impl_hydro -c 100 -r 1 dim1 ideal benchmark --dtmin 5e-4 --dtmax 1.28
+impl_plt.py -r
 ```
 
 To reproduce the (3+1)-dimensional results including the $\mathrm{dN}/\mathrm{d}\eta$ and $v_n$, you can run (warning: this will take many days on an 16-cores processor):
 ```bash
-implPreHydro.py -3d 100 -n=1000 -rb
+impl_pre_hydro.py -3d 100 -n=1000 -rb
 cd TeV5020/b_random
-implhydro -c 100 -s Implicit dim3 viscous trento -n 1000 --dt 0.2
-implPostHydro.py -3d -u -nbfreezeout=20
-analysis
-observables.py
+impl_hydro -c 100 -s Implicit dim3 viscous trento -n 1000 --dt 0.2
+impl_post_hydro.py -3d -u -nbfreezeout=20
+impl_analysis
+impl_observables.py
 ```
 
 ### Usefull scripts
@@ -74,18 +74,18 @@ Python libraries needed:
 
 | Name | Description |
 |------|-------------|
-| `implplt.py` | If executed in the same folder as the `results` folder, creates a `figures` folder and generates all the figures. The `-r` flag can be used to remove failed points, the `-s` flag shows scheme names, the `-a` flag save a time animation, the `-m` flag save figures for all the Trento results and not only the one labeled `0`. |
-| `implPreHydro.py` | Call [`trento`](https://github.com/Duke-QCD/trento) or [`trento3d-2.0`](https://github.com/Duke-QCD/trento3d-2.0) to generate the initial condition. The flag `-3d` can be used to enable 3d `trento`. |
-| `implPostHydro.py` | Must be used next to the `results` folder. It will execute [`frzout`](https://github.com/Duke-QCD/frzout) on all the `surface.dat` hyper-surface outputs to create a `particles_in.dat` file, then it will execute the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner to create the `particles_out.dat` file which contains the final particles.|
+| `impl_plt.py` | If executed in the same folder as the `results` folder, creates a `figures` folder and generates all the figures. The `-r` flag can be used to remove failed points, the `-s` flag shows scheme names, the `-a` flag save a time animation, the `-m` flag save figures for all the Trento results and not only the one labeled `0`. |
+| `impl_pre_hydro.py` | Call [`trento`](https://github.com/Duke-QCD/trento) or [`trento3d-2.0`](https://github.com/Duke-QCD/trento3d-2.0) to generate the initial condition. The flag `-3d` can be used to enable 3d `trento`. |
+| `impl_post_hydro.py` | Must be used next to the `results` folder. It will execute [`frzout`](https://github.com/Duke-QCD/frzout) on all the `surface.dat` hyper-surface outputs to create a `particles_in.dat` file, then it will execute the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner to create the `particles_out.dat` file which contains the final particles.|
 | `plt_setting.py` | Settings for matplotlib from [Saizensen](https://github.com/MasakiyoK/Saizensen) |
 
-In addition, there is another rust program that is install with the `./install` command called `analysis`. After running the `implPostHydro.py` script, the `analysis` progam can be executed next to the `results` folder to generate a file named `observables.txt` which will contains the observables $\mathrm{dN}_\mathrm{ch}/\mathrm{d}\eta$ and $v_2\{2\}$ as function of centrality.  
+In addition, there is another rust program that is install with the `./install` command called `analysis`. After running the `impl_post_hydro.py` script, the `analysis` progam can be executed next to the `results` folder to generate a file named `observables.txt` which will contains the observables $\mathrm{dN}_\mathrm{ch}/\mathrm{d}\eta$ and $v_2\{2\}$ as function of centrality.  
 
 ## File formats
 
 ### Input format
 
-The `implhydro` code expect the input data to be formated in the same way that `trento` outputs its readable format (hdf5 is not supported). The data files should be stored in a folder that starts by the letter 's' followed by the number of cells in the X-Y directions, where the X and Y directions must have the same number of cells. For instance, for a 100 by 100 cells lattice, the data files should be stored in a folder called `s100`. The data files should be named by a number with left zero padding followed by the `.dat` file extension. For instance, in the case where 100 initial conditions are stored, the first file would be `00.dat` and the last one `99.dat`.  
+The `impl_hydro` code expect the input data to be formated in the same way that `trento` outputs its readable format (hdf5 is not supported). The data files should be stored in a folder that starts by the letter 's' followed by the number of cells in the X-Y directions, where the X and Y directions must have the same number of cells. For instance, for a 100 by 100 cells lattice, the data files should be stored in a folder called `s100`. The data files should be named by a number with left zero padding followed by the `.dat` file extension. For instance, in the case where 100 initial conditions are stored, the first file would be `00.dat` and the last one `99.dat`.  
 
 #### 2+1D matrix format
 

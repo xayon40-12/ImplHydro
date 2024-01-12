@@ -1,5 +1,5 @@
 use clap::{command, Parser, Subcommand};
-use implhydro::{
+use impl_hydro::{
     run::{ideal1d, ideal2d, ideal3d, viscous2d, viscous3d},
     solver::Solver,
 };
