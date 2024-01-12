@@ -49,6 +49,27 @@ def plot_dndeta_eta(dndeta_eta):
     plt.legend()
     plt.savefig("dndeta-eta.pdf")
 
+def plot_d2ndetadpt_pt(d2ndetadpt_pt):
+    plt.close()
+    name, centralities, valuess = d2ndetadpt_pt
+    max_c = 60
+    for [cl,cr], (pos, value, err) in zip(centralities, valuess):
+        if cl < max_c:
+            plt.errorbar(pos, value, err, label="{}%-{}%".format(cl,cr))
+    fst = True
+    # for [cl,cr], (pos, value, err) in alice5020["d2ndetadpt-pt"]:
+    #     if cl < max_c:
+    #         pi = len([p for p in pos if p < 0])
+    #         name = fst and "ALICE 5.02TeV" or ""
+    #         fst = False
+    #         plt.errorbar(pos[pi:], value[pi:], err[pi:], linestyle="", marker="o", color="black", label=name)
+    plt.xlabel("$p_T$")
+    plt.ylabel("$1/\mathrm{N_{evt}}\mathrm{d^2N}_{\mathrm{ch}}/\mathrm{d}\eta\mathrm{dp_T}$")
+    plt.legend()
+    plt.yscale("log")
+    plt.xscale("log")
+    plt.savefig("d2ndetadpt-pt.pdf")
+
 def plot_dndeta_mid(dndeta_mid):
     plt.close()
 
@@ -100,7 +121,7 @@ def tosym(err):
 
 alice5020_path = os.environ.get("ALICE5020",".")
 
-alice5020 = {"v2": None, "v3": None, "v4": None, "dndeta": None, "dndeta-eta": None}
+alice5020 = {"v2": None, "v3": None, "v4": None, "dndeta": None, "dndeta-eta": None, "d2ndetadpt-pt": None}
 with open(alice5020_path+"/ALICE_5.02TeV-v2.yaml", "r") as f:
     y = yaml.safe_load(f)
     ivs = y["independent_variables"][0]["values"]
@@ -141,7 +162,7 @@ with open(alice5020_path+"/ALICE_5.02TeV-dndeta-eta.yaml", "r") as f:
         errs = [v["errors"][0]["symerror"]+tosym(v["errors"][1]) for v in dvs]
         dndeta_eta += [(c, (etas, vs, errs))]
     alice5020["dndeta-eta"] = dndeta_eta
-
+    
 with open("observables.txt") as f:
     obs = [parse(lines) for lines in f.read().split("\n\n")]
     vns = [o for o in obs if o[0].startswith("v")]
@@ -150,3 +171,5 @@ with open("observables.txt") as f:
     plot_dndeta_mid(dndeta_mid)
     dndeta_eta = [o for o in obs if o[0] == "dn/deta"][0]
     plot_dndeta_eta(dndeta_eta)
+    d2ndetadpt_pt = [o for o in obs if o[0] == "d2n/detadpt"][0]
+    plot_d2ndetadpt_pt(d2ndetadpt_pt)

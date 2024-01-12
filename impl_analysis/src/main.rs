@@ -83,7 +83,7 @@ pub fn vn(n: f64, events: &Vec<&Event>) -> (f64, f64) {
     jacknife(|num, den| (num / den).sqrt(), nums, dens)
 }
 
-// Simetrized dn/deta os function of eta
+// Simetrized dn/deta as function of eta
 pub fn dn_deta_eta(events: &Vec<&Event>) -> Vec<(f64, f64, f64)> {
     let deta = 0.25;
     let etas = (0..(5.0 / deta) as usize).map(|i| i as f64 * deta);
@@ -110,6 +110,44 @@ pub fn dn_deta_eta(events: &Vec<&Event>) -> Vec<(f64, f64, f64)> {
         let errdndeta = ((dndeta2 - dndeta * dndeta) / events.len() as f64).sqrt();
 
         (eta + deta / 2.0, dndeta, errdndeta)
+    })
+    .collect()
+}
+
+// Simetrized d2n/deta/dpT as function of pT
+pub fn d2n_detadpt_pt(events: &Vec<&Event>) -> Vec<(f64, f64, f64)> {
+    let eta_m = 0.8;
+    let deta = 2.0 * eta_m;
+    let dpt = 0.1;
+    let pts = (0..(30.0 / dpt) as usize).map(|i| i as f64 * dpt);
+
+    pts.map(|pt| {
+        let dndetas: Vec<f64> = events
+            .iter()
+            .map(|e| {
+                e.freezeouts
+                    .iter()
+                    .map(|f| {
+                        let n_evt = f.particles.len() as f64;
+                        f.particles
+                            .iter()
+                            .filter(|p| {
+                                pt <= p.pt.abs() && p.pt.abs() <= pt + dpt && p.eta.abs() <= eta_m
+                            })
+                            .count() as f64
+                            / n_evt
+                    })
+                    .fold(0.0, |acc, a| acc + a)
+                    / e.freezeouts.len() as f64
+                    / (2.0 * dpt)
+                    / deta
+            })
+            .collect();
+        let d2ndetadpt: f64 = dndetas.iter().fold(0.0, |acc, a| acc + a) / dndetas.len() as f64;
+        let d2ndetadpt2 = dndetas.iter().fold(0.0, |acc, a| acc + a * a) / dndetas.len() as f64;
+        let errd2ndetadpt = ((d2ndetadpt2 - d2ndetadpt * d2ndetadpt) / events.len() as f64).sqrt();
+
+        (pt + dpt / 2.0, d2ndetadpt, errd2ndetadpt)
     })
     .collect()
 }
@@ -211,7 +249,7 @@ fn main() {
     let l = mults.len();
     let percent = |i| i as f64 / l as f64 * 100.0;
 
-    let nb_obs = 5;
+    let nb_obs = 6;
     let mut msg = vec![String::new(); nb_obs];
 
     // Choose the number of bins
@@ -249,20 +287,32 @@ fn main() {
             "{}dn/deta|{:.1}-{:.1}|{}\n",
             msg[1], bin.0, bin.1, dndetaetas_data
         );
-        let (v2, errv2) = vn(2.0, &events);
+        let d2ndetadptpts = d2n_detadpt_pt(&events);
+        let d2ndetadptpts_data = d2ndetadptpts
+            .iter()
+            .map(|(pt, d2ndetadpt, errd2ndetadpt)| {
+                format!("{:.4e}:{:.4e}:{:.4e}", pt, d2ndetadpt, errd2ndetadpt)
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
         msg[2] = format!(
+            "{}d2n/detadpt|{:.1}-{:.1}|{}\n",
+            msg[2], bin.0, bin.1, d2ndetadptpts_data
+        );
+        let (v2, errv2) = vn(2.0, &events);
+        msg[3] = format!(
             "{}v2|{:.1}-{:.1}|{:.3}:{:.3}\n",
-            msg[2], bin.0, bin.1, v2, errv2
+            msg[3], bin.0, bin.1, v2, errv2
         );
         let (v3, errv3) = vn(3.0, &events);
-        msg[3] = format!(
+        msg[4] = format!(
             "{}v3|{:.1}-{:.1}|{:.3}:{:.3}\n",
-            msg[3], bin.0, bin.1, v3, errv3
+            msg[4], bin.0, bin.1, v3, errv3
         );
         let (v4, errv4) = vn(4.0, &events);
-        msg[4] = format!(
+        msg[5] = format!(
             "{}v4|{:.1}-{:.1}|{:.3}:{:.3}\n",
-            msg[4], bin.0, bin.1, v4, errv4
+            msg[5], bin.0, bin.1, v4, errv4
         );
 
         j += size;
