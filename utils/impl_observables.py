@@ -33,7 +33,7 @@ def parse(lines):
 def plot_dndeta_eta(dndeta_eta):
     plt.close()
     name, centralities, valuess = dndeta_eta
-    max_c = 60
+    max_c = 70
     for [cl,cr], (pos, value, err) in zip(centralities, valuess):
         if cl < max_c:
             plt.errorbar(pos, value, err, label="{}%-{}%".format(cl,cr))
@@ -52,17 +52,21 @@ def plot_dndeta_eta(dndeta_eta):
 def plot_d2ndetadpt_pt(d2ndetadpt_pt):
     plt.close()
     name, centralities, valuess = d2ndetadpt_pt
-    max_c = 60
+    n = len(valuess)
+    max_c = 80
     for [cl,cr], (pos, value, err) in zip(centralities, valuess):
         if cl < max_c:
-            plt.errorbar(pos, value, err, label="{}%-{}%".format(cl,cr))
+            plt.errorbar(pos, np.array(value)*10**n, np.array(err)*10**n, label="{}%-{}% $\\times 10^{}$".format(cl,cr,n))
+        n -= 1
     fst = True
-    # for [cl,cr], (pos, value, err) in alice5020["d2ndetadpt-pt"]:
-    #     if cl < max_c:
-    #         pi = len([p for p in pos if p < 0])
-    #         name = fst and "ALICE 5.02TeV" or ""
-    #         fst = False
-    #         plt.errorbar(pos[pi:], value[pi:], err[pi:], linestyle="", marker="o", color="black", label=name)
+    n = len(valuess)
+    for [cl,cr], (pos, value, err) in alice5020["d2ndetadpt-pt"]:
+        if cl < max_c:
+            pi = len([p for p in pos if p < 0])
+            name = fst and "ALICE 5.02TeV" or ""
+            fst = False
+            plt.errorbar(pos[pi:], np.array(value[pi:])*10**n, np.array(err[pi:])*10**n, linestyle="", marker="o", markersize = 2, color="black", label=name)
+        n -= 1
     plt.xlabel("$p_T$")
     plt.ylabel("$1/\mathrm{N_{evt}}\mathrm{d^2N}_{\mathrm{ch}}/\mathrm{d}\eta\mathrm{dp_T}$")
     plt.legend()
@@ -162,6 +166,19 @@ with open(alice5020_path+"/ALICE_5.02TeV-dndeta-eta.yaml", "r") as f:
         errs = [v["errors"][0]["symerror"]+tosym(v["errors"][1]) for v in dvs]
         dndeta_eta += [(c, (etas, vs, errs))]
     alice5020["dndeta-eta"] = dndeta_eta
+    
+with open(alice5020_path+"/ALICE_5.02TeV-pT-spectra.yaml", "r") as f:
+    y = yaml.safe_load(f)
+    ivs = y["independent_variables"][0]["values"]
+    pts = [sum(v[d] for d in ["low","high"])/2 for v in ivs]
+    d2ndetadpt_pt = []
+    for ci in range(len(y["dependent_variables"])):
+        dvs = y["dependent_variables"][ci]["values"]
+        c = [float(v) for v in y["dependent_variables"][ci]["qualifiers"][0]["value"].split(" ")[0].split("-")]
+        vs = [v["value"] for v in dvs]
+        errs = [v["errors"][0]["symerror"]+tosym(v["errors"][1]) for v in dvs]
+        d2ndetadpt_pt += [(c, (pts, vs, errs))]
+    alice5020["d2ndetadpt-pt"] = d2ndetadpt_pt
     
 with open("observables.txt") as f:
     obs = [parse(lines) for lines in f.read().split("\n\n")]
