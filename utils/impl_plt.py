@@ -50,7 +50,7 @@ for arg in sys.argv:
 # crop = 9
 crop = 19
 crop_eta = crop/4
-defaultfromref = 0
+defaultfromref = 1
 maxerr = 1e-6
 num2D = 5
 compare_type = 0 # 0: absolute, 1: relative
@@ -60,12 +60,13 @@ plot_meanmax_dx = False
 plot_conv = True
 plot_1D = True
 plot_2D = True
-def refName(srs):
+def refName(scs):
     # return scs[0]
     # return scs[-1]
     # return "RadauIIA2"
-    return "GL1"
+    # return "GL1"
     # return "GL2"
+    return "Heun"
 
 e0 = 10
 emin = 1
@@ -174,8 +175,8 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     # it means that explicit failed
     expl_fail = sum(e) > 10*sum(e0)
     # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
-    # impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
-    impl_fail = fails > 0
+    impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
+    # impl_fail = fails > 0
     if rejectfails and (expl_fail or impl_fail): 
         continue # skip explicit or implicit that failed
 
@@ -350,9 +351,10 @@ def convall(l, cnds):
                         else:
                             c, cname = convergence(ds0, refs[s1])
                         ln = np.log
-                        if len(c) > 2:
-                            dt_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[-1][5])-ln(c[1][5]))
-                            cost_order = (ln(c[-1][mmi])-ln(c[1][mmi]))/(ln(c[1][6])-ln(c[-1][6]))
+                        if len(c) > 3:
+                            ibig = max([i for i, dt in zip(range(1000),c[:,5]) if dt < dx/10 + 1e-10])
+                            dt_order = (ln(c[ibig,mmi])-ln(c[1,mmi]))/(ln(c[ibig,5])-ln(c[1,5]))
+                            cost_order = (ln(c[ibig,mmi])-ln(c[1,mmi]))/(ln(c[1,6])-ln(c[ibig,6]))
                             print("{: <10}{: <10}\t{:.2}\t{:.2}".format(cname[mmi], s0, dt_order, cost_order))
                         c = np.array(list(filter(lambda v: v[5]+1e-14>=0.1*dx*2**-5, c)), dtype=object) # use dt=0.1dx*2**-5 as reference
                         al = alpha

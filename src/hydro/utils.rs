@@ -4,7 +4,7 @@ use std::{
     io::{BufReader, Read},
 };
 
-use crate::solver::context::{Arr, DIM};
+use crate::solver::context::{Arr, BArr, DIM};
 use boxarray::boxarray;
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -62,19 +62,24 @@ pub fn converge<
     fun: impl Fn(f64) -> HydroOutput<VX, VY, VZ, F, C>,
 ) -> Option<()> {
     let dtmul = 0.5;
-    let mut f = fun(dt)?.0;
-    println!("error convergence:");
     let update = |dt: f64| {
         let dt = dt * dtmul;
         dt
     };
-    dt = update(dt);
+    let mut f: Option<(BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>)> = None;
+    // let mut f = fun(dt)?.0;
+    // println!("error convergence:");
+    // dt = update(dt);
 
     while dt > dtmin {
-        let f2 = fun(dt)?.0;
-        let (ma, av) = compare(0, &f.0, &f2.0);
-        println!("dt: {:.3e}, max: {:.3e}, average: {:.3e}", dt, ma, av);
-        f = f2;
+        if let Some(f2) = fun(dt) {
+            let f2 = f2.0;
+            if let Some(f) = f {
+                let (ma, av) = compare(0, &f.0, &f2.0);
+                println!("dt: {:.3e}, max: {:.3e}, average: {:.3e}", dt, ma, av);
+            }
+            f = Some(f2);
+        }
         dt = update(dt);
     }
     println!("");
