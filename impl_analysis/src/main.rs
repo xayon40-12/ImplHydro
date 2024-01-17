@@ -30,7 +30,7 @@ impl Event {
 }
 
 pub fn jacknife<F: Fn(f64, f64) -> f64>(f: F, aa: Vec<f64>, bb: Vec<f64>) -> (f64, f64) {
-    let a: f64 = aa.iter().sum();
+    let a: f64 = aa.iter().sum(); // WARNING: it should probably be the mean so /l
     let b: f64 = bb.iter().sum();
     let val = f(a, b);
     let l = aa.len();
