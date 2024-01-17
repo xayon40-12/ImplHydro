@@ -164,8 +164,12 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     
     if case == 0:
         ld = len(ts)
-        num = num2D
-        nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
+        # num = num2D
+        # if dim == "1D":
+        #     nums = np.array(range(ld))
+        # else:
+        #     nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
+        nums = np.array(range(ld))
         datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),find_diff(dird+"/"+t)) for t in np.array(ts)[nums]]
         info["datats"] = datats
 
