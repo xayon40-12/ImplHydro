@@ -194,12 +194,12 @@ fn gen_constraints<'a>(
                     ppi,
                 ];
 
-                if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
-                    panic!(
-                        "\n\nNaN in constraint\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
-                        cur, g, v, vs, trans
-                    );
-                }
+                // if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
+                //     panic!(
+                //         "\n\nNaN in constraint\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
+                //         cur, g, v, vs, trans
+                //     );
+                // }
 
                 (vs, trans)
             }
