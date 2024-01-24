@@ -64,8 +64,8 @@ def refName(scs):
     # return scs[0]
     # return scs[-1]
     # return "RadauIIA2"
-    # return "GL1"
     # return "GL2"
+    # return "GL1"
     return "Heun"
 
 e0 = 10
@@ -102,10 +102,13 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     dird = dir+d
     dirs = list(filter(lambda d: os.path.isdir(dird+"/"+d), os.listdir(dird)))
     ts = sorted(dirs, key=float) 
-    maxt = ts[-1]
+    id = -1
+    if len(ts)-1 < id:
+        continue
+    t = ts[id]
     # maxt = ts[int(0.3*(len(ts)-1))]
 
-    p = dird+"/"+maxt
+    p = dird+"/"+t
     info = {k: convert(v.strip()) for [k, v] in np.loadtxt(p+"/info.txt", dtype=object, delimiter=":")}
 
     def round10(x):
@@ -177,7 +180,7 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     e = data[:,vid["e"]]
     # if the total energy sum(e) is bigger at the end time than the initial time, 
     # it means that explicit failed
-    expl_fail = sum(e) > 10*sum(e0)
+    expl_fail = sum(e) > 1.1*sum(e0)
     # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
     impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
     # impl_fail = fails > 0
@@ -744,6 +747,8 @@ def plot2d(l, datadts):
         fromref = 0
     dt = maxdts[fromref]
     # (info, ref, diffref) = datadts[maxdts[0]]
+    if len(expl[dt]) == 0:
+        return
     (info, ref, diffref) = expl[dt]
     vid = info["ID"]
     cut = info["CUT"]
@@ -769,7 +774,7 @@ def plot2d(l, datadts):
         num = num2D
         nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
         # nb = 5
-        nb = 3
+        nb = 2
         if "Gubser" in einfo["name"]:
             nb += 1
         if "FixPoint" in einfo["integration"]:
@@ -862,7 +867,8 @@ def plot2d(l, datadts):
             # all = [(r"$\epsilon$", z),("vy",zvy), ("err ref",zerrref), ("vx", zvx)]
             # all = [(r"$\epsilon$", z), ("ur", zur), ("ut", zut)]
             # all = [(r"$\epsilon$", z),(r"pi00", zpi00),(r"pi11", zpi11),(r"pi12", zpi12),(r"pi22", zpi22)]
-            all = [(r"$\epsilon$", z), ("ref", zref), ("err ref",zerrref)]
+            # all = [(r"$\epsilon$", z), ("ref", zref), ("err ref",zerrref)]
+            all = [(r"$\epsilon$", z), (r"$\Delta_\mathrm{Impl-Expl}$",zerrref)]
             # all = [(r"$\epsilon$", z)]
             if "Gubser" in einfo["name"]:
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]
