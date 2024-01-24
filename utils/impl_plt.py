@@ -976,10 +976,11 @@ def plot2d(l, datadts):
         if not hasattr(axs, "__len__"):
             axs = [axs]
         for (i, (n, z)) in zip(range(nb),all):
-            if n == "iter":
-                im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
-            else:
-                im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
+            im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower")
+            # if n == "iter":
+            #     im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
+            # else:
+            #     im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower") #, norm=CenteredNorm(0)) # , cmap="terrain"
             axs[i].set_xlabel("$x$ (fm)")
             axs[i].xaxis.tick_top()
             axs[i].xaxis.set_label_position('top') 
