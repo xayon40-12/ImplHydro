@@ -55,7 +55,7 @@ fn gen_constraints<'a>(
     _implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_3D]) -> ([f64; F_BOTH_3D], [f64; C_BOTH_3D]) + 'a + Sync> {
     Box::new(
-        move |t, cur @ [tt00, tt01, tt02, tt03, utpi11, utpi12, utpi13, utpi22, utpi23, utppi]| {
+        move |t, [tt00, tt01, tt02, tt03, utpi11, utpi12, utpi13, utpi22, utpi23, utppi]| {
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;
@@ -176,12 +176,12 @@ fn gen_constraints<'a>(
                     ppi,
                 ];
 
-                if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
-                    panic!(
-                        "\n\nNaN in constraint\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
-                        cur, g, v, vs, trans
-                    );
-                }
+                // if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
+                //     panic!(
+                //         "\n\nNaN in constraint\n{:?}\n{} {}\n{:?}\n{:?}\n\n",
+                //         cur, g, v, vs, trans
+                //     );
+                // }
 
                 (vs, trans)
             }

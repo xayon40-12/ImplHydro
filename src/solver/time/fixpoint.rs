@@ -86,7 +86,7 @@ pub fn fixpoint<
     let mut alpha = 1.0;
     let mut maxe_count = 0;
     while iserr {
-        if maxe > 1e50 || maxe_count > 4 {
+        if maxe.is_nan() || maxe > 1e50 || maxe_count > 4 {
             eprintln!("reset {}\t: {}", failed, t);
             failed += 1;
             alpha *= 0.5;
@@ -159,12 +159,12 @@ pub fn fixpoint<
                         let fuf = fu[s][z][y][x][f];
                         let kf = k[s][z][y][x][f];
                         let e = (fuf - kf).abs();
-                        if e.is_nan() {
-                            panic!(
-                                "\n\nNaN encountered in fixpoint iteration.\nfields: {:?}\n\n",
-                                fu[s][z][y][x]
-                            );
-                        }
+                        // if e.is_nan() {
+                        //     panic!(
+                        //         "\n\nNaN encountered in fixpoint iteration.\nfields: {:?}\n\n",
+                        //         fu[s][z][y][x]
+                        //     );
+                        // }
                         *errr = errr.max(e);
                         *errs |= e > er || e.is_nan();
                     }
@@ -219,7 +219,7 @@ pub fn fixpoint<
             });
         }
 
-        iserr = maxe > er;
+        iserr = maxe > er || maxe.is_nan();
 
         if maxe >= omaxe {
             maxe_count += 1;

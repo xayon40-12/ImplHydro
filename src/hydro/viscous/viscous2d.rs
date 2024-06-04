@@ -101,7 +101,7 @@ fn gen_constraints<'a>(
     _implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_MILNE_BOTH_2D]) + 'a + Sync> {
     Box::new(
-        move |t, cur @ [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi]| {
+        move |t, [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi]| {
             let t00 = tt00 / t;
             let t01 = tt01 / t;
             let t02 = tt02 / t;

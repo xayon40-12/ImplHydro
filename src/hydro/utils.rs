@@ -21,9 +21,9 @@ pub fn eigenvaluesk(dpde: f64, ut: f64, uk: f64) -> f64 {
     let a = ut * uk * (1.0 - vs2);
     let b = (ut * ut - uk * uk - (ut * ut - uk * uk - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
-    if b < 0.0 || d == 0.0 {
-        panic!("\nvs2:\na: {a}, b:{b}, d:{d}\n");
-    }
+    // if b < 0.0 || d == 0.0 {
+    //     panic!("\nvs2:\na: {a}, b:{b}, d:{d}\n");
+    // }
     (a.abs() + b.sqrt()) / d
 }
 

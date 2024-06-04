@@ -65,8 +65,8 @@ def refName(scs):
     # return scs[-1]
     # return "RadauIIA2"
     # return "GL2"
-    # return "GL1"
-    return "Heun"
+    return "GL1"
+    # return "Heun"
 
 e0 = 10
 emin = 1
@@ -873,7 +873,7 @@ def plot2d(l, datadts):
             if "Gubser" in einfo["name"]:
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]
             if "FixPoint" in einfo["integration"]:
-                all += [("$\mathrm{iterations}$", ziter)]
+                all += [(r"$\mathrm{iterations}$", ziter)]
             for (i, (n, z)) in zip(range(nb),all):
                 if "iterations" in n:
                     imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=zitermin, vmax=zitermax)
