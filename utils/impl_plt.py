@@ -50,7 +50,7 @@ for arg in sys.argv:
 # crop = 9
 crop = 19
 crop_eta = crop/4
-defaultfromref = 1
+defaultfromref = 0
 maxerr = 1e-6
 num2D = 5
 compare_type = 0 # 0: absolute, 1: relative
@@ -207,7 +207,8 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
         if not diff is None:
             diff = diff[dataz0,:]
         data = data[dataz0,:]
-        info["datats"] = [(t, d[dataz0,:], diff) for (t,d,diff) in info["datats"]]
+        if case == 0:
+            info["datats"] = [(t, d[dataz0,:], diff) for (t,d,diff) in info["datats"]]
 
     # print(p, dim, t0, tend, dx, nx, maxdt)
     datas[dim][name][visc][t0][tend][t][case][(dx,nx)][scheme][maxdt] = (info, data, diff)
