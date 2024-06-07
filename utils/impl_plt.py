@@ -39,13 +39,26 @@ useschemename = False
 def setUseSchemeName():
     global useschemename
     useschemename = True
+t_id = -1
+def setTimeId(i):
+    global t_id
+    t_id = int(i)
+    
 
-argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-s","--schemename"], setUseSchemeName)]
-for arg in sys.argv:
+argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-s","--schemename"], setUseSchemeName), (["-t","--time_id"], setTimeId)]
+for arg in sys.argv[1:]:
+    found = False
     for (larg, act) in argActions:
-        if arg in larg:
-            act()
-
+        for l in larg:
+            if arg.startswith(l):
+                found = True
+                if len(l) < len(arg):
+                    act(arg[len(l)+1:])
+                else:
+                    act()
+    if not found:
+        print("invalid arg: ", arg)
+        exit(-1)
 
 # crop = 9
 crop = 19
@@ -59,7 +72,8 @@ use_average_ref = False
 plot_meanmax_dx = False
 plot_conv = True
 plot_1D = True
-plot_2D = True
+plot_2D = False
+# plot_2D = True
 def refName(scs):
     # return scs[0]
     # return scs[-1]
@@ -102,10 +116,9 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
     dird = dir+d
     dirs = list(filter(lambda d: os.path.isdir(dird+"/"+d), os.listdir(dird)))
     ts = sorted(dirs, key=float) 
-    id = -1
-    if len(ts)-1 < id:
+    if len(ts)-1 < t_id:
         continue
-    t = ts[id]
+    t = ts[t_id]
     # maxt = ts[int(0.3*(len(ts)-1))]
 
     p = dird+"/"+t
@@ -165,7 +178,7 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
             return None
     diff = find_diff(p)
     
-    if case == 0:
+    if case == 0 and plot_2D:
         ld = len(ts)
         # num = num2D
         # if dim == "1D":
@@ -178,9 +191,11 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
 
     e0 = data0[:,vid["e"]]
     e = data[:,vid["e"]]
+    info["e_max"] = max(e)
     # if the total energy sum(e) is bigger at the end time than the initial time, 
     # it means that explicit failed
-    expl_fail = sum(e) > 1.1*sum(e0)
+    sum_e = sum(e)
+    expl_fail = sum_e != sum_e or sum(e) > 1.1*sum(e0)
     # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
     impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
     # impl_fail = fails > 0
@@ -207,7 +222,7 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
         if not diff is None:
             diff = diff[dataz0,:]
         data = data[dataz0,:]
-        if case == 0:
+        if case == 0 and plot_2D:
             info["datats"] = [(t, d[dataz0,:], diff) for (t,d,diff) in info["datats"]]
 
     # print(p, dim, t0, tend, dx, nx, maxdt)
@@ -297,6 +312,7 @@ def convall(l, cnds):
     allx = [("cost", 6)]
     # ally = [("max", 2)]
     fromref = defaultfromref
+    e_max = []
     for (dtcost, dci) in allx:
         fig, axs = plt.subplots(2, figsize=(8,9), sharex=True)
         fig.subplots_adjust(wspace=0,hspace=0)
@@ -340,14 +356,18 @@ def convall(l, cnds):
                         colors = plt_setting.clist
                     for (s0,col) in zip(scs,colors): 
                         ds0 = ds[s0]
-                        dtref = sorted(list(ds0.keys()))[0]
+                        dts = sorted(list(ds0.keys()))
+                        dtref = dts[0]
                         info = ds0[dtref][0]
+                        ibig = max([i for i, dt in zip(range(1000),dts) if dt < dx/10 + 1e-10])
+                        info_big = ds0[dts[ibig]][0]
                         dx = info["dx"]
                         refs = {s: ds[s][sorted(list(ds[s].keys()))[0]] for s in ds}
                         if "FixPoint" in info["integration"]:
                             schemetype = "Implicit"
                         else:
                             schemetype = "Explicit"
+                            e_max = e_max + [info_big["e_max"]]
                         if useschemename:
                             schemetype = info["scheme"]
                         def fuse(r1,r2):
@@ -419,6 +439,15 @@ def convall(l, cnds):
             prefix += "averageref_"
         else:
             prefix += "{}ref_".format(s1)
+        fmt_e_max = ""
+        last = -1
+        for em in e_max:
+            if em != last:
+                last = em
+                fmt_e_max = "{},{:.2f}".format(fmt_e_max, em)
+        fmt_e_max = fmt_e_max[1:]
+        e_frz = info["freezeoutenergy"]
+        fig.suptitle(r"$\tau = {}$   $\epsilon_m = {}$   $\epsilon_f = {:.2f}$".format(t, fmt_e_max, e_frz))
         fig.savefig("figures/{}convergence_{}_meanmax_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
         if plot_meanmax_dx:
             fig2.savefig("figures/{}convergence_{}_meanmax_dx_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
