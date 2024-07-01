@@ -209,6 +209,11 @@ pub fn save<
         )
             }
         };
+        let freezeout = if let Some(e_freeze) = context.freezeout_energy {
+            format!("freezeoutenergy: {e_freeze:e}\n")
+        } else {
+            format!("")
+        };
         let variables = ["x", "y", "z", "iter"]
             .iter()
             .chain(namesf.iter())
@@ -217,8 +222,8 @@ pub fn save<
             .collect::<Vec<&str>>()
             .join(" ");
         let info = format!(
-            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\ndy: {:e}\ndz: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\nvariables: {}\n",
-            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, dy, dz, maxdt, integration, schemename, stages, name, case, viscosity, variables,
+            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\ndy: {:e}\ndz: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\n{}\nvariables: {}\n",
+            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, dy, dz, maxdt, integration, schemename, stages, name, case, viscosity, freezeout, variables,
         );
         std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
     }
