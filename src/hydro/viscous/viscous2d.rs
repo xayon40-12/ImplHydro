@@ -490,7 +490,7 @@ fn flux<const V: usize>(
     let tauppi = taupi; // use shear relaxation time for bulk
 
     if gev < tempcut {
-        let tau_decay = 1.0;
+        let tau_decay = 10.0;
         let m = ((1.0 - tempcut / gev) / tau_decay).exp();
         eta *= m;
         zeta *= m;

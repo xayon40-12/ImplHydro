@@ -72,8 +72,8 @@ use_average_ref = False
 plot_meanmax_dx = False
 plot_conv = True
 plot_1D = True
-plot_2D = False
-# plot_2D = True
+# plot_2D = False
+plot_2D = True
 def refName(scs):
     # return scs[0]
     # return scs[-1]
@@ -191,12 +191,13 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
 
     e0 = data0[:,vid["e"]]
     e = data[:,vid["e"]]
+    pi11 = data[:,vid["pi11"]]
     info["e_max"] = max(e)
     # if the total energy sum(e) is bigger at the end time than the initial time, 
     # it means that explicit failed
     sum_e = sum(e)
-    expl_fail = sum_e != sum_e or sum(e) > 1.1*sum(e0)
-    # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
+    sum_pi11 = sum(pi11)
+    expl_fail = sum_pi11 != sum_pi11 or sum_e != sum_e or sum_e > 1.1*sum(e0)    # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
     impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
     # impl_fail = fails > 0
     if rejectfails and (expl_fail or impl_fail): 
@@ -803,8 +804,8 @@ def plot2d(l, datadts):
     if many:
         num = num2D
         nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
-        # nb = 5
-        nb = 2
+        # nb = 2
+        nb = 3
         if "Gubser" in einfo["name"]:
             nb += 1
         if "FixPoint" in einfo["integration"]:
@@ -852,9 +853,13 @@ def plot2d(l, datadts):
             ziter = mdata[:,vid["iter"]]
             # print(name, case, scheme, dt, n, ziter.sum())
             # zpi00 = mdata[:,vid["pi00"]]
-            # zpi11 = mdata[:,vid["pi11"]]
+            zpi11 = mdata[:,vid["pi11"]]
             # zpi12 = mdata[:,vid["pi12"]]
             # zpi22 = mdata[:,vid["pi22"]]
+            # rpi00 = mref[:,vid["pi00"]]
+            rpi11 = mref[:,vid["pi11"]]
+            # rpi12 = mref[:,vid["pi12"]]
+            # rpi22 = mref[:,vid["pi22"]]
             zut = mdata[:,vid["ut"]]
             zux = mdata[:,vid["ux"]]
             zvx = zux/zut
@@ -887,9 +892,13 @@ def plot2d(l, datadts):
             zut = np.reshape(zut, (n,n))[nl:nr,nl:nr]
             zur = np.sqrt(zux*zux+zuy*zuy)
             # zpi00 = np.reshape(zpi00, (n,n))[nl:nr,nl:nr]
-            # zpi11 = np.reshape(zpi11, (n,n))[nl:nr,nl:nr]
+            zpi11 = np.reshape(zpi11, (n,n))[nl:nr,nl:nr]
             # zpi12 = np.reshape(zpi12, (n,n))[nl:nr,nl:nr]
             # zpi22 = np.reshape(zpi22, (n,n))[nl:nr,nl:nr]
+            # rpi00 = np.reshape(rpi00, (n,n))[nl:nr,nl:nr]
+            rpi11 = np.reshape(rpi11, (n,n))[nl:nr,nl:nr]
+            # rpi12 = np.reshape(rpi12, (n,n))[nl:nr,nl:nr]
+            # rpi22 = np.reshape(rpi22, (n,n))[nl:nr,nl:nr]
             l = x[0][0]
             r = x[0][-1]
             d = y[0][0]
@@ -898,7 +907,8 @@ def plot2d(l, datadts):
             # all = [(r"$\epsilon$", z), ("ur", zur), ("ut", zut)]
             # all = [(r"$\epsilon$", z),(r"pi00", zpi00),(r"pi11", zpi11),(r"pi12", zpi12),(r"pi22", zpi22)]
             # all = [(r"$\epsilon$", z), ("ref", zref), ("err ref",zerrref)]
-            all = [(r"$\epsilon$", z), (r"$\Delta_\mathrm{Impl-Expl}$",zerrref)]
+            # all = [(r"$\epsilon$", z), (r"$\Delta_\mathrm{Impl-Expl}$",zerrref)]
+            all = [(r"$\epsilon$", z), (r"$impl \pi^{11}$",zpi11), (r"$expl \pi^{11}$",rpi11)]
             # all = [(r"$\epsilon$", z)]
             if "Gubser" in einfo["name"]:
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]
