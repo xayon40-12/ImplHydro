@@ -310,7 +310,7 @@ def convall(l, cnds):
     if use_square:
         ally += [((2,2), "none", 4)]
     ally += [((6,6), "none", 3)]
-    allx = [("cost", 6)]
+    allx = [("cost", 6), ("elapsed", 8)]
     # ally = [("max", 2)]
     fromref = defaultfromref
     e_max = []
