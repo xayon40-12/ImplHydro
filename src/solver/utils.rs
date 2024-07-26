@@ -219,3 +219,53 @@ pub fn pfor3d3<U: Send, V: Send, W: Send, const VX: usize, const VY: usize, cons
         })
         .for_each(f);
 }
+pub fn pfor3d4<
+    T1: Send,
+    T2: Send,
+    T3: Send,
+    T4: Send,
+    const VX: usize,
+    const VY: usize,
+    const VZ: usize,
+>(
+    t1sss: &mut [[[T1; VX]; VY]; VZ],
+    t2sss: &mut [[[T2; VX]; VY]; VZ],
+    t3sss: &mut [[[T3; VX]; VY]; VZ],
+    t4sss: &mut [[[T4; VX]; VY]; VZ],
+    f: &(dyn Fn((Coord, &mut T1, &mut T2, &mut T3, &mut T4)) + Sync),
+) {
+    t1sss
+        .par_iter_mut()
+        .zip(t2sss.par_iter_mut())
+        .zip(t3sss.par_iter_mut())
+        .zip(t4sss.par_iter_mut())
+        .enumerate()
+        .flat_map(|(vz, (((t1ss, t2ss), t3ss), t4ss))| {
+            t1ss.par_iter_mut()
+                .zip(t2ss.par_iter_mut())
+                .zip(t3ss.par_iter_mut())
+                .zip(t4ss.par_iter_mut())
+                .enumerate()
+                .flat_map(move |(vy, (((t1s, t2s), t3s), t4s))| {
+                    t1s.par_iter_mut()
+                        .zip(t2s.par_iter_mut())
+                        .zip(t3s.par_iter_mut())
+                        .zip(t4s.par_iter_mut())
+                        .enumerate()
+                        .map(move |(vx, (((t1, t2), t3), t4))| {
+                            (
+                                Coord {
+                                    x: vx,
+                                    y: vy,
+                                    z: vz,
+                                },
+                                t1,
+                                t2,
+                                t3,
+                                t4,
+                            )
+                        })
+                })
+        })
+        .for_each(f);
+}

@@ -110,9 +110,7 @@ fn gen_constraints<'a>(
 
             let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
             let cv = |v: f64| v.max(0.0).min(1.0);
-            let gamma_max2 = 20.0f64.powi(2);
-            let v_max = (1.0 - 1.0 / gamma_max2).sqrt();
-            let v = newton(1e-10, 0.5, |v| sv(v) - v, cv).min(v_max);
+            let v = newton(1e-10, 0.5, |v| sv(v) - v, cv);
 
             let e = (t00 - m * v).max(VOID).min(1e10);
 
@@ -143,13 +141,17 @@ fn gen_constraints<'a>(
                 let pi33 = pi00 - pi11 - pi22;
 
                 let m = matrix![
-                    pi00, pi01, pi02, 0.0;
-                    pi01, pi11, pi12, 0.0;
-                    pi02, pi12, pi22, 0.0;
-                    0.0, 0.0, 0.0, pi33;
+                    pi00, pi01, pi02;
+                    pi01, pi11, pi12;
+                    pi02, pi12, pi22;
                 ];
                 let eigs = m.symmetric_eigenvalues();
-                let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
+                let smallest = eigs
+                    .into_iter()
+                    .chain([pi33].iter())
+                    .map(|v| *v)
+                    .min_by(f64::total_cmp)
+                    .unwrap();
 
                 // check that shear viscosity does not make pressure negative
                 let epeppi = epe + ppi;
@@ -482,19 +484,19 @@ fn flux<const V: usize>(
 
     let vgev = gev.max(tc); // viscous temperature [GeV] blocked at tc
     let etaovers = etas_min + etas_slope * (vgev - tc) * (vgev / tc).powf(etas_crv);
-    let mut eta = etaovers * s;
+    let eta = etaovers * s;
     let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
     let zetaovers = (zetas_max) / (1.0 + ((vgev - zetas_peak) / zetas_width).powi(2));
-    let mut zeta = zetaovers * s;
+    let zeta = zetaovers * s;
     let tauppi = taupi; // use shear relaxation time for bulk
 
-    if gev < tempcut {
-        let tau_decay = 10.0;
-        let m = ((1.0 - tempcut / gev) / tau_decay).exp();
-        eta *= m;
-        zeta *= m;
-    }
+    // if gev < tempcut && enable_tempcut {
+    //     let tau_decay = 10.0;
+    //     let m = ((1.0 - tempcut / gev) / tau_decay).exp();
+    //     eta *= m;
+    //     zeta *= m;
+    // }
 
     let mut spi = [0.0f64; 7];
     {
