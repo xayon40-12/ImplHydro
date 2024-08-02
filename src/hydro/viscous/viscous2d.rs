@@ -125,12 +125,6 @@ fn gen_constraints<'a>(
                 // check that bulk viscosity does not make pressure negative
                 let ppi = g * utppi;
                 let epe = e + pe;
-                let rp = if epe + ppi < 0.0 {
-                    -epe / ppi * (1.0 - 1e-10)
-                } else {
-                    1.0
-                };
-                let ppi = rp * ppi;
 
                 let pi11 = utpi11 / ut;
                 let pi12 = utpi12 / ut;
@@ -154,13 +148,13 @@ fn gen_constraints<'a>(
                     .unwrap();
 
                 // check that shear viscosity does not make pressure negative
-                let epeppi = epe + ppi;
-                let r = if epeppi + smallest < 0.0 {
-                    -epeppi / smallest * (1.0 - 1e-10)
+                let r = if epe + ppi + smallest < 0.0 {
+                    -epe / (ppi + smallest) * (1.0 - 1e-10)
                 } else {
                     1.0
                 };
 
+                let ppi = r * ppi;
                 let pi11 = r * pi11;
                 let pi12 = r * pi12;
                 let pi22 = r * pi22;
