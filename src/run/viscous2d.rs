@@ -18,11 +18,11 @@ fn hydro2d<const V: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     r: Scheme<S>,
-    init_s: (&[[f64; V]; V], usize),
+    init_s: &(Box<[[f64; V]; V]>, usize),
     save_raw: Option<f64>,
 ) -> HydroOutput<V, V, 1, F_BOTH_2D, C_MILNE_BOTH_2D> {
     let (s, i) = init_s;
-    let name = ("InitTrento", i);
+    let name = ("InitTrento", *i);
     // let eos = EOSs::ConformalMassless;
     let eos = EOSs::WB;
     // let eos = EOSs::HotQCD;
@@ -83,7 +83,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     let dx = l / V as f64;
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = &trentos[i];
         converge(dtmax, dtmin, |dt| {
             hydro2d::<V, S>(
                 t0,
@@ -215,7 +215,7 @@ pub fn run_trento_2d<const V: usize>(
         );
     };
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = &trentos[i];
         match solver {
             Solver::Both => {
                 do_gl1(trento);

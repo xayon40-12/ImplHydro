@@ -18,11 +18,11 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     r: Scheme<S>,
-    init_e: (&[[[f64; XY]; XY]; Z], usize),
+    init_e: &(Box<[[[f64; XY]; XY]; Z]>, usize),
     save_raw: Option<f64>,
 ) -> HydroOutput<XY, XY, Z, F_BOTH_3D, C_BOTH_3D> {
     let (e, i) = init_e;
-    let name = ("InitTrento", i);
+    let name = ("InitTrento", *i);
     let eos = EOSs::WB;
     // let eos = EOSs::HotQCD;
     // let eos = EOSs::HotQCDLog;
@@ -85,7 +85,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     let dxs = dxs.unwrap_or([dx, dx, detas]);
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = &trentos[i];
         converge(dtmax, dtmin, |dt| {
             hydro3d::<XY, Z, S>(
                 t0,
@@ -216,7 +216,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
         );
     };
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = &trentos[i];
         match solver {
             Solver::Both => {
                 do_gl1(trento);

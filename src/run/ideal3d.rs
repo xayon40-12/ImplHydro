@@ -14,12 +14,12 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     dxs: [f64; DIM],
     maxdt: f64,
     r: Scheme<S>,
-    init_e: (&[[[f64; XY]; XY]; Z], usize),
+    init_e: &(Box<[[[f64; XY]; XY]; Z]>, usize),
     save_raw: Option<f64>,
 ) -> HydroOutput<XY, XY, Z, F_IDEAL_3D, C_IDEAL_3D> {
     let (es, i) = init_e;
 
-    let name = ("InitTrento", i);
+    let name = ("InitTrento", *i);
     let (p, dpde, _temp): (Eos, Eos, Eos) = (&wb::p, &wb::dpde, &wb::T);
     println!("{}{}", name.0, name.1);
     let init = init_from_energy_density_3d(t0, es, p, dpde);
@@ -44,7 +44,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     let dt0 = dtmax;
     println!("{}", r.name);
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = &trentos[i];
         converge(dt0, dtmin, |dt| {
             hydro3d::<XY, Z, S>(t0, tend, dxs, dt, r, trento, save_raw)
         });
@@ -106,7 +106,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     let detas = etas_len / Z as f64;
     let dxs = dxs.unwrap_or([dx, dx, detas]);
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = &trentos[i];
         match solver {
             Solver::Both => {
                 hydro3d::<XY, Z, 1>(t0, tend, dxs, dt, imp, trento, save_raw);

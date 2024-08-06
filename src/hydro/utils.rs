@@ -178,14 +178,17 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
 pub fn prepare_trento_2d<const V: usize>(
     nb_trento: usize,
     first_trento: usize,
-) -> Vec<Box<[[f64; V]; V]>> {
-    let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0); nb_trento];
+) -> Vec<(Box<[[f64; V]; V]>, usize)> {
+    let mut trentos: Vec<(Box<[[f64; V]; V]>, usize)> = vec![(boxarray(0.0), 0); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for ix in 0..nb_trento {
         let i = ix + first_trento;
-        trentos[ix] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
-            "Could not load trento initial condition file \"s{V}/{i:0>width$}.dat\"."
-        ));
+        trentos[ix] = (
+            load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
+                "Could not load trento initial condition file \"s{V}/{i:0>width$}.dat\"."
+            )),
+            i,
+        );
     }
     trentos
 }
@@ -193,8 +196,8 @@ pub fn prepare_trento_2d<const V: usize>(
 pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
     nb_trento: usize,
     first_trento: usize,
-) -> (Vec<Box<[[[f64; XY]; XY]; Z]>>, Option<[f64; DIM]>) {
-    let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
+) -> (Vec<(Box<[[[f64; XY]; XY]; Z]>, usize)>, Option<[f64; DIM]>) {
+    let mut trentos: Vec<(Box<[[[f64; XY]; XY]; Z]>, usize)> = vec![(boxarray(0.0), 0); nb_trento];
     let mut dxs = None;
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for ix in 0..nb_trento {
@@ -206,13 +209,17 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
                 load_matrix_2d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
                     "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
                 ));
+            trentos[ix].1 = i;
             for z in 0..Z {
-                trentos[ix][z] = *trento_2d;
+                trentos[ix].0[z] = *trento_2d;
             }
         } else {
-            trentos[ix] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
-                "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
-            ));
+            trentos[ix] = (
+                load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
+                    "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
+                )),
+                i,
+            );
             if let Ok(str) = std::fs::read_to_string(&format!("s{XY}/info.txt")) {
                 let m: HashMap<String, f64> = str
                     .trim()

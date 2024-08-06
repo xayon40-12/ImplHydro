@@ -16,11 +16,11 @@ fn hydro2d<const V: usize, const S: usize>(
     dx: f64,
     maxdt: f64,
     r: Scheme<S>,
-    init_e: Option<(&[[f64; V]; V], usize)>,
+    init_e: Option<&(Box<[[f64; V]; V]>, usize)>,
     save_raw: Option<f64>,
 ) -> HydroOutput<V, V, 1, F_IDEAL_2D, C_IDEAL_2D> {
     let name = if let Some((_, i)) = init_e {
-        ("InitTrento", i)
+        ("InitTrento", *i)
     } else {
         ("Gubser", 0)
     };
@@ -59,7 +59,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
         });
     }
     for i in 0..nb_trento {
-        let trento = Some((trentos[i].as_ref(), i));
+        let trento = Some(&trentos[i]);
         converge(dt0, dtmin, |dt| {
             hydro2d::<V, S>(t0, tend, dx, dt, r, trento, save_raw)
         });
@@ -110,7 +110,7 @@ pub fn run_trento_2d<const V: usize>(
     let exp = heun();
     let dx = l / V as f64;
     for i in 0..nb_trento {
-        let trento = Some((trentos[i].as_ref(), i));
+        let trento = Some(&trentos[i]);
         match solver {
             Solver::Both => {
                 hydro2d::<V, 1>(t0, tend, dx, dt, imp, trento, save_raw);
