@@ -76,10 +76,10 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_mev: f64,
     r: impl Fn(f64) -> Scheme<S>,
-    nb_trento: usize,
+    (nb_trento, first_trento): (usize, usize),
     save_raw: Option<f64>,
 ) {
-    let trentos = prepare_trento_2d::<V>(nb_trento);
+    let trentos = prepare_trento_2d::<V>(nb_trento, first_trento);
     let dx = l / V as f64;
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
@@ -112,7 +112,7 @@ pub fn run_2d<const V: usize>(
     zetaovers: (f64, f64, f64),
     tempcut: f64,
     freezeout_temp_gev: f64,
-    nb_trento: usize,
+    nf_trento: (usize, usize),
     save_raw: Option<f64>,
 ) {
     let do_gl1 = || {
@@ -127,7 +127,7 @@ pub fn run_2d<const V: usize>(
             tempcut,
             freezeout_temp_gev,
             |_| gauss_legendre_1(),
-            nb_trento,
+            nf_trento,
             save_raw,
         )
     };
@@ -143,7 +143,7 @@ pub fn run_2d<const V: usize>(
             tempcut,
             freezeout_temp_gev,
             |_| heun(),
-            nb_trento,
+            nf_trento,
             save_raw,
         )
     };
@@ -170,10 +170,10 @@ pub fn run_trento_2d<const V: usize>(
     zetaovers: (f64, f64, f64),
     tempcut: f64,
     freezeout_temp_gev: f64,
-    nb_trento: usize,
+    (nb_trento, first_trento): (usize, usize),
     save_raw: Option<f64>,
 ) {
-    let trentos = prepare_trento_2d::<V>(nb_trento);
+    let trentos = prepare_trento_2d::<V>(nb_trento, first_trento);
     let gl1 = gauss_legendre_1();
     // let gl1 = gauss_legendre_2();
     // let gl1 = gauss_legendre_3();

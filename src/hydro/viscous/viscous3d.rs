@@ -302,7 +302,7 @@ fn flux<const XY: usize, const VZ: usize>(
         (zetas_max, zetas_width, zetas_peak),
         entropy,
         temperature,
-        tempcut,
+        _tempcut,
     ): &((f64, f64, f64), (f64, f64, f64), Eos, Eos, f64),
 ) -> [f64; F_BOTH_3D] {
     let theta = 1.1;

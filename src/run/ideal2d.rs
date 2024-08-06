@@ -46,10 +46,10 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     dtmax: f64,
     r: Scheme<S>,
     gubser: bool,
-    nb_trento: usize,
+    (nb_trento, first_trento): (usize, usize),
     save_raw: Option<f64>,
 ) {
-    let trentos = prepare_trento_2d::<V>(nb_trento);
+    let trentos = prepare_trento_2d::<V>(nb_trento, first_trento);
     let dx = l / V as f64;
     let dt0 = dtmax;
     println!("{}", r.name);
@@ -74,7 +74,7 @@ pub fn run_2d<const V: usize>(
     dtmin: f64,
     dtmax: f64,
     gubser: bool,
-    nb_trento: usize,
+    nf_trento: (usize, usize),
     save_raw: Option<f64>,
 ) {
     let imp = gauss_legendre_1();
@@ -84,14 +84,14 @@ pub fn run_2d<const V: usize>(
     let exp = heun();
     match solver {
         Solver::Both => {
-            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, gubser, nb_trento, save_raw);
-            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, gubser, nb_trento, save_raw);
+            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, gubser, nf_trento, save_raw);
+            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, gubser, nf_trento, save_raw);
         }
         Solver::Implicit => {
-            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, gubser, nb_trento, save_raw);
+            run_convergence_2d::<V, I>(t0, tend, l, dtmin, dtmax, imp, gubser, nf_trento, save_raw);
         }
         Solver::Explicit => {
-            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, gubser, nb_trento, save_raw);
+            run_convergence_2d::<V, 2>(t0, tend, l, dtmin, dtmax, exp, gubser, nf_trento, save_raw);
         }
     }
 }
@@ -102,10 +102,10 @@ pub fn run_trento_2d<const V: usize>(
     tend: f64,
     l: f64,
     dt: f64,
-    nb_trento: usize,
+    (nb_trento, first_trento): (usize, usize),
     save_raw: Option<f64>,
 ) {
-    let trentos = prepare_trento_2d::<V>(nb_trento);
+    let trentos = prepare_trento_2d::<V>(nb_trento, first_trento);
     let imp = gauss_legendre_1();
     let exp = heun();
     let dx = l / V as f64;

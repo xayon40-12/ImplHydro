@@ -175,11 +175,15 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
     Ok(mat)
 }
 
-pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V]; V]>> {
+pub fn prepare_trento_2d<const V: usize>(
+    nb_trento: usize,
+    first_trento: usize,
+) -> Vec<Box<[[f64; V]; V]>> {
     let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
-    for i in 0..nb_trento {
-        trentos[i] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
+    for ix in 0..nb_trento {
+        let i = ix + first_trento;
+        trentos[ix] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
             "Could not load trento initial condition file \"s{V}/{i:0>width$}.dat\"."
         ));
     }
@@ -188,11 +192,13 @@ pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V];
 
 pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
     nb_trento: usize,
+    first_trento: usize,
 ) -> (Vec<Box<[[[f64; XY]; XY]; Z]>>, Option<[f64; DIM]>) {
     let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
     let mut dxs = None;
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
-    for i in 0..nb_trento {
+    for ix in 0..nb_trento {
+        let i = ix + first_trento;
         const LOAD2D: bool = false;
         // const LOAD2D: bool = true;
         if LOAD2D {
@@ -201,10 +207,10 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
                     "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
                 ));
             for z in 0..Z {
-                trentos[i][z] = *trento_2d;
+                trentos[ix][z] = *trento_2d;
             }
         } else {
-            trentos[i] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
+            trentos[ix] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
                 "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
             ));
             if let Ok(str) = std::fs::read_to_string(&format!("s{XY}/info.txt")) {

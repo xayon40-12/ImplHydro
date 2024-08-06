@@ -76,10 +76,10 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_mev: f64,
     r: impl Fn(f64) -> Scheme<S>,
-    nb_trento: usize,
+    (nb_trento, first_trento): (usize, usize),
     save_raw: Option<f64>,
 ) {
-    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento);
+    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento, first_trento);
     let dx = l / XY as f64;
     let detas = etas_len / Z as f64;
     let dxs = dxs.unwrap_or([dx, dx, detas]);
@@ -115,7 +115,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
     zetaovers: (f64, f64, f64),
     tempcut: f64,
     freezeout_temp_gev: f64,
-    nb_trento: usize,
+    nf_trento: (usize, usize),
     save_raw: Option<f64>,
 ) {
     let do_gl1 = || {
@@ -131,7 +131,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
             tempcut,
             freezeout_temp_gev,
             |_| gauss_legendre_1(),
-            nb_trento,
+            nf_trento,
             save_raw,
         )
     };
@@ -148,7 +148,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
             tempcut,
             freezeout_temp_gev,
             |_| heun(),
-            nb_trento,
+            nf_trento,
             save_raw,
         )
     };
@@ -176,10 +176,10 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     zetaovers: (f64, f64, f64),
     tempcut: f64,
     freezeout_temp_gev: f64,
-    nb_trento: usize,
+    (nb_trento, first_trento): (usize, usize),
     save_raw: Option<f64>,
 ) {
-    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento);
+    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento, first_trento);
     let gl1 = gauss_legendre_1();
     let heun = heun();
     let dx = l / XY as f64;

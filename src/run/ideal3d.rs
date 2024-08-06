@@ -34,10 +34,10 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     dtmin: f64,
     dtmax: f64,
     r: Scheme<S>,
-    nb_trento: usize,
+    (nb_trento, first_trento): (usize, usize),
     save_raw: Option<f64>,
 ) {
-    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento);
+    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento, first_trento);
     let dx = l / XY as f64;
     let detas = etas_len / Z as f64;
     let dxs = dxs.unwrap_or([dx, dx, detas]);
@@ -59,7 +59,7 @@ pub fn run_3d<const XY: usize, const Z: usize>(
     etas_len: f64,
     dtmin: f64,
     dtmax: f64,
-    nb_trento: usize,
+    nf_trento: (usize, usize),
     save_raw: Option<f64>,
 ) {
     let imp = gauss_legendre_1();
@@ -70,20 +70,20 @@ pub fn run_3d<const XY: usize, const Z: usize>(
     match solver {
         Solver::Both => {
             run_convergence_3d::<XY, Z, I>(
-                t0, tend, l, etas_len, dtmin, dtmax, imp, nb_trento, save_raw,
+                t0, tend, l, etas_len, dtmin, dtmax, imp, nf_trento, save_raw,
             );
             run_convergence_3d::<XY, Z, 2>(
-                t0, tend, l, etas_len, dtmin, dtmax, exp, nb_trento, save_raw,
+                t0, tend, l, etas_len, dtmin, dtmax, exp, nf_trento, save_raw,
             );
         }
         Solver::Implicit => {
             run_convergence_3d::<XY, Z, I>(
-                t0, tend, l, etas_len, dtmin, dtmax, imp, nb_trento, save_raw,
+                t0, tend, l, etas_len, dtmin, dtmax, imp, nf_trento, save_raw,
             );
         }
         Solver::Explicit => {
             run_convergence_3d::<XY, Z, 2>(
-                t0, tend, l, etas_len, dtmin, dtmax, exp, nb_trento, save_raw,
+                t0, tend, l, etas_len, dtmin, dtmax, exp, nf_trento, save_raw,
             );
         }
     }
@@ -96,10 +96,10 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     l: f64,
     etas_len: f64,
     dt: f64,
-    nb_trento: usize,
+    (nb_trento, first_trento): (usize, usize),
     save_raw: Option<f64>,
 ) {
-    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento);
+    let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento, first_trento);
     let imp = gauss_legendre_1();
     let exp = heun();
     let dx = l / XY as f64;
