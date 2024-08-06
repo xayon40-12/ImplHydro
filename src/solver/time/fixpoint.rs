@@ -79,7 +79,7 @@ pub fn fixpoint<
     let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(0);
     let dt = *dto;
     let mut failed = 1usize;
-    let maxfailed = 20;
+    let maxfailed = 13;
     let mut maxe = 1e50f64;
     let mut omaxe = maxe;
     let mut alpha = 1.0;
