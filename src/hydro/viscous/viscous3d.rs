@@ -773,7 +773,7 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
         freezeout_energy: Some(freezeout_energy),
     };
 
-    let e = 5e-2;
+    let e = 2e-1;
     let err_thr = |_t: f64,
                    vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; VZ],
                    _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; VZ]| {

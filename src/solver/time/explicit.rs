@@ -1,6 +1,6 @@
 use crate::solver::{
     context::Context,
-    utils::{pfor3d, Coord},
+    utils::{cfor3d, gen_coords, Coord},
 };
 use boxarray::boxarray;
 
@@ -39,6 +39,7 @@ pub fn explicit<
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
 ) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>, usize)> {
+    let coords = gen_coords::<VX, VY, VZ>();
     *dt = maxdt.min(*dt);
     let cost = S as f64;
     let nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
@@ -60,7 +61,7 @@ pub fn explicit<
             }
         }
         let es = if s == 0 { S - 1 } else { s - 1 }; // index of last computed k
-        pfor3d(&mut fu, &|(Coord { x, y, z }, fu)| {
+        cfor3d(&coords, &mut fu, |&Coord { x, y, z }, fu| {
             *fu = fun(
                 &k[es],
                 [&ovdtk, &vdtk],
@@ -77,7 +78,7 @@ pub fn explicit<
         otrdtk = trdtk.clone();
         ovdtk = vdtk.clone();
         k[s] = *fu;
-        pfor3d(&mut vdtk, &|(Coord { x, y, z }, vdtk)| {
+        cfor3d(&coords, &mut vdtk, |&Coord { x, y, z }, vdtk| {
             for f in 0..F {
                 vdtk[f] = vs[z][y][x][f];
                 for s1 in 0..S {
