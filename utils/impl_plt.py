@@ -448,7 +448,7 @@ def convall(l, cnds):
                 fmt_e_max = "{},{:.2f}".format(fmt_e_max, em)
         fmt_e_max = fmt_e_max[1:]
         e_frz = info["freezeoutenergy"]
-        fig.suptitle(r"$\tau = {}$   $\epsilon_m = {}$   $\epsilon_f = {:.2f}$".format(t, fmt_e_max, e_frz))
+        # fig.suptitle(r"$\tau = {}$   $\epsilon_m = {}$   $\epsilon_f = {:.2f}$".format(t, fmt_e_max, e_frz))
         fig.savefig("figures/{}convergence_{}_meanmax_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
         if plot_meanmax_dx:
             fig2.savefig("figures/{}convergence_{}_meanmax_dx_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
