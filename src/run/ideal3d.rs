@@ -44,7 +44,7 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
     let dt0 = dtmax;
     println!("{}", r.name);
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = (trentos[i].as_ref(), first_trento + i);
         converge(dt0, dtmin, |dt| {
             hydro3d::<XY, Z, S>(t0, tend, dxs, dt, r, trento, save_raw)
         });
@@ -106,7 +106,7 @@ pub fn run_trento_3d<const XY: usize, const Z: usize>(
     let detas = etas_len / Z as f64;
     let dxs = dxs.unwrap_or([dx, dx, detas]);
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = (trentos[i].as_ref(), first_trento + i);
         match solver {
             Solver::Both => {
                 hydro3d::<XY, Z, 1>(t0, tend, dxs, dt, imp, trento, save_raw);

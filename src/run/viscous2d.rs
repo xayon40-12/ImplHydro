@@ -83,7 +83,7 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
     let dx = l / V as f64;
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = (trentos[i].as_ref(), first_trento + i);
         converge(dtmax, dtmin, |dt| {
             hydro2d::<V, S>(
                 t0,
@@ -215,7 +215,7 @@ pub fn run_trento_2d<const V: usize>(
         );
     };
     for i in 0..nb_trento {
-        let trento = (trentos[i].as_ref(), i);
+        let trento = (trentos[i].as_ref(), first_trento + i);
         match solver {
             Solver::Both => {
                 do_gl1(trento);
