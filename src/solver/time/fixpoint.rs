@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use crate::solver::{
     context::{Arr, Context},
     utils::{cfor3d, cfor3d2, gen_coords, Coord},
@@ -79,13 +77,13 @@ pub fn fixpoint<
     let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(0);
     let dt = *dto;
     let mut failed = 1usize;
-    let maxfailed = 20;
+    let maxfailed = 12;
     let mut maxe = 1e50f64;
     let mut omaxe = maxe;
     let mut alpha = 1.0;
     let mut maxe_count = 0;
     while iserr {
-        let main_time = Instant::now();
+        // let main_time = Instant::now();
         let mut new_coords: Vec<Coord> = Vec::with_capacity(VX * VY * VZ);
         if maxe.is_nan() || maxe > 1e50 || maxe_count > 4 {
             eprintln!("reset {}\t: {}", failed, t);
@@ -177,9 +175,9 @@ pub fn fixpoint<
                 new_coords.push(Coord { x, y, z });
             }
         });
-        let main_elapsed = main_time.elapsed().as_secs_f32();
+        // let main_elapsed = main_time.elapsed().as_secs_f32();
 
-        let error_time = Instant::now();
+        // let error_time = Instant::now();
         new_coords.sort_unstable();
         new_coords.dedup();
         if ERROR_PROPAGATION {
@@ -212,17 +210,17 @@ pub fn fixpoint<
             omaxe = maxe;
         }
         coords = new_coords;
-        let error_elpased = error_time.elapsed().as_secs_f32();
-        let ratio = error_elpased / main_elapsed;
-        if ratio > 5e-2 {
-            println!(
-                "error/main: {:e}, error: {:.6}ms, main: {:.6}ms, len: {}",
-                ratio,
-                error_elpased,
-                main_elapsed,
-                coords.len()
-            );
-        }
+        // let error_elpased = error_time.elapsed().as_secs_f32();
+        // let ratio = error_elpased / main_elapsed;
+        // if ratio > 5e-2 {
+        //     println!(
+        //         "error/main: {:e}, error: {:.6}ms, main: {:.6}ms, len: {}",
+        //         ratio,
+        //         error_elpased,
+        //         main_elapsed,
+        //         coords.len()
+        //     );
+        // }
     }
     *ovs = vs.clone();
     *otrs = trs.clone();
