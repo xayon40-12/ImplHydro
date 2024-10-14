@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{DirEntry, File},
     io::{BufReader, Read},
+    path::PathBuf,
 };
 
 use crate::solver::context::{Arr, BArr, DIM};
@@ -196,38 +197,45 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
 ) -> (Vec<Box<[[[f64; XY]; XY]; Z]>>, Option<[f64; DIM]>) {
     let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
     let mut dxs = None;
-    let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
+    let path = format!("s{XY}");
+    let ls: Vec<String> = std::fs::read_dir(&path)
+        .expect(&format!("Could not open directory \"{path}\""))
+        .into_iter()
+        .filter_map(|f| f.ok())
+        .map(|f| f.path())
+        .filter_map(|f| {
+            f.file_name()
+                .and_then(|f| f.to_str())
+                .map(|f| f.to_string())
+        })
+        .collect();
     for ix in 0..nb_trento {
         let i = ix + first_trento;
-        const LOAD2D: bool = false;
-        // const LOAD2D: bool = true;
-        if LOAD2D {
-            let trento_2d =
-                load_matrix_2d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
-                    "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
-                ));
-            for z in 0..Z {
-                trentos[ix][z] = *trento_2d;
-            }
-        } else {
-            trentos[ix] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
-                "Could not load trento initial condition file \"s{XY}/{i:0>width$}.dat\"."
-            ));
-            if let Ok(str) = std::fs::read_to_string(&format!("s{XY}/info.txt")) {
-                let m: HashMap<String, f64> = str
-                    .trim()
-                    .split("\n")
-                    .map(|s| {
-                        let v = s.split(": ").collect::<Vec<_>>();
-                        (
-                            v[0].to_string(),
-                            v[1].parse()
-                                .expect("Could not parse lattice spacing for trento info.txt."),
-                        )
-                    })
-                    .collect();
-                dxs = Some([m["dx"], m["dy"], m["detas"]]);
-            }
+        let ending = format!("{i}.dat");
+        let el = ending.len();
+        let name = ls
+            .iter()
+            .filter(|p| p.ends_with(&ending) && p[..p.len() - el].chars().all(|c| c == '0'))
+            .next()
+            .expect(&format!("Could not find file \"{path}/{i}.dat\"."));
+        println!("name: {name}");
+        trentos[ix] = load_matrix_3d(&format!("{path}/{name}")).expect(&format!(
+            "Could not load trento initial condition file \"{path}/{name}\"."
+        ));
+        if let Ok(str) = std::fs::read_to_string(&format!("{path}/info.txt")) {
+            let m: HashMap<String, f64> = str
+                .trim()
+                .split("\n")
+                .map(|s| {
+                    let v = s.split(": ").collect::<Vec<_>>();
+                    (
+                        v[0].to_string(),
+                        v[1].parse()
+                            .expect("Could not parse lattice spacing for trento info.txt."),
+                    )
+                })
+                .collect();
+            dxs = Some([m["dx"], m["dy"], m["detas"]]);
         }
     }
     (trentos, dxs)

@@ -9,14 +9,14 @@ import math
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
-# run frsout
+# run frzout
 # git: Duke-QCD/trento
 
 
 HBARC = 0.1973 # GeV.fm
 
 nb_frzout = 10
-nb_threads = 15
+nb_threads = 112
 ymax = 0.5
 dim = 3
 use_urqmd = False
@@ -25,7 +25,7 @@ for arg in sys.argv[1:]:
       nb_frzout = int(arg[13:])
       
    if "-ymax=" in arg:
-      ymax = arg[6:]
+      ymax = float(arg[6:])
       
    if "-threads=" in arg:
       nb_threads = int(arg[9:])
