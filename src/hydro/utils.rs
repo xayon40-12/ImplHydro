@@ -218,7 +218,6 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
             .filter(|p| p.ends_with(&ending) && p[..p.len() - el].chars().all(|c| c == '0'))
             .next()
             .expect(&format!("Could not find file \"{path}/{i}.dat\"."));
-        println!("name: {name}");
         trentos[ix] = load_matrix_3d(&format!("{path}/{name}")).expect(&format!(
             "Could not load trento initial condition file \"{path}/{name}\"."
         ));
