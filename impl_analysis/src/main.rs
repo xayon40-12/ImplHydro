@@ -160,12 +160,18 @@ pub fn d2n_detadpt_pt(events: &Vec<&Event>) -> Vec<(f64, f64, f64)> {
 
 pub fn dn_deta(events: &Vec<&Event>) -> (f64, f64) {
     let deta = 0.5;
+    let pt_cut = 0.05; // 50MeV from "PRL 116, 222302 (2016)" page 222302-2, right column, second paragraph
     let dndetas: Vec<f64> = events
         .iter()
         .map(|e| {
             e.freezeouts
                 .iter()
-                .map(|f| f.particles.iter().filter(|p| p.eta.abs() <= deta).count() as f64)
+                .map(|f| {
+                    f.particles
+                        .iter()
+                        .filter(|p| p.eta.abs() <= deta && p.pt <= pt_cut)
+                        .count() as f64
+                })
                 .fold(0.0, |acc, a| acc + a)
                 / e.freezeouts.len() as f64
                 / (2.0 * deta)
