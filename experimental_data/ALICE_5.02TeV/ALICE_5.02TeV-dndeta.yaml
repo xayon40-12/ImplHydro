@@ -1,3 +1,6 @@
+# Centrality dependence of the charged-particle multiplicity density at mid-rapidity in Pb-Pb collisions at sqrt(s_NN) = 5.02 TeV
+# Phys.Rev.Lett. 116 (2016) 222302, 2016.
+# https://www.hepdata.net/record/ins1410589: Table 2
 dependent_variables:
 - header: {name: '$\mathrm{d}N_\mathrm{ch}/\mathrm{d}\eta$'}
   qualifiers:

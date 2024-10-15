@@ -1,3 +1,6 @@
+# Anisotropic flow of charged particles in Pb-Pb collisions at sqrt(s_NN) = 5.02 TeV
+# Phys.Rev.Lett. 116 (2016) 132302, 2016.
+# https://www.hepdata.net/record/ins1419244: Table 1
 dependent_variables:
 - header: {name: 'V2{2, |DELTAETA|>1}'}
   qualifiers:
