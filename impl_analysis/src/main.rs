@@ -169,7 +169,7 @@ pub fn dn_deta(events: &Vec<&Event>) -> (f64, f64) {
                 .map(|f| {
                     f.particles
                         .iter()
-                        .filter(|p| p.eta.abs() <= deta && p.pt <= pt_cut)
+                        .filter(|p| p.eta.abs() <= deta && p.pt >= pt_cut)
                         .count() as f64
                 })
                 .fold(0.0, |acc, a| acc + a)
