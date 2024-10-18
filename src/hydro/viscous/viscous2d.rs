@@ -41,6 +41,10 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
             0.0,
             0.0,
             0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
         ];
         fitutpi(t0, vars)
     })
@@ -81,6 +85,10 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
             0.0,
             0.0,
             0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
             // pi00,
             // pi01,
             // pi02,
@@ -162,6 +170,9 @@ fn gen_constraints<'a>(
                 let pi02 = r * pi02;
                 let pi00 = r * pi00;
                 let pi33 = r * pi33;
+                let lam0 = r * eigs[0];
+                let lam1 = r * eigs[1];
+                let lam2 = r * eigs[2];
 
                 let vs = [
                     t00 * t,
@@ -188,6 +199,10 @@ fn gen_constraints<'a>(
                     pi22,
                     pi33,
                     ppi,
+                    lam0,
+                    lam1,
+                    lam2,
+                    r,
                 ];
 
                 // if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
@@ -205,13 +220,13 @@ fn gen_constraints<'a>(
 
 fn eigenvaluesx(
     _t: f64,
-    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _]: [f64; C_MILNE_BOTH_2D],
+    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_MILNE_BOTH_2D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, ux)
 }
 fn eigenvaluesy(
     _t: f64,
-    [_e, _pe, dpde, ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi]: [f64;
+    [_e, _pe, dpde, ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, uy)
@@ -219,7 +234,7 @@ fn eigenvaluesy(
 
 pub fn fitutpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, _pi01, _pi02, pi11, pi12, pi22, _pi33, ppi]: [f64;
+    [e, pe, _, ut, ux, uy, _pi00, _pi01, _pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> [f64; F_BOTH_2D] {
     [
@@ -234,7 +249,7 @@ pub fn fitutpi(
 }
 fn fxuxpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, pi01, _pi02, pi11, pi12, pi22, _pi33, ppi]: [f64;
+    [e, pe, _, ut, ux, uy, _pi00, pi01, _pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> [f64; F_BOTH_2D] {
     let pe = pe + ppi;
@@ -250,7 +265,7 @@ fn fxuxpi(
 }
 fn fyuypi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, _pi01, pi02, pi11, pi12, pi22, _pi33, ppi]: [f64;
+    [e, pe, _, ut, ux, uy, _pi00, _pi01, pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> [f64; F_BOTH_2D] {
     let pe = pe + ppi;
@@ -267,7 +282,7 @@ fn fyuypi(
 
 fn u(
     _t: f64,
-    [_e, _pe, _, ut, ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi]: [f64;
+    [_e, _pe, _, ut, ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> [f64; 3] {
     [ut, ux, uy]
@@ -343,9 +358,10 @@ fn flux<const V: usize>(
     let x = pos[0] as usize;
     let [ktt00, ktt01, ktt02, kutpi11, kutpi12, kutpi22, kutppi] = k[z][y][x];
     let [tt00, tt01, tt02, _utpi11, _utpi12, _utpi22, _utppi] = vs[z][y][x];
-    let [_oe, _ope, _odpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi] =
+    let [_oe, _ope, _odpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi, _, _, _, _] =
         otrs[z][y][x];
-    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi] = trs[z][y][x];
+    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi, _, _, _, _] =
+        trs[z][y][x];
     let pimn = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
 
     let g = [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]];
@@ -592,7 +608,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
         ["tt00", "tt01", "tt02", "utpi11", "utpi12", "utpi22", "utPi"],
         [
             "e", "pe", "dpde", "ut", "ux", "uy", "pi00", "pi01", "pi02", "pi11", "pi12", "pi22",
-            "pi33", "Pi",
+            "pi33", "Pi", "lam0", "lam1", "lam2", "renorm",
         ],
     );
     let k: Box<[[[[[f64; F_BOTH_2D]; V]; V]; 1]; S]> = boxarray(0.0);

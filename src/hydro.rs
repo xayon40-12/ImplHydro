@@ -110,12 +110,12 @@ pub const C_BOTH_2D: usize =
 pub const C_MILNE_SHEAR_2D: usize =
     Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value()) + 1; // +1 for pi33
 pub const C_MILNE_BOTH_2D: usize =
-    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value()) + 1; // +1 for pi33
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value()) + 1 + 4; // +1 for pi33, +4 for the eigenvalues of pi^{\mu\nu} lam0-1-2 and for the renorm factor
 pub const C_IDEAL_3D: usize = Viscosity::Ideal.nb_transforms(Dim::D3.value());
 pub const C_BULK_3D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D3.value());
 pub const C_SHEAR_3D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D3.value());
 pub const C_BOTH_3D: usize =
-    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D3.value());
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D3.value()) + 5; // +5 for the eigenvalues of pi^{\mu\nu} lam0-1-2-3 and for the renorm factor
 
 pub mod ideal_gas {
     use std::f64::consts::PI;

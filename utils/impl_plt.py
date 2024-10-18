@@ -70,10 +70,12 @@ compare_type = 0 # 0: absolute, 1: relative
 use_square = False
 use_average_ref = False
 plot_meanmax_dx = False
-plot_conv = True
-plot_1D = True
-# plot_2D = False
+# plot_conv = True
+plot_conv = False
+# plot_1D = True
+plot_1D = False
 plot_2D = True
+# plot_2D = False
 def refName(scs):
     # return scs[0]
     # return scs[-1]
@@ -770,17 +772,17 @@ def plot2d(l, datadts):
     if case > 0 and not manycases:
         return
     (dx,n) = dxn
-    expl = datadts["Heun"]
+    # expl = datadts["Heun"]
     datadts = datadts["GL1"]
     maxdts = sorted([dt for dt in datadts])
     fromref = defaultfromref
     if len(maxdts) == 1:
         fromref = 0
     dt = maxdts[fromref]
-    # (info, ref, diffref) = datadts[maxdts[0]]
-    if len(expl[dt]) == 0:
-        return
-    (info, ref, diffref) = expl[dt]
+    # if len(expl[dt]) == 0:
+    #     return
+    (info, ref, diffref) = datadts[maxdts[0]]
+    # (info, ref, diffref) = expl[dt]
     vid = info["ID"]
     cut = info["CUT"]
     ref = mask(ref,vid,cut)
@@ -795,7 +797,7 @@ def plot2d(l, datadts):
         refdatats = np.array(info["datats"], dtype=object)
     else:
         datats = [(t,data,diff)]
-        refdatats = [(t,ref,refdiff)]
+        refdatats = [(t,ref,diffref)]
 
     ld = len(datats)
     many = ld > 1
@@ -805,7 +807,7 @@ def plot2d(l, datadts):
         num = num2D
         nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
         # nb = 2
-        nb = 3
+        nb = 8
         if "Gubser" in einfo["name"]:
             nb += 1
         if "FixPoint" in einfo["integration"]:
@@ -849,15 +851,22 @@ def plot2d(l, datadts):
             x = mdata[:,vid["x"]]
             y = mdata[:,vid["y"]]
             z = mdata[:,vid["e"]]
+            zp = mdata[:,vid["pe"]]
+            zPi = mdata[:,vid["Pi"]]
+            zlam0 = mdata[:,vid["lam0"]]
+            zlam1 = mdata[:,vid["lam1"]]
+            zlam2 = mdata[:,vid["lam2"]]
+            zrenorm = mdata[:,vid["renorm"]]
+            # zlam3 = mdata[:,vid["lam3"]]
             zref = mref[:,vid["e"]]
             ziter = mdata[:,vid["iter"]]
             # print(name, case, scheme, dt, n, ziter.sum())
             # zpi00 = mdata[:,vid["pi00"]]
-            zpi11 = mdata[:,vid["pi11"]]
+            # zpi11 = mdata[:,vid["pi11"]]
             # zpi12 = mdata[:,vid["pi12"]]
             # zpi22 = mdata[:,vid["pi22"]]
             # rpi00 = mref[:,vid["pi00"]]
-            rpi11 = mref[:,vid["pi11"]]
+            # rpi11 = mref[:,vid["pi11"]]
             # rpi12 = mref[:,vid["pi12"]]
             # rpi22 = mref[:,vid["pi22"]]
             zut = mdata[:,vid["ut"]]
@@ -880,6 +889,13 @@ def plot2d(l, datadts):
             x = np.reshape(x, (n,n))[nl:nr,nl:nr]
             y = np.reshape(y, (n,n))[nl:nr,nl:nr]
             z = np.reshape(z, (n,n))[nl:nr,nl:nr]
+            zp = np.reshape(zp, (n,n))[nl:nr,nl:nr]
+            zPi = np.reshape(zPi, (n,n))[nl:nr,nl:nr]
+            zlam0 = np.reshape(zlam0, (n,n))[nl:nr,nl:nr]
+            zlam1 = np.reshape(zlam1, (n,n))[nl:nr,nl:nr]
+            zlam2 = np.reshape(zlam2, (n,n))[nl:nr,nl:nr]
+            # zlam3 = np.reshape(zlam3, (n,n))[nl:nr,nl:nr]
+            zrenorm = np.reshape(zrenorm, (n,n))[nl:nr,nl:nr]
             zref = np.reshape(zref, (n,n))[nl:nr,nl:nr]
             ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
             zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
@@ -890,13 +906,13 @@ def plot2d(l, datadts):
             zux = np.reshape(zux, (n,n))[nl:nr,nl:nr]
             zuy = np.reshape(zuy, (n,n))[nl:nr,nl:nr]
             zut = np.reshape(zut, (n,n))[nl:nr,nl:nr]
-            zur = np.sqrt(zux*zux+zuy*zuy)
+            # zur = np.sqrt(zux*zux+zuy*zuy)
             # zpi00 = np.reshape(zpi00, (n,n))[nl:nr,nl:nr]
-            zpi11 = np.reshape(zpi11, (n,n))[nl:nr,nl:nr]
+            # zpi11 = np.reshape(zpi11, (n,n))[nl:nr,nl:nr]
             # zpi12 = np.reshape(zpi12, (n,n))[nl:nr,nl:nr]
             # zpi22 = np.reshape(zpi22, (n,n))[nl:nr,nl:nr]
             # rpi00 = np.reshape(rpi00, (n,n))[nl:nr,nl:nr]
-            rpi11 = np.reshape(rpi11, (n,n))[nl:nr,nl:nr]
+            # rpi11 = np.reshape(rpi11, (n,n))[nl:nr,nl:nr]
             # rpi12 = np.reshape(rpi12, (n,n))[nl:nr,nl:nr]
             # rpi22 = np.reshape(rpi22, (n,n))[nl:nr,nl:nr]
             l = x[0][0]
@@ -908,7 +924,16 @@ def plot2d(l, datadts):
             # all = [(r"$\epsilon$", z),(r"pi00", zpi00),(r"pi11", zpi11),(r"pi12", zpi12),(r"pi22", zpi22)]
             # all = [(r"$\epsilon$", z), ("ref", zref), ("err ref",zerrref)]
             # all = [(r"$\epsilon$", z), (r"$\Delta_\mathrm{Impl-Expl}$",zerrref)]
-            all = [(r"$\epsilon$", z), (r"$impl \pi^{11}$",zpi11), (r"$expl \pi^{11}$",rpi11)]
+            all = [
+                (r"renorm", zrenorm),
+                (r"$p(\epsilon)$", zp),
+                (r"$\Pi$",zPi),
+                (r"$\lambda_1$", zlam1),
+                (r"$\lambda_2$", zlam2),
+                (r"$p(\epsilon)+\Pi$", zp+zPi),
+                (r"$p(\epsilon)+\Pi+\lambda_1$", zp+zPi+zlam1),
+                (r"$p(\epsilon)+\Pi+\lambda_2$", zp+zPi+zlam2),
+            ]
             # all = [(r"$\epsilon$", z)]
             if "Gubser" in einfo["name"]:
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]
