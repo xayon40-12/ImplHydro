@@ -81,6 +81,7 @@ def plot_dndeta_mid(dndeta_mid):
     centralities_c = [(l+r)/2 for [l,r] in centralities]
     values = [v[0] for v in valuess]
     errs = [v[1] for v in valuess]
+    # plt.yscale('log')
     plt.errorbar(centralities_c, values, errs, label="numerics")
 
     centralities, valuess = alice5020["dndeta"]
