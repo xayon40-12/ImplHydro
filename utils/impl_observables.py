@@ -95,7 +95,7 @@ def plot_dndeta_mid(dndeta_mid):
     plt.savefig("dndeta-mid.pdf")
 
 def plot_vn(vns):
-    alice = [alice5020[n] for (n, _, _) in vns]
+    alice = [alice5020[n[0:2]] for (n, _, _) in vns]
     def name(n):
         if len(n) > 2:
             return "$v_{{{}}}${{2}} $|\\Delta\\eta| < 1$".format(n[1])
