@@ -487,10 +487,6 @@ pub fn run<
                         };
                         if res.is_none() {
                             eprintln!("Integration failed, abort current run.");
-                            std::fs::remove_dir_all(foldername).expect(&format!(
-                                "Could not delete directory \"{}\" after abort.",
-                                foldername
-                            ));
                             eprintln!("");
                             return None;
                         }
@@ -541,5 +537,8 @@ pub fn run<
     let min = ((elapsed - hour as f64 * 3600.0) / 60.0) as u64;
     let sec = (elapsed - hour as f64 * 3600.0 - min as f64 * 60.0) as u64;
     eprintln!("Elapsed: {}h{}m{}s", hour, min, sec);
+    if let Err(err) = std::fs::write(&format!("{}/done", foldername), b"") {
+        eprintln!("Could not write done file: {err}");
+    }
     Some((context.vstrs, context.t, cost as usize, tsteps))
 }
