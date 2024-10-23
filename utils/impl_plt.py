@@ -193,13 +193,11 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
 
     e0 = data0[:,vid["e"]]
     e = data[:,vid["e"]]
-    pi11 = data[:,vid["pi11"]]
     info["e_max"] = max(e)
     # if the total energy sum(e) is bigger at the end time than the initial time, 
     # it means that explicit failed
     sum_e = sum(e)
-    sum_pi11 = sum(pi11)
-    expl_fail = sum_pi11 != sum_pi11 or sum_e != sum_e or sum_e > 1.1*sum(e0)    # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
+    expl_fail = sum_e != sum_e or sum_e > 1.1*sum(e0)    # if a fail (decreasing dt) happens in implicit when dt>dx/10, we consider that implicit failed as we want to test large dt and thus do not want dt to be decreased
     impl_fail = False # no dt decrease anymare, so no need for: fails > 0 and maxdt>dx/10
     # impl_fail = fails > 0
     if rejectfails and (expl_fail or impl_fail): 
@@ -772,21 +770,22 @@ def plot2d(l, datadts):
     if case > 0 and not manycases:
         return
     (dx,n) = dxn
-    # expl = datadts["Heun"]
+    expl = datadts["Heun"]
     datadts = datadts["GL1"]
     maxdts = sorted([dt for dt in datadts])
     fromref = defaultfromref
     if len(maxdts) == 1:
         fromref = 0
     dt = maxdts[fromref]
-    # if len(expl[dt]) == 0:
-    #     return
-    (info, ref, diffref) = datadts[maxdts[0]]
-    # (info, ref, diffref) = expl[dt]
+    if len(expl[dt]) == 0:
+        return
+    # (info, ref, diffref) = datadts[maxdts[0]]
+    (info, ref, diffref) = expl[dt]
     vid = info["ID"]
     cut = info["CUT"]
     ref = mask(ref,vid,cut)
     (einfo, data, diff) = datadts[dt]
+    viscous = einfo["viscosity"] != "Ideal"
     vid = einfo["ID"]
     cut = einfo["CUT"]
 
@@ -806,8 +805,9 @@ def plot2d(l, datadts):
     if many:
         num = num2D
         nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
-        # nb = 2
-        nb = 8
+        nb = 7
+        if viscous:
+            nb += 4
         if "Gubser" in einfo["name"]:
             nb += 1
         if "FixPoint" in einfo["integration"]:
@@ -852,13 +852,15 @@ def plot2d(l, datadts):
             y = mdata[:,vid["y"]]
             z = mdata[:,vid["e"]]
             zp = mdata[:,vid["pe"]]
-            zPi = mdata[:,vid["Pi"]]
-            zlam0 = mdata[:,vid["lam0"]]
-            zlam1 = mdata[:,vid["lam1"]]
-            zlam2 = mdata[:,vid["lam2"]]
-            zrenorm = mdata[:,vid["renorm"]]
-            # zlam3 = mdata[:,vid["lam3"]]
+            if viscous:
+                zPi = mdata[:,vid["Pi"]]
+                zlam0 = mdata[:,vid["lam0"]]
+                zlam1 = mdata[:,vid["lam1"]]
+                zlam2 = mdata[:,vid["lam2"]]
+                zrenorm = mdata[:,vid["renorm"]]
+                # zlam3 = mdata[:,vid["lam3"]]
             zref = mref[:,vid["e"]]
+            zpref = mref[:,vid["pe"]]
             ziter = mdata[:,vid["iter"]]
             # print(name, case, scheme, dt, n, ziter.sum())
             # zpi00 = mdata[:,vid["pi00"]]
@@ -873,11 +875,12 @@ def plot2d(l, datadts):
             zux = mdata[:,vid["ux"]]
             zvx = zux/zut
             sgn = np.sign(zvx)
-            zvx = np.power(zvx*sgn,0.5)*sgn
+            # zvx = np.power(zvx*sgn,0.5)*sgn
             zuy = mdata[:,vid["uy"]]
             zvy = zuy/zut
             sgn = np.sign(zvy)
-            zvy = np.power(zvy*sgn,0.5)*sgn
+            # zvy = np.power(zvy*sgn,0.5)*sgn
+            zv = np.sqrt(zvx*zvx + zvy*zvy)
             zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)]
             zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
             # zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
@@ -890,13 +893,15 @@ def plot2d(l, datadts):
             y = np.reshape(y, (n,n))[nl:nr,nl:nr]
             z = np.reshape(z, (n,n))[nl:nr,nl:nr]
             zp = np.reshape(zp, (n,n))[nl:nr,nl:nr]
-            zPi = np.reshape(zPi, (n,n))[nl:nr,nl:nr]
-            zlam0 = np.reshape(zlam0, (n,n))[nl:nr,nl:nr]
-            zlam1 = np.reshape(zlam1, (n,n))[nl:nr,nl:nr]
-            zlam2 = np.reshape(zlam2, (n,n))[nl:nr,nl:nr]
-            # zlam3 = np.reshape(zlam3, (n,n))[nl:nr,nl:nr]
-            zrenorm = np.reshape(zrenorm, (n,n))[nl:nr,nl:nr]
+            if viscous:
+                zPi = np.reshape(zPi, (n,n))[nl:nr,nl:nr]
+                zlam0 = np.reshape(zlam0, (n,n))[nl:nr,nl:nr]
+                zlam1 = np.reshape(zlam1, (n,n))[nl:nr,nl:nr]
+                zlam2 = np.reshape(zlam2, (n,n))[nl:nr,nl:nr]
+                # zlam3 = np.reshape(zlam3, (n,n))[nl:nr,nl:nr]
+                zrenorm = np.reshape(zrenorm, (n,n))[nl:nr,nl:nr]
             zref = np.reshape(zref, (n,n))[nl:nr,nl:nr]
+            zpref = np.reshape(zpref, (n,n))[nl:nr,nl:nr]
             ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
             zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
             zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
@@ -905,6 +910,7 @@ def plot2d(l, datadts):
             zvy = np.reshape(zvy, (n,n))[nl:nr,nl:nr]
             zux = np.reshape(zux, (n,n))[nl:nr,nl:nr]
             zuy = np.reshape(zuy, (n,n))[nl:nr,nl:nr]
+            zv = np.reshape(zv, (n,n))[nl:nr,nl:nr]
             zut = np.reshape(zut, (n,n))[nl:nr,nl:nr]
             # zur = np.sqrt(zux*zux+zuy*zuy)
             # zpi00 = np.reshape(zpi00, (n,n))[nl:nr,nl:nr]
@@ -924,16 +930,27 @@ def plot2d(l, datadts):
             # all = [(r"$\epsilon$", z),(r"pi00", zpi00),(r"pi11", zpi11),(r"pi12", zpi12),(r"pi22", zpi22)]
             # all = [(r"$\epsilon$", z), ("ref", zref), ("err ref",zerrref)]
             # all = [(r"$\epsilon$", z), (r"$\Delta_\mathrm{Impl-Expl}$",zerrref)]
+            zcomp = (zp-zpref)/np.maximum(zp,zpref)
+            diff = zp-zpref
             all = [
-                (r"renorm", zrenorm),
                 (r"$p(\epsilon)$", zp),
-                (r"$\Pi$",zPi),
-                (r"$\lambda_1$", zlam1),
-                (r"$\lambda_2$", zlam2),
-                (r"$p(\epsilon)+\Pi$", zp+zPi),
-                (r"$p(\epsilon)+\Pi+\lambda_1$", zp+zPi+zlam1),
-                (r"$p(\epsilon)+\Pi+\lambda_2$", zp+zPi+zlam2),
+                (r"$\Delta_{\mathrm{Impl}-\mathrm{Expl}} p(\epsilon)$", diff),
+                (r"$\Delta_{\mathrm{log}:\mathrm{Impl}-\mathrm{Expl}} p(\epsilon)$", -1/np.where(diff>0, np.log(diff), -np.log(-diff))),
+                (r"$\Delta_{(\mathrm{Impl}-\mathrm{Expl})/\max(|\mathrm{Impl}|,|\mathrm{Expl}|)} p(\epsilon)$", np.log(np.abs(zcomp))),
+                (r"$v$", zv),
+                (r"$v^x$", zvx),
+                (r"$v^y$", zvy),
             ]
+            if viscous:
+                all += [
+                    (r"$\Pi$",zPi),
+                    (r"$\lambda_1$", zlam1),
+                    (r"$\lambda_2$", zlam2),
+                    # (r"$p(\epsilon)+\Pi$", zp+zPi),
+                    # (r"$p(\epsilon)+\Pi+\lambda_1$", zp+zPi+zlam1),
+                    # (r"$p(\epsilon)+\Pi+\lambda_2$", zp+zPi+zlam2),
+                    (r"renorm", zrenorm),
+                ]
             # all = [(r"$\epsilon$", z)]
             if "Gubser" in einfo["name"]:
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]

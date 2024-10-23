@@ -83,39 +83,6 @@ pub fn vn(n: f64, events: &Vec<&Event>) -> (f64, f64) {
     jacknife(|num, den| (num / den).sqrt(), nums, dens)
 }
 
-pub fn vn_eta_diff_1(n: f64, events: &Vec<&Event>) -> (f64, f64) {
-    let (v2, v22) = events
-        .iter()
-        .map(|e| {
-            e.freezeouts
-                .iter()
-                .map(|f| {
-                    let particles: Vec<_> = f
-                        .particles
-                        .iter()
-                        .filter(|p| p.eta.abs() < 0.8 && 0.2 < p.pt && p.pt < 5.0)
-                        .cloned()
-                        .collect();
-
-                    let cos_n: Vec<f64> = particles
-                        .iter()
-                        .flat_map(|&p1| particles.iter().map(move |&p2| (p1, p2)))
-                        .filter(|(p1, p2)| (p1.eta - p2.eta).abs() < 1.0)
-                        .map(|(p1, p2)| (n * (p1.phi - p2.phi)).cos())
-                        .collect();
-                    let count = cos_n.len();
-                    cos_n.into_iter().sum::<f64>() / count as f64
-                })
-                .sum::<f64>()
-                / e.freezeouts.len() as f64
-        })
-        .fold((0.0, 0.0), |(av2, av22), v2| (av2 + v2, av22 + v2 * v2));
-    let l = events.len() as f64;
-    let v2 = v2 / l;
-    let sigma = (v22 / l - v2 * v2).sqrt();
-    (v2, sigma)
-}
-
 // Simetrized dn/deta as function of eta
 pub fn dn_deta_eta(events: &Vec<&Event>) -> Vec<(f64, f64, f64)> {
     let deta = 0.25;
@@ -294,7 +261,7 @@ fn main() {
     let l = mults.len();
     let percent = |i| i as f64 / l as f64 * 100.0;
 
-    let nb_obs = 9;
+    let nb_obs = 6;
     let mut msg = vec![String::new(); nb_obs];
 
     // Choose the number of bins
@@ -345,21 +312,6 @@ fn main() {
         msg[4] = format!("{}v3|{}|{:.3}:{:.3}\n", msg[4], sbin, v3, errv3);
         let (v4, errv4) = vn(4.0, &events);
         msg[5] = format!("{}v4|{}|{:.3}:{:.3}\n", msg[5], sbin, v4, errv4);
-        let (v2_eta_diff_1, errv2) = vn_eta_diff_1(2.0, &events);
-        msg[6] = format!(
-            "{}v2_eta_diff_1|{}|{:.3}:{:.3}\n",
-            msg[6], sbin, v2_eta_diff_1, errv2
-        );
-        let (v3_eta_diff_1, errv3) = vn_eta_diff_1(3.0, &events);
-        msg[7] = format!(
-            "{}v3_eta_diff_1|{}|{:.3}:{:.3}\n",
-            msg[7], sbin, v3_eta_diff_1, errv3
-        );
-        let (v4_eta_diff_1, errv4) = vn_eta_diff_1(4.0, &events);
-        msg[8] = format!(
-            "{}v4_eta_diff_1|{}|{:.3}:{:.3}\n",
-            msg[8], sbin, v4_eta_diff_1, errv4
-        );
 
         j += size;
     }

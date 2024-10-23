@@ -98,10 +98,7 @@ def plot_dndeta_mid(dndeta_mid):
 def plot_vn(vns):
     alice = [alice5020[n[0:2]] for (n, _, _) in vns]
     def name(n):
-        if len(n) > 2:
-            return "$v_{{{}}}${{2}} $|\\Delta\\eta| < 1$".format(n[1])
-        else:
-            return "$v_{{{}}}${{2}}".format(n[1])
+        return "$v_{{{}}}${{2}}".format(n[1])
     vns = [(name(n), c, v) for (n, c, v) in vns]
     plt.close()
     for name, centralities, valuess in vns:
