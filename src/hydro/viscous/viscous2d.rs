@@ -21,6 +21,7 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     _entropy: Eos<'a>,
+    temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i];
@@ -44,7 +45,9 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
             0.0,
             0.0,
             0.0,
+            0.0,
             1.0,
+            temperature(e),
         ];
         fitutpi(t0, vars)
     })
@@ -55,6 +58,7 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
     trs: &'a [[[f64; FREESTREAM_2D]; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
+    temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let e = trs[j][i][0].max(VOID);
@@ -88,7 +92,9 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
             0.0,
             0.0,
             0.0,
+            0.0,
             1.0,
+            temperature(e),
             // pi00,
             // pi01,
             // pi02,
@@ -105,7 +111,7 @@ pub fn init_from_freestream_2d<'a, const VX: usize, const VY: usize>(
 fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
-    _temp: Eos<'a>,
+    temp: Eos<'a>,
     _implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_MILNE_BOTH_2D]) + 'a + Sync> {
     Box::new(
@@ -142,20 +148,26 @@ fn gen_constraints<'a>(
                 let pi00 = (ux * pi01 + uy * pi02) / ut;
                 let pi33 = pi00 - pi11 - pi22;
 
-                let m = matrix![
-                    pi00, pi01, pi02;
-                    pi01, pi11, pi12;
-                    pi02, pi12, pi22;
-                ];
-                let eigs = m.symmetric_eigenvalues();
-                let smallest = eigs
+                // let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
+                //     pi00, pi01, pi02;
+                //     pi01, pi11, pi12;
+                //     pi02, pi12, pi22;
+                // ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
+                let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
+                    pi11, pi12;
+                    pi12, pi22;
+                ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
+                let mut eigs: Vec<f64> = m
+                    .symmetric_eigenvalues()
                     .into_iter()
-                    .chain([pi33].iter())
-                    .map(|v| *v)
-                    .min_by(f64::total_cmp)
-                    .unwrap();
+                    .cloned()
+                    .chain([0.0, pi33].into_iter())
+                    .collect();
+                eigs.sort_by(f64::total_cmp);
+                let smallest = eigs[0];
 
                 // check that shear viscosity does not make pressure negative
+                // let r = if epe + ppi + smallest < 0.0 {
                 let r = if epe + ppi + smallest < 0.0 {
                     -epe / (ppi + smallest) * (1.0 - 1e-10)
                 } else {
@@ -173,6 +185,7 @@ fn gen_constraints<'a>(
                 let lam0 = r * eigs[0];
                 let lam1 = r * eigs[1];
                 let lam2 = r * eigs[2];
+                let lam3 = r * eigs[3];
 
                 let vs = [
                     t00 * t,
@@ -202,7 +215,9 @@ fn gen_constraints<'a>(
                     lam0,
                     lam1,
                     lam2,
+                    lam3,
                     r,
+                    temp(e),
                 ];
 
                 // if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
@@ -220,13 +235,13 @@ fn gen_constraints<'a>(
 
 fn eigenvaluesx(
     _t: f64,
-    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_MILNE_BOTH_2D],
+    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_MILNE_BOTH_2D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, ux)
 }
 fn eigenvaluesy(
     _t: f64,
-    [_e, _pe, dpde, ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi, _, _, _, _]: [f64;
+    [_e, _pe, dpde, ut, _ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi, _, _, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, uy)
@@ -234,7 +249,7 @@ fn eigenvaluesy(
 
 pub fn fitutpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, _pi01, _pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _]: [f64;
+    [e, pe, _, ut, ux, uy, _pi00, _pi01, _pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> [f64; F_BOTH_2D] {
     [
@@ -249,7 +264,7 @@ pub fn fitutpi(
 }
 fn fxuxpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, pi01, _pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _]: [f64;
+    [e, pe, _, ut, ux, uy, _pi00, pi01, _pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> [f64; F_BOTH_2D] {
     let pe = pe + ppi;
@@ -265,7 +280,7 @@ fn fxuxpi(
 }
 fn fyuypi(
     t: f64,
-    [e, pe, _, ut, ux, uy, _pi00, _pi01, pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _]: [f64;
+    [e, pe, _, ut, ux, uy, _pi00, _pi01, pi02, pi11, pi12, pi22, _pi33, ppi, _, _, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> [f64; F_BOTH_2D] {
     let pe = pe + ppi;
@@ -282,7 +297,7 @@ fn fyuypi(
 
 fn u(
     _t: f64,
-    [_e, _pe, _, ut, ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi, _, _, _, _]: [f64;
+    [_e, _pe, _, ut, ux, uy, _pi00, _pi01, _pi02, _pi11, _pi12, _pi22, _pi33, _ppi, _, _, _, _, _, _]: [f64;
         C_MILNE_BOTH_2D],
 ) -> [f64; 3] {
     [ut, ux, uy]
@@ -358,9 +373,9 @@ fn flux<const V: usize>(
     let x = pos[0] as usize;
     let [ktt00, ktt01, ktt02, kutpi11, kutpi12, kutpi22, kutppi] = k[z][y][x];
     let [tt00, tt01, tt02, _utpi11, _utpi12, _utpi22, _utppi] = vs[z][y][x];
-    let [_oe, _ope, _odpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi, _, _, _, _] =
+    let [_oe, _ope, _odpde, out, oux, ouy, opi00, opi01, opi02, _opi11, _opi12, _opi22, _opi33, oppi, _, _, _, _, _, _] =
         otrs[z][y][x];
-    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi, _, _, _, _] =
+    let [e, pe, dpde, ut, ux, uy, pi00, pi01, pi02, pi11, pi12, pi22, pi33, ppi, _, _, _, _, _, _] =
         trs[z][y][x];
     let pimn = [[pi00, pi01, pi02], [pi01, pi11, pi12], [pi02, pi12, pi22]];
 
@@ -501,7 +516,7 @@ fn flux<const V: usize>(
     let zeta = zetaovers * s;
     let tauppi = taupi; // use shear relaxation time for bulk
 
-    // if gev < tempcut && enable_tempcut {
+    // if gev < tempcut {
     //     let tau_decay = 10.0;
     //     let m = ((1.0 - tempcut / gev) / tau_decay).exp();
     //     eta *= m;
@@ -607,8 +622,26 @@ pub fn viscous2d<const V: usize, const S: usize>(
     let names = (
         ["tt00", "tt01", "tt02", "utpi11", "utpi12", "utpi22", "utPi"],
         [
-            "e", "pe", "dpde", "ut", "ux", "uy", "pi00", "pi01", "pi02", "pi11", "pi12", "pi22",
-            "pi33", "Pi", "lam0", "lam1", "lam2", "renorm",
+            "e",
+            "pe",
+            "dpde",
+            "ut",
+            "ux",
+            "uy",
+            "pi00",
+            "pi01",
+            "pi02",
+            "pi11",
+            "pi12",
+            "pi22",
+            "pi33",
+            "Pi",
+            "lam0",
+            "lam1",
+            "lam2",
+            "lam3",
+            "renorm",
+            "temperature",
         ],
     );
     let k: Box<[[[[[f64; F_BOTH_2D]; V]; V]; 1]; S]> = boxarray(0.0);

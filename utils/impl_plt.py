@@ -802,12 +802,46 @@ def plot2d(l, datadts):
     many = ld > 1
     nid = ceil(log(ld)/log(10))
 
+    idt = vid["temperature"]
+    ide = vid["e"]
+    idp = vid["pe"]
+    idx = vid["x"]
+    idy = vid["y"]
+    ts = datats[:,0]
+    data = datats[:,1]
+
+    plt.clf()
+    plt.plot(ts, np.vectorize(lambda x: np.max(x[:,idt]))(data), label="max")
+    plt.plot(ts, np.vectorize(lambda x: np.sum(x[:,idt]*x[:,ide])/np.sum(x[:,ide]))(data), label="mean")
+    plt.legend()
+    plt.savefig("figures/obs_temperature.pdf", dpi=100)
+
+    plt.clf()
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    for (t, d, _) in datats:
+        ys = d[:,idy]
+        y0 = ys == ys[np.argmax(ys>0)]
+        xs = d[:,idx][y0]
+        ps = d[:,idp][y0]
+        pmax = np.max(ps)
+        ax.scatter(xs, t, ps/pmax)
+    # plt.show()
+    plt.savefig("figures/obs_temperature_x.pdf", dpi=100)
+
+    plt.clf()
+    
+
+    # max = np.max(temperature)
+    # quantiles = np.quantile(temperature, [0.25, 0.5, 0.75])
+    # mean = np.mean(temperature)
+
     if many:
         num = num2D
         nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
-        nb = 7
+        nb = 1
         if viscous:
-            nb += 4
+            nb += 2
         if "Gubser" in einfo["name"]:
             nb += 1
         if "FixPoint" in einfo["integration"]:
@@ -820,7 +854,7 @@ def plot2d(l, datadts):
         mi = 1e100
         zitermax = 1e-100
         zitermin = 1e100
-        for (id, (t,data,diff)) in zip(range(num),datats): #[nums]):
+        for (id, (t,data,diff)) in zip(range(num),datats[nums]): #[nums]):
             mdata = mask(data,vid,cut)
             n = einfo["nx"]
             x = mdata[:,vid["x"]]
@@ -852,21 +886,22 @@ def plot2d(l, datadts):
             y = mdata[:,vid["y"]]
             z = mdata[:,vid["e"]]
             zp = mdata[:,vid["pe"]]
+            ztemperature = mdata[:,vid["temperature"]]
             if viscous:
                 zPi = mdata[:,vid["Pi"]]
                 zlam0 = mdata[:,vid["lam0"]]
                 zlam1 = mdata[:,vid["lam1"]]
                 zlam2 = mdata[:,vid["lam2"]]
                 zrenorm = mdata[:,vid["renorm"]]
-                # zlam3 = mdata[:,vid["lam3"]]
+                zlam3 = mdata[:,vid["lam3"]]
             zref = mref[:,vid["e"]]
             zpref = mref[:,vid["pe"]]
             ziter = mdata[:,vid["iter"]]
             # print(name, case, scheme, dt, n, ziter.sum())
             # zpi00 = mdata[:,vid["pi00"]]
-            # zpi11 = mdata[:,vid["pi11"]]
-            # zpi12 = mdata[:,vid["pi12"]]
-            # zpi22 = mdata[:,vid["pi22"]]
+            zpi11 = mdata[:,vid["pi11"]]
+            zpi12 = mdata[:,vid["pi12"]]
+            zpi22 = mdata[:,vid["pi22"]]
             # rpi00 = mref[:,vid["pi00"]]
             # rpi11 = mref[:,vid["pi11"]]
             # rpi12 = mref[:,vid["pi12"]]
@@ -893,12 +928,13 @@ def plot2d(l, datadts):
             y = np.reshape(y, (n,n))[nl:nr,nl:nr]
             z = np.reshape(z, (n,n))[nl:nr,nl:nr]
             zp = np.reshape(zp, (n,n))[nl:nr,nl:nr]
+            ztemperature = np.reshape(ztemperature, (n,n))[nl:nr,nl:nr]
             if viscous:
                 zPi = np.reshape(zPi, (n,n))[nl:nr,nl:nr]
                 zlam0 = np.reshape(zlam0, (n,n))[nl:nr,nl:nr]
                 zlam1 = np.reshape(zlam1, (n,n))[nl:nr,nl:nr]
                 zlam2 = np.reshape(zlam2, (n,n))[nl:nr,nl:nr]
-                # zlam3 = np.reshape(zlam3, (n,n))[nl:nr,nl:nr]
+                zlam3 = np.reshape(zlam3, (n,n))[nl:nr,nl:nr]
                 zrenorm = np.reshape(zrenorm, (n,n))[nl:nr,nl:nr]
             zref = np.reshape(zref, (n,n))[nl:nr,nl:nr]
             zpref = np.reshape(zpref, (n,n))[nl:nr,nl:nr]
@@ -914,9 +950,9 @@ def plot2d(l, datadts):
             zut = np.reshape(zut, (n,n))[nl:nr,nl:nr]
             # zur = np.sqrt(zux*zux+zuy*zuy)
             # zpi00 = np.reshape(zpi00, (n,n))[nl:nr,nl:nr]
-            # zpi11 = np.reshape(zpi11, (n,n))[nl:nr,nl:nr]
-            # zpi12 = np.reshape(zpi12, (n,n))[nl:nr,nl:nr]
-            # zpi22 = np.reshape(zpi22, (n,n))[nl:nr,nl:nr]
+            zpi11 = np.reshape(zpi11, (n,n))[nl:nr,nl:nr]
+            zpi12 = np.reshape(zpi12, (n,n))[nl:nr,nl:nr]
+            zpi22 = np.reshape(zpi22, (n,n))[nl:nr,nl:nr]
             # rpi00 = np.reshape(rpi00, (n,n))[nl:nr,nl:nr]
             # rpi11 = np.reshape(rpi11, (n,n))[nl:nr,nl:nr]
             # rpi12 = np.reshape(rpi12, (n,n))[nl:nr,nl:nr]
@@ -933,19 +969,28 @@ def plot2d(l, datadts):
             zcomp = (zp-zpref)/np.maximum(zp,zpref)
             diff = zp-zpref
             all = [
+                # (r"temperature", ztemperature),
                 (r"$p(\epsilon)$", zp),
-                (r"$\Delta_{\mathrm{Impl}-\mathrm{Expl}} p(\epsilon)$", diff),
-                (r"$\Delta_{\mathrm{log}:\mathrm{Impl}-\mathrm{Expl}} p(\epsilon)$", -1/np.where(diff>0, np.log(diff), -np.log(-diff))),
-                (r"$\Delta_{(\mathrm{Impl}-\mathrm{Expl})/\max(|\mathrm{Impl}|,|\mathrm{Expl}|)} p(\epsilon)$", np.log(np.abs(zcomp))),
-                (r"$v$", zv),
-                (r"$v^x$", zvx),
-                (r"$v^y$", zvy),
+                # (r"$\Delta_{\mathrm{Impl}-\mathrm{Expl}} p(\epsilon)$", diff),
+                # (r"$\Delta_{\mathrm{log}:\mathrm{Impl}-\mathrm{Expl}} p(\epsilon)$", -1/np.where(diff>0, np.log(diff), -np.log(-diff))),
+                # (r"$\Delta_{(\mathrm{Impl}-\mathrm{Expl})/\max(|\mathrm{Impl}|,|\mathrm{Expl}|)} p(\epsilon)$", np.log(np.abs(zcomp))),
+                # (r"$v$", zv),
+                # (r"$v^x$", zvx),
+                # (r"$v^y$", zvy),
             ]
             if viscous:
                 all += [
                     (r"$\Pi$",zPi),
-                    (r"$\lambda_1$", zlam1),
-                    (r"$\lambda_2$", zlam2),
+                    # (r"$\pi^{11}$", zpi11),
+                    # (r"$\pi^{12}$", zpi12),
+                    # (r"$\pi^{22}$", zpi22),
+                    # (r"$\lambda_0$", zlam0),
+                    # (r"$\lambda_1$", zlam1),
+                    # (r"$\lambda_2$", zlam2),
+                    # (r"$\lambda_3$", zlam3),
+                    # (r"$\sum_;\mu\lambda_\mu$", zlam0-zlam1-zlam2-zlam3),
+                    # (r"$\sum_\mu\lambda_\mu$", zlam0+zlam1+zlam2+zlam3),
+                    # (r"$\Pi_\mu\lambda_\mu$", zlam0*zlam1*zlam2*zlam3),
                     # (r"$p(\epsilon)+\Pi$", zp+zPi),
                     # (r"$p(\epsilon)+\Pi+\lambda_1$", zp+zPi+zlam1),
                     # (r"$p(\epsilon)+\Pi+\lambda_2$", zp+zPi+zlam2),
@@ -956,14 +1001,23 @@ def plot2d(l, datadts):
                 all += [(r"$\Delta_\mathrm{exact}$", zerr)]
             if "FixPoint" in einfo["integration"]:
                 all += [(r"$\mathrm{iterations}$", ziter)]
+            cmap_dual = "twilight_shifted"
+            # cmap_dual = "seismic"
+            # cmap_dual = "terrain"
+            cmap = "inferno"
             for (i, (n, z)) in zip(range(nb),all):
                 if "iterations" in n:
-                    imit = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=zitermin, vmax=zitermax)
+                    imit = axs[i][id].imshow(z, cmap=cmap, extent=[l,r,d,u], origin="lower", vmin=zitermin, vmax=zitermax)
                     colors += list(np.unique(z))
+                elif n == r"renorm" :
+                    z = z*((1-z)/(1-z))
+                    im = axs[i][id].imshow(z, cmap=cmap, extent=[l,r,d,u], origin="lower", vmin=0.95, vmax=1.0)
                 elif n == r"$\Delta_\mathrm{exact}$":
-                    im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower", vmin=mi, vmax=ma)
+                    im = axs[i][id].imshow(z, cmap=cmap_dual, extent=[l,r,d,u], origin="lower", vmin=mi, vmax=ma)
                 else:
-                    im = axs[i][id].imshow(z, extent=[l,r,d,u], origin="lower")
+                    fz = z[np.isfinite(z)]
+                    limit = max(abs(np.min(fz)),abs(np.max(fz)))
+                    im = axs[i][id].imshow(z, cmap=cmap_dual, extent=[l,r,d,u], origin="lower", vmin=-limit, vmax=limit)
 
                 axs[i][id].yaxis.tick_right()
                 if i == 0:

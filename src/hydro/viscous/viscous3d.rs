@@ -21,6 +21,7 @@ pub fn init_from_energy_density_3d<'a, const VX: usize, const VY: usize, const V
     p: Eos<'a>,
     dpde: Eos<'a>,
     _entropy: Eos<'a>,
+    temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_BOTH_3D] + 'a> {
     Box::new(move |(i, j, k), _| {
         let e = e[k][j][i] / HBARC / t0;
@@ -48,6 +49,7 @@ pub fn init_from_energy_density_3d<'a, const VX: usize, const VY: usize, const V
             0.0,
             0.0,
             1.0,
+            temperature(e),
         ];
         fitutpi(t0, vars)
     })
@@ -56,7 +58,7 @@ pub fn init_from_energy_density_3d<'a, const VX: usize, const VY: usize, const V
 fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
-    _temp: Eos<'a>,
+    temp: Eos<'a>,
     _implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_3D]) -> ([f64; F_BOTH_3D], [f64; C_BOTH_3D]) + 'a + Sync> {
     Box::new(
@@ -113,13 +115,18 @@ fn gen_constraints<'a>(
                 let pi33 = pi00 - pi11 - pi22;
 
                 let m = matrix![
-                    pi00, pi01, pi02, pi03;
-                    pi01, pi11, pi12, pi13;
-                    pi02, pi12, pi22, pi23;
-                    pi03, pi13, pi23, pi33;
-                ];
-                let eigs = m.symmetric_eigenvalues();
-                let smallest = eigs.into_iter().map(|v| *v).min_by(f64::total_cmp).unwrap();
+                    pi11, pi12, pi13;
+                    pi12, pi22, pi23;
+                    pi13, pi23, pi33;
+                ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
+                let mut eigs: Vec<f64> = m
+                    .symmetric_eigenvalues()
+                    .into_iter()
+                    .cloned()
+                    .chain([0.0].into_iter())
+                    .collect();
+                eigs.sort_by(f64::total_cmp);
+                let smallest = eigs[0];
 
                 // check that shear viscosity does not make pressure negative
                 let r = if epe + ppi + smallest < 0.0 {
@@ -181,6 +188,7 @@ fn gen_constraints<'a>(
                     lam2,
                     lam3,
                     r,
+                    temp(e),
                 ];
 
                 // if vs.iter().any(|v| v.is_nan()) || trans.iter().any(|v| v.is_nan()) {
@@ -198,26 +206,26 @@ fn gen_constraints<'a>(
 
 fn eigenvaluesx(
     _t: f64,
-    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
+    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, ux)
 }
 fn eigenvaluesy(
     _t: f64,
-    [_, _, dpde, ut, _, uy, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
+    [_, _, dpde, ut, _, uy, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, uy)
 }
 fn eigenvaluesz(
     _t: f64,
-    [_, _, dpde, ut, _, _, uz, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
+    [_, _, dpde, ut, _, _, uz, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> f64 {
     eigenvaluesk(dpde, ut, uz)
 }
 
 pub fn fitutpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _]: [f64; C_BOTH_3D],
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     [
         t * ((e + pe) * ut * ut - pe), // no pi in Ttt because it is substracted in the flux
@@ -234,7 +242,7 @@ pub fn fitutpi(
 }
 fn fxuxpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _]: [f64; C_BOTH_3D],
+    [e, pe, _, ut, ux, uy, uz, _pi00, pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
@@ -252,7 +260,7 @@ fn fxuxpi(
 }
 fn fyuypi(
     t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _]: [f64; C_BOTH_3D],
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
@@ -271,7 +279,7 @@ fn fyuypi(
 
 fn fzuzpi(
     t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi, _, _, _, _, _]: [f64; C_BOTH_3D],
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi, _, _, _, _, _, _]: [f64; C_BOTH_3D],
 ) -> [f64; F_BOTH_3D] {
     let pe = pe + ppi;
     [
@@ -290,7 +298,7 @@ fn fzuzpi(
 
 fn u(
     _t: f64,
-    [_e, _pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, _pi11, _pi12, _pi13, _pi22, _pi23, _pi33, _ppi, _, _, _, _, _]: [f64;
+    [_e, _pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, _pi11, _pi12, _pi13, _pi22, _pi23, _pi33, _ppi, _, _, _, _, _, _]: [f64;
         C_BOTH_3D],
 ) -> [f64; 4] {
     [ut, ux, uy, uz]
@@ -381,9 +389,9 @@ fn flux<const XY: usize, const VZ: usize>(
     let [ktt00, ktt01, ktt02, ktt03, kutpi11, kutpi12, kutpi13, kutpi22, kutpi23, kutppi] =
         k[z][y][x];
     let [tt00, tt01, tt02, tt03, _utpi11, _utpi12, _utpi13, _utpi22, _utpi23, _utppi] = vs[z][y][x];
-    let [_oe, _ope, _odpde, out, oux, ouy, ouz, opi00, opi01, opi02, opi03, _opi11, _opi12, _opi13, _opi22, _opi23, _opi33, oppi, _, _, _, _, _] =
+    let [_oe, _ope, _odpde, out, oux, ouy, ouz, opi00, opi01, opi02, opi03, _opi11, _opi12, _opi13, _opi22, _opi23, _opi33, oppi, _, _, _, _, _, _] =
         otrs[z][y][x];
-    let [e, pe, dpde, ut, ux, uy, uz, pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi, _, _, _, _, _] =
+    let [e, pe, dpde, ut, ux, uy, uz, pi00, pi01, pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi, _, _, _, _, _, _] =
         trs[z][y][x];
     let pimn = [
         [pi00, pi01, pi02, pi03],
@@ -731,8 +739,30 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
             "utPi",
         ],
         [
-            "e", "pe", "dpde", "ut", "ux", "uy", "uz", "pi00", "pi01", "pi02", "pi03", "pi11",
-            "pi12", "pi13", "pi22", "pi23", "pi33", "Pi", "lam0", "lam1", "lam2", "lam3", "renorm",
+            "e",
+            "pe",
+            "dpde",
+            "ut",
+            "ux",
+            "uy",
+            "uz",
+            "pi00",
+            "pi01",
+            "pi02",
+            "pi03",
+            "pi11",
+            "pi12",
+            "pi13",
+            "pi22",
+            "pi23",
+            "pi33",
+            "Pi",
+            "lam0",
+            "lam1",
+            "lam2",
+            "lam3",
+            "renorm",
+            "temperature",
         ],
     );
     let k: Box<[[[[[f64; F_BOTH_3D]; XY]; XY]; VZ]; S]> = boxarray(0.0);
