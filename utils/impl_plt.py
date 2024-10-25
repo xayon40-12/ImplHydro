@@ -1075,6 +1075,7 @@ def plot2d(l, datadts):
         x = mdata[:,vid["x"]]
         y = mdata[:,vid["y"]]
         z = mdata[:,vid["e"]]
+        zPi = mdata[:,vid["Pi"]]
         zref = ref[:,vid["e"]]
         ziter = mdata[:,vid["iter"]]
         zut = mdata[:,vid["ut"]]
@@ -1096,6 +1097,7 @@ def plot2d(l, datadts):
         x = np.reshape(x, (n,n))[nl:nr,nl:nr]
         y = np.reshape(y, (n,n))[nl:nr,nl:nr]
         z = np.reshape(z, (n,n))[nl:nr,nl:nr]
+        zPi = np.reshape(zPi, (n,n))[nl:nr,nl:nr]
         ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
         zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
         zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
@@ -1107,7 +1109,7 @@ def plot2d(l, datadts):
         d = y[0][0]
         u = y[-1][0]
         # all = [("e", z), ("vy", zvy), ("err ref", zerrref),("vx",zvx)]
-        all = [("e", z)]
+        all = [("e", z),("Pi", zPi)]
         # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
         if "Gubser" in einfo["name"] and not "Exponential" in einfo["name"]:
             all += [("err", zerr)]
@@ -1118,7 +1120,16 @@ def plot2d(l, datadts):
         if not hasattr(axs, "__len__"):
             axs = [axs]
         for (i, (n, z)) in zip(range(nb),all):
-            im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower")
+            fz = z[np.isfinite(z)]
+            limit = max(abs(np.min(fz)),abs(np.max(fz)))
+            nlimit = -limit
+            if n == "iter":
+                nlimit = 1
+                limit = max(limit,2)
+                cmap = "inferno"
+            else:
+                cmap = "twilight_shifted"
+            im = axs[i].imshow(z, cmap=cmap, extent=[l,r,d,u], origin="lower", vmin=nlimit, vmax=limit)
             # if n == "iter":
             #     im = axs[i].imshow(z, extent=[l,r,d,u], origin="lower", vmin=0, vmax=3)
             # else:
