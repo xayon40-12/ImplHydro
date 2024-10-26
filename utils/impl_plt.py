@@ -43,9 +43,13 @@ t_id = -1
 def setTimeId(i):
     global t_id
     t_id = int(i)
+num2D = 5
+def setNum2D(i):
+    global num2D
+    num2D = int(i)
     
 
-argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-s","--schemename"], setUseSchemeName), (["-t","--time_id"], setTimeId)]
+argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-s","--schemename"], setUseSchemeName), (["-t","--time_id"], setTimeId), (["-n","--num2D"], setNum2D)]
 for arg in sys.argv[1:]:
     found = False
     for (larg, act) in argActions:
@@ -65,7 +69,6 @@ crop = 19
 crop_eta = crop/4
 defaultfromref = 0
 maxerr = 1e-6
-num2D = 5
 compare_type = 0 # 0: absolute, 1: relative
 use_square = False
 use_average_ref = False
@@ -770,20 +773,21 @@ def plot2d(l, datadts):
     if case > 0 and not manycases:
         return
     (dx,n) = dxn
-    expl = datadts["Heun"]
     datadts = datadts["GL1"]
     maxdts = sorted([dt for dt in datadts])
     fromref = defaultfromref
     if len(maxdts) == 1:
         fromref = 0
     dt = maxdts[fromref]
-    if len(expl[dt]) == 0:
-        return
-    # (info, ref, diffref) = datadts[maxdts[0]]
-    (info, ref, diffref) = expl[dt]
-    vid = info["ID"]
-    cut = info["CUT"]
-    ref = mask(ref,vid,cut)
+    heun = "Heun" in datadts
+    if heun:
+        expl = datadts["Heun"]
+        if len(expl[dt]) == 0:
+            return
+        (info, ref, diffref) = expl[dt]
+        vid = info["ID"]
+        cut = info["CUT"]
+        ref = mask(ref,vid,cut)
     (einfo, data, diff) = datadts[dt]
     viscous = einfo["viscosity"] != "Ideal"
     vid = einfo["ID"]
@@ -793,10 +797,12 @@ def plot2d(l, datadts):
     case = einfo["case"]
     if (("Trento" in name and case == 0) or "Gubser" in name):
         datats = np.array(einfo["datats"], dtype=object)
-        refdatats = np.array(info["datats"], dtype=object)
+        if heun:
+            refdatats = np.array(info["datats"], dtype=object)
     else:
         datats = [(t,data,diff)]
-        refdatats = [(t,ref,diffref)]
+        if heun:
+            refdatats = [(t,ref,diffref)]
 
     ld = len(datats)
     many = ld > 1
@@ -873,14 +879,19 @@ def plot2d(l, datadts):
             ma = max(ma,zerr.max())
             zitermin = min(zitermin, ziter.min())
             zitermax = max(zitermax, ziter.max())
-        for (id, (t,data,diff), (_,ref,refdiff)) in zip(range(num),datats[nums],refdatats[nums]):
+        if not heun:
+            refdatats = np.array([i for i in range(ld)])
+        for (id, (t,data,diff), tup_ref) in zip(range(num),datats[nums],refdatats[nums]):
+            if heun:
+                (_,ref,refdiff) = tup_ref
             # global greft
             # if greft[case][t] is None:
             #     greft[case][t] = (data,scheme)
             # elif greft[case][t][1] != scheme:
             #     ref = greft[case][t][0]
             mdata = mask(data,vid,cut)
-            mref = mask(ref,vid,cut)
+            if heun:
+                mref = mask(ref,vid,cut)
             n = einfo["nx"]
             x = mdata[:,vid["x"]]
             y = mdata[:,vid["y"]]
@@ -894,8 +905,9 @@ def plot2d(l, datadts):
                 zlam2 = mdata[:,vid["lam2"]]
                 zrenorm = mdata[:,vid["renorm"]]
                 zlam3 = mdata[:,vid["lam3"]]
-            zref = mref[:,vid["e"]]
-            zpref = mref[:,vid["pe"]]
+            if heun:
+                zref = mref[:,vid["e"]]
+                zpref = mref[:,vid["pe"]]
             ziter = mdata[:,vid["iter"]]
             # print(name, case, scheme, dt, n, ziter.sum())
             # zpi00 = mdata[:,vid["pi00"]]
@@ -919,8 +931,9 @@ def plot2d(l, datadts):
             zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)]
             zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
             # zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
-            zerrref = [(a-b) for (a,b) in zip(z,zref)]
-            sgn = np.sign(zerrref)
+            if heun:
+                zerrref = [(a-b) for (a,b) in zip(z,zref)]
+                sgn = np.sign(zerrref)
             # zerrref = np.power(zerrref*sgn,0.5)*sgn
             nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
             nr = n-1-nl
@@ -936,12 +949,14 @@ def plot2d(l, datadts):
                 zlam2 = np.reshape(zlam2, (n,n))[nl:nr,nl:nr]
                 zlam3 = np.reshape(zlam3, (n,n))[nl:nr,nl:nr]
                 zrenorm = np.reshape(zrenorm, (n,n))[nl:nr,nl:nr]
-            zref = np.reshape(zref, (n,n))[nl:nr,nl:nr]
-            zpref = np.reshape(zpref, (n,n))[nl:nr,nl:nr]
+            if heun:
+                zref = np.reshape(zref, (n,n))[nl:nr,nl:nr]
+                zpref = np.reshape(zpref, (n,n))[nl:nr,nl:nr]
             ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
             zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
             zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
-            zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
+            if heun:
+                zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
             zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
             zvy = np.reshape(zvy, (n,n))[nl:nr,nl:nr]
             zux = np.reshape(zux, (n,n))[nl:nr,nl:nr]
@@ -966,11 +981,12 @@ def plot2d(l, datadts):
             # all = [(r"$\epsilon$", z),(r"pi00", zpi00),(r"pi11", zpi11),(r"pi12", zpi12),(r"pi22", zpi22)]
             # all = [(r"$\epsilon$", z), ("ref", zref), ("err ref",zerrref)]
             # all = [(r"$\epsilon$", z), (r"$\Delta_\mathrm{Impl-Expl}$",zerrref)]
-            zcomp = (zp-zpref)/np.maximum(zp,zpref)
-            diff = zp-zpref
+            if heun:
+                zcomp = (zp-zpref)/np.maximum(zp,zpref)
+                zdiff = zp-zpref
             all = [
                 # (r"temperature", ztemperature),
-                (r"$p(\epsilon)$", zp),
+                (r"$\sqrt{p(\epsilon)}$", zp**0.5),
                 # (r"$\Delta_{\mathrm{Impl}-\mathrm{Expl}} p(\epsilon)$", diff),
                 # (r"$\Delta_{\mathrm{log}:\mathrm{Impl}-\mathrm{Expl}} p(\epsilon)$", -1/np.where(diff>0, np.log(diff), -np.log(-diff))),
                 # (r"$\Delta_{(\mathrm{Impl}-\mathrm{Expl})/\max(|\mathrm{Impl}|,|\mathrm{Expl}|)} p(\epsilon)$", np.log(np.abs(zcomp))),
@@ -978,9 +994,16 @@ def plot2d(l, datadts):
                 # (r"$v^x$", zvx),
                 # (r"$v^y$", zvy),
             ]
+            maxabs = np.abs(zlam0)
+            maxabs = np.maximum(maxabs,np.abs(zlam1))
+            maxabs = np.maximum(maxabs,np.abs(zlam2))
+            maxabs = np.maximum(maxabs,np.abs(zlam3))
+            # for l in [zlam0,zlam1,zlam2,zlam3]:
+            #     maxabs = np.maximum(maxabs,np.abs(l))
             if viscous:
                 all += [
-                    (r"$\Pi$",zPi),
+                    (r"$\sqrt{\Pi}$",np.vectorize(lambda x: np.sign(x)*abs(x)**0.5)(zPi)),
+                    (r"$\sqrt{\rho(\pi^{\mu\nu})}$", maxabs**0.5),
                     # (r"$\pi^{11}$", zpi11),
                     # (r"$\pi^{12}$", zpi12),
                     # (r"$\pi^{22}$", zpi22),
@@ -988,13 +1011,12 @@ def plot2d(l, datadts):
                     # (r"$\lambda_1$", zlam1),
                     # (r"$\lambda_2$", zlam2),
                     # (r"$\lambda_3$", zlam3),
-                    # (r"$\sum_;\mu\lambda_\mu$", zlam0-zlam1-zlam2-zlam3),
                     # (r"$\sum_\mu\lambda_\mu$", zlam0+zlam1+zlam2+zlam3),
                     # (r"$\Pi_\mu\lambda_\mu$", zlam0*zlam1*zlam2*zlam3),
                     # (r"$p(\epsilon)+\Pi$", zp+zPi),
                     # (r"$p(\epsilon)+\Pi+\lambda_1$", zp+zPi+zlam1),
                     # (r"$p(\epsilon)+\Pi+\lambda_2$", zp+zPi+zlam2),
-                    (r"renorm", zrenorm),
+                    # (r"renorm", zrenorm),
                 ]
             # all = [(r"$\epsilon$", z)]
             if "Gubser" in einfo["name"]:
@@ -1076,7 +1098,7 @@ def plot2d(l, datadts):
         y = mdata[:,vid["y"]]
         z = mdata[:,vid["e"]]
         zPi = mdata[:,vid["Pi"]]
-        zref = ref[:,vid["e"]]
+        # zref = ref[:,vid["e"]]
         ziter = mdata[:,vid["iter"]]
         zut = mdata[:,vid["ut"]]
         zux = mdata[:,vid["ux"]]
@@ -1089,9 +1111,9 @@ def plot2d(l, datadts):
         zvy = np.power(zvy*sgn,0.5)*sgn
         zgubser = [gubser(x,y,t) for (x,y) in zip(x,y)]
         zerr = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zgubser)]
-        zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
-        sgn = np.sign(zerrref)
-        zerrref = np.power(zerrref*sgn,0.5)*sgn
+        # zerrref = [(a-b)/max(abs(a),abs(b)) for (a,b) in zip(z,zref)]
+        # sgn = np.sign(zerrref)
+        # zerrref = np.power(zerrref*sgn,0.5)*sgn
         nl = next(i for (i,v) in zip(range(n*n),x) if v >= -crop)
         nr = n-1-nl
         x = np.reshape(x, (n,n))[nl:nr,nl:nr]
@@ -1101,7 +1123,7 @@ def plot2d(l, datadts):
         ziter = np.reshape(ziter, (n,n))[nl:nr,nl:nr]
         zgubser = np.reshape(zgubser, (n,n))[nl:nr,nl:nr]
         zerr = np.reshape(zerr, (n,n))[nl:nr,nl:nr]
-        zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
+        # zerrref = np.reshape(zerrref, (n,n))[nl:nr,nl:nr]
         zvx = np.reshape(zvx, (n,n))[nl:nr,nl:nr]
         zvy = np.reshape(zvy, (n,n))[nl:nr,nl:nr]
         l = x[0][0]
@@ -1109,7 +1131,7 @@ def plot2d(l, datadts):
         d = y[0][0]
         u = y[-1][0]
         # all = [("e", z), ("vy", zvy), ("err ref", zerrref),("vx",zvx)]
-        all = [("e", z),("Pi", zPi)]
+        all = [(r"$\epsilon$", z),(r"$\Pi$", zPi)]
         # all = [("vx", zvx), ("e", z), ("err ref", zerrref)]
         if "Gubser" in einfo["name"] and not "Exponential" in einfo["name"]:
             all += [("err", zerr)]
@@ -1139,6 +1161,9 @@ def plot2d(l, datadts):
             axs[i].xaxis.set_label_position('top') 
             if i == 0:
                 axs[i].set_ylabel("$y$ (fm)")
+            if i == nb-1:
+                axs[i].set_ylabel(" ")
+                axs[i].yaxis.set_label_position('right')
             divider = make_axes_locatable(axs[i])
             cax = divider.new_vertical(size="5%", pad=0.6, pack_start=True)
             fig.add_axes(cax)
