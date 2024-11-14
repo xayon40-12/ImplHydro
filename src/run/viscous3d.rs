@@ -18,10 +18,10 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
     tempcut: f64,
     freezeout_temp_gev: f64,
     r: Scheme<S>,
-    init_e: (&[[[f64; XY]; XY]; Z], usize),
+    init_s: (&[[[f64; XY]; XY]; Z], usize),
     save_raw: Option<f64>,
 ) -> HydroOutput<XY, XY, Z, F_BOTH_3D, C_BOTH_3D> {
-    let (e, i) = init_e;
+    let (s, i) = init_s;
     let name = ("InitTrento", i);
     let eos = EOSs::WB;
     // let eos = EOSs::HotQCD;
@@ -43,7 +43,7 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
         ),
     };
     println!("{}{}", name.0, name.1);
-    let init = init_from_energy_density_3d(t0, e, p, dpde, entropy, temp);
+    let init = init_from_energy_density_3d(t0, s, p, dpde, entropy, temp);
     viscous3d::<XY, Z, S>(
         &name,
         maxdt,

@@ -17,14 +17,16 @@ use nalgebra::matrix;
 
 pub fn init_from_energy_density_3d<'a, const VX: usize, const VY: usize, const VZ: usize>(
     t0: f64,
-    e: &'a [[[f64; VX]; VY]; VZ],
+    s: &'a [[[f64; VX]; VY]; VZ],
     p: Eos<'a>,
     dpde: Eos<'a>,
-    _entropy: Eos<'a>,
+    entropy: Eos<'a>,
     temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_BOTH_3D] + 'a> {
     Box::new(move |(i, j, k), _| {
-        let e = e[k][j][i] / HBARC / t0;
+        let s = s[k][j][i] / HBARC / t0;
+        let e = newton(1e-10, s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
+        // let e = s;
         let vars = [
             e,
             p(e),
