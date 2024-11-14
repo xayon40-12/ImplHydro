@@ -128,6 +128,10 @@ pub mod ideal_gas {
         1.0 / 3.0
     }
 
+    pub fn s(e: f64) -> f64 {
+        (e + p(e)) / T(e)
+    }
+
     #[allow(non_snake_case)]
     pub fn T(e: f64) -> f64 {
         (30.0 * e / (PI * PI * (16.0 + 21.0 / 2.0))).powf(0.25)

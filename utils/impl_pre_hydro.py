@@ -29,19 +29,15 @@ for arg in sys.argv[1:]:
 
 sigs = [7.0]
 energies = [5020] # GeV
-norms = [20] # GeV
 bs = [10.5]
 random_b = False
 usefreestream = False
 use3d = False
-Nscale = 2.6
+Nscale = 11.3
 
 for arg in args:
     if "-n=" in arg:
         num = int(arg[3:])
-
-    if "-norm=" in arg:
-        norms = [float(arg[6:])]
 
     if "-Nscale=" in arg:
         Nscale = float(arg[8:])
@@ -62,7 +58,7 @@ for arg in args:
 
 for c in cells:
     dx = 2*half_size / float(c)
-    for sig, energy, normi in zip(sigs,energies,norms):
+    for sig, energy in zip(sigs,energies):
         for b in bs:
             if random_b:
                 dir_b = "_random"
@@ -82,7 +78,6 @@ for c in cells:
 
             eta_c = int(float(c)/2)
             eta_c += 1-eta_c%2;
-            norm = normi/0.1973 # fm^-1
 
             if use3d:
                 # Duke-QCD/trento3d-2.0
@@ -124,11 +119,11 @@ for c in cells:
                 # trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --b-min {bmin} --b-max {bmax} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} --form-width {u} -w {w} -m {nc} -v {v} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
                 #     .format(u=0.88, w=1.3, nc=16.4, v=1.3, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=1.713, pmid=0.333, k=0.104, f=1.0, Nscale=2.6, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bmin=b, bmax=b, num=num, dir=dir)
                 trento_cmd = "trento-3 Pb Pb -s {s} --random-seed {random_seed} --grid-max {grid_max} --grid-step {grid_step} --nsteps-etas {nsteps_etas} {bminmax} --form-width {u} -d {d} -w {w} -m {nc} -t {ktmin} --shape-alpha {alpha} --shape-beta {beta} --mid-norm {Nmid} --mid-power {pmid} -k {k} --flatness {f} --overall-norm {Nscale} {num} -o {dir}"\
-                    .format(u=rcp, d=dmin, w=wc, nc=nc, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=0.113, pmid=0.615, k=k, f=1.0, Nscale=11.3, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bminmax=bminmax, num=num, dir=dir)
+                    .format(u=rcp, d=dmin, w=wc, nc=nc, ktmin=0.33, alpha=4.6, beta=0.19, Nmid=0.113, pmid=0.615, k=k, f=1.0, Nscale=Nscale, nsteps_etas=eta_c, grid_step=dx, grid_max=half_size, s=energy, random_seed=random_seed, bminmax=bminmax, num=num, dir=dir)
             else:
                 trento_cmd = \
                     "trento Pb Pb --random-seed {r} -p {p} -k {k} -w {w} -m {m} -v {v} -d {d} {bminmax} --cross-section {sig} --normalization {n} --grid-max {l} --grid-step {dx} {num} -o {dir}" \
-                    .format(r=random_seed, p=p, k=k, w=rcp, m=nc, v=wc, d=dmin, sig=sig, bminmax=bminmax, l=half_size, dx=dx, n=norm, num=num, dir=dir)
+                    .format(r=random_seed, p=p, k=k, w=rcp, m=nc, v=wc, d=dmin, sig=sig, bminmax=bminmax, l=half_size, dx=dx, n=Nscale, num=num, dir=dir)
             trento = os.popen(trento_cmd)
             output = trento.read()
             print("Trento:\n{}".format(output))

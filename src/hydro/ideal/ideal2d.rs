@@ -1,7 +1,7 @@
 use crate::{
     hydro::{
         utils::{eigenvaluesk, Coordinate},
-        C_IDEAL_2D, F_IDEAL_2D,
+        C_IDEAL_2D, F_IDEAL_2D, HBARC,
     },
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
@@ -21,9 +21,11 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     s: &'a [[f64; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
+    entropy: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_IDEAL_2D] + 'a> {
     Box::new(move |(i, j), _| {
-        let s = s[j][i].max(VOID);
+        let s = s[j][i] / HBARC / t0;
+        let e = newton(1e-10, s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
         let e = s;
         let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0];
         f0(t0, vars)
