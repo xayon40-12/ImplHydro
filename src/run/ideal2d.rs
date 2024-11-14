@@ -16,15 +16,15 @@ fn hydro2d<const V: usize, const S: usize>(
     dx: f64,
     maxdt: f64,
     r: Scheme<S>,
-    init_e: Option<(&[[f64; V]; V], usize)>,
+    init_s: Option<(&[[f64; V]; V], usize)>,
     save_raw: Option<f64>,
 ) -> HydroOutput<V, V, 1, F_IDEAL_2D, C_IDEAL_2D> {
-    let name = if let Some((_, i)) = init_e {
+    let name = if let Some((_, i)) = init_s {
         ("InitTrento", i)
     } else {
         ("Gubser", 0)
     };
-    let (p, dpde, entropy, _temp): (Eos, Eos, Eos, Eos) = if init_e.is_some() {
+    let (p, dpde, entropy, _temp): (Eos, Eos, Eos, Eos) = if init_s.is_some() {
         (&wb::p, &wb::dpde, &wb::s, &wb::T)
     } else {
         (
@@ -35,8 +35,8 @@ fn hydro2d<const V: usize, const S: usize>(
         )
     };
     println!("{} {}", name.0, name.1);
-    let init = if let Some((es, _)) = init_e {
-        init_from_entropy_density_2d(t0, es, p, dpde, entropy)
+    let init = if let Some((s, _)) = init_s {
+        init_from_entropy_density_2d(t0, s, p, dpde, entropy)
     } else {
         init_gubser(t0, p, dpde)
     };
