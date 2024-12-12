@@ -20,13 +20,13 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     s: &'a [[f64; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
-    entropy: Eos<'a>,
+    _entropy: Eos<'a>,
     temperature: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_BOTH_2D] + 'a> {
     Box::new(move |(i, j), _| {
         let s = s[j][i] / HBARC / t0;
-        let e = newton(1e-10, s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
-        // let e = s;
+        // let e = newton(1e-10, s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
+        let e = s;
         let vars = [
             e,
             p(e),
