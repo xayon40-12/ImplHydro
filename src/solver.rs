@@ -473,6 +473,7 @@ pub fn run<
     let mut again = true;
     let mut freezout = None;
     while again {
+        println!("t: {}", context.t);
         if do_save {
             let mut d = next_save - context.t;
             if d <= 2.0 * context.dt && enable_save {
@@ -496,7 +497,11 @@ pub fn run<
                 tmp_ctx.t = (tmp_ctx.t * r).round() / r; // round time for saving
                 save(&tmp_ctx, cost, tsteps, &nbiter, fails);
                 current_save = next_save;
-                next_save = (current_save + save_every).min(context.tend);
+                next_save = current_save + save_every;
+                println!("save t: {}, next_save: {next_save}", context.t);
+                if context.tend > 0.0 {
+                    next_save = next_save.min(context.tend);
+                }
             }
         }
         tsteps += 1;

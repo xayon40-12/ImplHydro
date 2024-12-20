@@ -129,7 +129,6 @@ pub struct Coord {
     pub y: usize,
     pub x: usize,
     pub remaining: usize,
-    pub reduction: i32,
     pub error_increases: usize,
     pub max_err: f64,
 }
@@ -144,7 +143,6 @@ pub fn gen_coords<const VX: usize, const VY: usize, const VZ: usize>() -> Vec<Co
                     y,
                     z,
                     remaining: 1,
-                    reduction: 0,
                     error_increases: 0,
                     max_err: 0.0,
                 });

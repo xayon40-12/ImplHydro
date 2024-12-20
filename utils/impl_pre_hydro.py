@@ -5,10 +5,11 @@ import sys
 import os
 import shutil
 import numpy as np
+import math
 
 random_seed = 1
 num = 10
-pn = int(1+np.log10(num-1))
+pn = int(1+math.log10(num-1))
 half_size = 20 # fm
 half_size_eta = half_size/4 # fm
 

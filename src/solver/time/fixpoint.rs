@@ -50,7 +50,7 @@ pub fn fixpoint<
     }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
     err_thr: ErrThr<F, C, VX, VY, VZ>,
 ) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>)> {
-    let max_error_increases = 2;
+    let max_error_increases = 4;
 
     let b = if let Some(b) = b { *b } else { a[S - 1] };
     let mut coords = gen_coords::<VX, VY, VZ>();
@@ -71,27 +71,27 @@ pub fn fixpoint<
         d
     };
     *dto = maxdt.min(*dto);
-    let _ko = k.clone();
+    let ko = k.clone();
     let mut fu = k.clone();
     let mut vdtk: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
     let mut trdtk: Box<[[[[f64; C]; VX]; VY]; VZ]> = boxarray(0.0);
     // let mut errs: Box<[[[bool; VX]; VY]; VZ]> = boxarray(true);
     let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(0);
-    let dt = *dto;
-    let mut dts: Box<[[[f64; VX]; VY]; VZ]> = boxarray(dt);
+    let mut dts: Box<[[[f64; VX]; VY]; VZ]> = boxarray(*dto);
+    let mut ts: Box<[[[f64; VX]; VY]; VZ]> = boxarray(*t);
     while coords.len() > 0 {
         let mut new_coords: Vec<Coord> = Vec::with_capacity(VX * VY * VZ);
         let er = err_thr(*t, &vs, &trs);
-        let mut maxe = 0.0f64;
         for s in 0..S {
             let c = a[s].iter().fold(0.0, |acc, r| acc + r);
-            let cdt = c * dt;
-            let ct = *t + cdt;
             cfor3d2(
                 &coords,
                 &mut vdtk,
                 &mut trdtk,
                 |&Coord { x, y, z, .. }, vdtk, trdtk| {
+                    let t = ts[z][y][x];
+                    let dt = dts[z][y][x];
+                    let ct = t + c * dt;
                     for f in 0..F {
                         vdtk[f] = vs[z][y][x][f];
                         for s1 in 0..S {
@@ -101,12 +101,12 @@ pub fn fixpoint<
                     }
                 },
             );
-            let (cdt, ovs, otrs) = if cdt == 0.0 {
-                (dt, &ovs, &otrs)
-            } else {
-                (cdt, &vs, &trs)
-            };
+            let (ovs, otrs) = if c == 0.0 { (&ovs, &otrs) } else { (&vs, &trs) };
             cfor3d(&coords, &mut fu[s], |&Coord { x, y, z, .. }, fu| {
+                let t = ts[z][y][x];
+                let dt = dts[z][y][x];
+                let cdt = if c == 0.0 { dt } else { c * dt };
+                let ct = t + c * dt;
                 *fu = fun(
                     &k[s],
                     [&ovs, &vdtk],
@@ -115,7 +115,7 @@ pub fn fixpoint<
                     boundary,
                     [x as i32, y as i32, z as i32],
                     *dxs,
-                    [*t, ct],
+                    [t, ct],
                     [dt, cdt],
                     opt,
                 );
@@ -127,7 +127,6 @@ pub fn fixpoint<
                  y,
                  x,
                  mut remaining,
-                 mut reduction,
                  mut error_increases,
                  max_err,
              }| {
@@ -140,26 +139,32 @@ pub fn fixpoint<
                         let kf = k[s][z][y][x][f];
                         let d = fuf - kf;
                         let e = d.abs();
-                        maxe = maxe.max(e);
                         current_max_err = current_max_err.max(e);
                         is_err |= e.is_nan() || e > er;
                         k[s][z][y][x][f] = kf + d;
                     }
                 }
                 if is_err {
+                    error_increases += 1;
                     if current_max_err >= max_err {
                         error_increases += 1;
                         if error_increases > max_error_increases {
                             remaining *= 2;
-                            reduction += 1;
+                            dts[z][y][x] *= 0.5;
+                            for s in 0..S {
+                                for f in 0..F {
+                                    k[s][z][y][x][f] = ko[s][z][y][x][f];
+                                }
+                            }
                         }
+                    } else {
+                        error_increases = 0;
                     }
                     new_coords.push(Coord {
                         x,
                         y,
                         z,
                         remaining,
-                        reduction,
                         error_increases,
                         max_err: current_max_err,
                     });
@@ -171,24 +176,23 @@ pub fn fixpoint<
                                 vs[z][y][x][f] += dts[z][y][x] * b[s] * k[s][z][y][x][f];
                             }
                         }
+                        ts[z][y][x] += dts[z][y][x];
                         new_coords.push(Coord {
                             x,
                             y,
                             z,
                             remaining,
-                            reduction,
-                            error_increases,
+                            error_increases: 0,
                             max_err: current_max_err,
                         });
-                    } else {
-                        dts[z][y][x] = dt * 0.5f64.powi(-reduction);
                     }
                 }
             },
         );
 
-        new_coords.sort_unstable_by_key(|&Coord { z, y, x, .. }| (z, y, x));
-        new_coords.dedup();
+        new_coords.sort_by_key(|&Coord { z, y, x, .. }| (z, y, x));
+        // new_coords.dedup_by_key(|&mut Coord { z, y, x, .. }| (z, y, x));
+        println!("coords.len(): {}", coords.len());
         if ERROR_PROPAGATION {
             for i in 0..new_coords.len() {
                 let c = new_coords[i];
@@ -208,8 +212,8 @@ pub fn fixpoint<
                     }
                 }
             }
-            new_coords.sort_unstable_by_key(|&Coord { z, y, x, .. }| (z, y, x));
-            new_coords.dedup();
+            new_coords.sort_by_key(|&Coord { z, y, x, .. }| (z, y, x));
+            new_coords.dedup_by_key(|&mut Coord { z, y, x, .. }| (z, y, x));
         }
 
         coords = new_coords;
@@ -236,6 +240,7 @@ pub fn fixpoint<
         .unwrap()) as f64
         / (VX * VY * VZ) as f64;
     *ot = *t;
+    let dt = *dto;
     *t += dt;
     *dto = maxdt.min(dt * 1.1);
     for vz in 0..VZ {
