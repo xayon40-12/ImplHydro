@@ -1,5 +1,3 @@
-use std::{mem::MaybeUninit, ptr::addr_of_mut};
-
 use boxarray::boxarray;
 
 use super::context::{Arr, BArr, DIM};
@@ -124,12 +122,16 @@ pub fn flux_limiter(theta: f64, a: f64, b: f64, c: f64) -> f64 {
     minmod2(theta * (b - a), minmod2((c - a) / 2.0, theta * (c - b)))
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 #[repr(C)]
 pub struct Coord {
     pub z: usize,
     pub y: usize,
     pub x: usize,
+    pub remaining: usize,
+    pub reduction: i32,
+    pub error_increases: usize,
+    pub max_err: f64,
 }
 
 pub fn gen_coords<const VX: usize, const VY: usize, const VZ: usize>() -> Vec<Coord> {
@@ -137,29 +139,19 @@ pub fn gen_coords<const VX: usize, const VY: usize, const VZ: usize>() -> Vec<Co
     for z in 0..VZ {
         for y in 0..VY {
             for x in 0..VX {
-                coords.push(Coord { x, y, z });
+                coords.push(Coord {
+                    x,
+                    y,
+                    z,
+                    remaining: 1,
+                    reduction: 0,
+                    error_increases: 0,
+                    max_err: 0.0,
+                });
             }
         }
     }
     coords
-}
-
-pub fn cfor3dn<T: Send, const N: usize, const VX: usize, const VY: usize, const VZ: usize>(
-    coords: &[Coord],
-    mut nsss: [&mut [[[T; VX]; VY]; VZ]; N],
-    f: impl Fn(&Coord, [&mut T; N]) + Sync,
-) {
-    coords.iter().for_each(|c| {
-        let tsss: [&mut T; N] = unsafe {
-            let mut uninit: MaybeUninit<[&mut T; N]> = MaybeUninit::uninit();
-            let ptr = uninit.as_mut_ptr();
-            nsss.iter_mut().enumerate().for_each(|(i, sss)| {
-                addr_of_mut!((*ptr)[i]).write(&mut sss[c.z][c.y][c.x]);
-            });
-            uninit.assume_init()
-        };
-        f(c, tsss)
-    });
 }
 
 macro_rules! gen_cfor3d {
@@ -178,143 +170,3 @@ gen_cfor3d!(cfor3d2, t1: T1, t2: T2);
 gen_cfor3d!(cfor3d3, t1: T1, t2: T2, t3: T3);
 gen_cfor3d!(cfor3d4, t1: T1, t2: T2, t3: T3, t4: T4);
 gen_cfor3d!(cfor3d5, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5);
-
-pub fn pfor3d<T: Send, const VX: usize, const VY: usize, const VZ: usize>(
-    vsss: &mut [[[T; VX]; VY]; VZ],
-    f: impl Fn((Coord, &mut T)) + Sync,
-) {
-    vsss.iter_mut()
-        .enumerate()
-        .flat_map(|(vz, vss)| {
-            vss.iter_mut().enumerate().flat_map(move |(vy, vs)| {
-                vs.iter_mut().enumerate().map(move |(vx, v)| {
-                    (
-                        Coord {
-                            x: vx,
-                            y: vy,
-                            z: vz,
-                        },
-                        v,
-                    )
-                })
-            })
-        })
-        .for_each(f);
-}
-pub fn pfor3d2<T: Send, U: Send, const VX: usize, const VY: usize, const VZ: usize>(
-    vsss: &mut [[[T; VX]; VY]; VZ],
-    wsss: &mut [[[U; VX]; VY]; VZ],
-    f: impl Fn((Coord, &mut T, &mut U)) + Sync,
-) {
-    vsss.iter_mut()
-        .zip(wsss.iter_mut())
-        .enumerate()
-        .flat_map(|(vz, (vss, wss))| {
-            vss.iter_mut()
-                .zip(wss.iter_mut())
-                .enumerate()
-                .flat_map(move |(vy, (vs, ws))| {
-                    vs.iter_mut()
-                        .zip(ws.iter_mut())
-                        .enumerate()
-                        .map(move |(vx, (v, w))| {
-                            (
-                                Coord {
-                                    x: vx,
-                                    y: vy,
-                                    z: vz,
-                                },
-                                v,
-                                w,
-                            )
-                        })
-                })
-        })
-        .for_each(f);
-}
-pub fn pfor3d3<U: Send, V: Send, W: Send, const VX: usize, const VY: usize, const VZ: usize>(
-    usss: &mut [[[U; VX]; VY]; VZ],
-    vsss: &mut [[[V; VX]; VY]; VZ],
-    wsss: &mut [[[W; VX]; VY]; VZ],
-    f: impl Fn((Coord, &mut U, &mut V, &mut W)) + Sync,
-) {
-    usss.iter_mut()
-        .zip(vsss.iter_mut())
-        .zip(wsss.iter_mut())
-        .enumerate()
-        .flat_map(|(vz, ((uss, vss), wss))| {
-            uss.iter_mut()
-                .zip(vss.iter_mut())
-                .zip(wss.iter_mut())
-                .enumerate()
-                .flat_map(move |(vy, ((us, vs), ws))| {
-                    us.iter_mut()
-                        .zip(vs.iter_mut())
-                        .zip(ws.iter_mut())
-                        .enumerate()
-                        .map(move |(vx, ((u, v), w))| {
-                            (
-                                Coord {
-                                    x: vx,
-                                    y: vy,
-                                    z: vz,
-                                },
-                                u,
-                                v,
-                                w,
-                            )
-                        })
-                })
-        })
-        .for_each(f);
-}
-pub fn pfor3d4<
-    T1: Send,
-    T2: Send,
-    T3: Send,
-    T4: Send,
-    const VX: usize,
-    const VY: usize,
-    const VZ: usize,
->(
-    t1sss: &mut [[[T1; VX]; VY]; VZ],
-    t2sss: &mut [[[T2; VX]; VY]; VZ],
-    t3sss: &mut [[[T3; VX]; VY]; VZ],
-    t4sss: &mut [[[T4; VX]; VY]; VZ],
-    f: impl Fn((Coord, &mut T1, &mut T2, &mut T3, &mut T4)) + Sync,
-) {
-    t1sss
-        .iter_mut()
-        .zip(t2sss.iter_mut())
-        .zip(t3sss.iter_mut())
-        .zip(t4sss.iter_mut())
-        .enumerate()
-        .flat_map(|(vz, (((t1ss, t2ss), t3ss), t4ss))| {
-            t1ss.iter_mut()
-                .zip(t2ss.iter_mut())
-                .zip(t3ss.iter_mut())
-                .zip(t4ss.iter_mut())
-                .enumerate()
-                .flat_map(move |(vy, (((t1s, t2s), t3s), t4s))| {
-                    t1s.iter_mut()
-                        .zip(t2s.iter_mut())
-                        .zip(t3s.iter_mut())
-                        .zip(t4s.iter_mut())
-                        .enumerate()
-                        .map(move |(vx, (((t1, t2), t3), t4))| {
-                            (
-                                Coord {
-                                    x: vx,
-                                    y: vy,
-                                    z: vz,
-                                },
-                                t1,
-                                t2,
-                                t3,
-                                t4,
-                            )
-                        })
-                })
-        })
-        .for_each(f);
-}

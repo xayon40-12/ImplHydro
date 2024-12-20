@@ -434,7 +434,7 @@ pub fn run<
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
     let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
-    let mut fails = 0;
+    let fails = 0;
     let save = |ctx: &Context<Opt, F, C, VX, VY, VZ, S>,
                 cost,
                 tsteps,
@@ -504,10 +504,9 @@ pub fn run<
             Integration::Explicit => explicit(&mut context),
             Integration::FixPoint => fixpoint(&mut context, err_thr),
         };
-        if let Some((c, nbi, nbf)) = res {
+        if let Some((c, nbi)) = res {
             cost += c;
             nbiter = nbi;
-            fails += nbf;
             if let Some(isosurface) = &mut isosurface {
                 let (_, otrs) = &context.ovstrs;
                 let (_, trs) = &context.vstrs;

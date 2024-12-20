@@ -38,7 +38,7 @@ pub fn explicit<
         dpde: _,
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
-) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>, usize)> {
+) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>)> {
     let coords = gen_coords::<VX, VY, VZ>();
     *dt = maxdt.min(*dt);
     let cost = S as f64;
@@ -61,7 +61,7 @@ pub fn explicit<
             }
         }
         let es = if s == 0 { S - 1 } else { s - 1 }; // index of last computed k
-        cfor3d(&coords, &mut fu, |&Coord { x, y, z }, fu| {
+        cfor3d(&coords, &mut fu, |&Coord { x, y, z, .. }, fu| {
             *fu = fun(
                 &k[es],
                 [&ovdtk, &vdtk],
@@ -78,7 +78,7 @@ pub fn explicit<
         otrdtk = trdtk.clone();
         ovdtk = vdtk.clone();
         k[s] = *fu;
-        cfor3d(&coords, &mut vdtk, |&Coord { x, y, z }, vdtk| {
+        cfor3d(&coords, &mut vdtk, |&Coord { x, y, z, .. }, vdtk| {
             for f in 0..F {
                 vdtk[f] = vs[z][y][x][f];
                 for s1 in 0..S {
@@ -122,5 +122,5 @@ pub fn explicit<
             }
         }
     }
-    Some((cost, nbiter, 0))
+    Some((cost, nbiter))
 }

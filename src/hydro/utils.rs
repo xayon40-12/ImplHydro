@@ -1,8 +1,7 @@
 use std::{
     collections::HashMap,
-    fs::{DirEntry, File},
+    fs::File,
     io::{BufReader, Read},
-    path::PathBuf,
 };
 
 use crate::solver::context::{Arr, BArr, DIM};
