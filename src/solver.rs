@@ -27,7 +27,8 @@ use enum_derive::{enum_derive_util, EnumDisplay, EnumFromStr};
 
 // pub const EXACT: bool = false;
 pub const EXACT: bool = true;
-const ERROR_PROPAGATION: bool = true;
+// const ERROR_PROPAGATION: bool = true;
+const ERROR_PROPAGATION: bool = false;
 
 custom_derive! {
     #[derive(Debug, Clone, Copy, EnumDisplay, EnumFromStr)]
@@ -498,7 +499,6 @@ pub fn run<
                 save(&tmp_ctx, cost, tsteps, &nbiter, fails);
                 current_save = next_save;
                 next_save = current_save + save_every;
-                println!("save t: {}, next_save: {next_save}", context.t);
                 if context.tend > 0.0 {
                     next_save = next_save.min(context.tend);
                 }

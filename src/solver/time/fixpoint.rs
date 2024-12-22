@@ -50,7 +50,7 @@ pub fn fixpoint<
     }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
     err_thr: ErrThr<F, C, VX, VY, VZ>,
 ) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>)> {
-    let max_error_increases = 4;
+    let max_error_increases = 10;
 
     let b = if let Some(b) = b { *b } else { a[S - 1] };
     let mut coords = gen_coords::<VX, VY, VZ>();
@@ -128,7 +128,7 @@ pub fn fixpoint<
                  x,
                  mut remaining,
                  mut error_increases,
-                 max_err,
+                 mut max_err,
              }| {
                 let mut is_err = false;
                 let mut current_max_err = 0.0f64;
@@ -140,12 +140,14 @@ pub fn fixpoint<
                         let d = fuf - kf;
                         let e = d.abs();
                         current_max_err = current_max_err.max(e);
-                        is_err |= e.is_nan() || e > er;
+                        is_err |= e.is_nan() || e > er; // * dts[z][y][x] / *dto;
                         k[s][z][y][x][f] = kf + d;
                     }
                 }
+                let error_increased = current_max_err >= max_err;
+                max_err = current_max_err;
                 if is_err {
-                    if current_max_err >= max_err {
+                    if error_increased {
                         error_increases += 1;
                         if error_increases > max_error_increases {
                             remaining *= 2;
@@ -155,6 +157,7 @@ pub fn fixpoint<
                                     k[s][z][y][x][f] = ko[s][z][y][x][f];
                                 }
                             }
+                            max_err = f64::MAX;
                         }
                     } else {
                         error_increases = 0;
@@ -165,7 +168,7 @@ pub fn fixpoint<
                         z,
                         remaining,
                         error_increases,
-                        max_err: current_max_err,
+                        max_err,
                     });
                 } else {
                     if remaining > 1 {
@@ -188,7 +191,7 @@ pub fn fixpoint<
                             z,
                             remaining,
                             error_increases: 0,
-                            max_err: current_max_err,
+                            max_err,
                         });
                     }
                 }
@@ -196,8 +199,27 @@ pub fn fixpoint<
         );
 
         new_coords.sort_by_key(|&Coord { z, y, x, .. }| (z, y, x));
-        // new_coords.dedup_by_key(|&mut Coord { z, y, x, .. }| (z, y, x));
-        println!("coords.len(): {}", coords.len());
+        const DEBUG: bool = false;
+        if DEBUG {
+            println!("coords.len(): {}", coords.len());
+            if coords.len() == 1 {
+                let Coord {
+                    z,
+                    y,
+                    x,
+                    remaining,
+                    error_increases,
+                    max_err,
+                } = coords[0];
+                println!("k: {:?}", k[0][z][y][x]);
+                println!("dt: {:e}", dts[z][y][x]);
+                println!("remaining: {remaining}");
+                println!("max_err: {max_err:e}");
+                if dts[z][y][x] < 1e-10 || k[0][z][y][x][0].is_nan() {
+                    panic!("dt null or nan");
+                }
+            }
+        }
         if ERROR_PROPAGATION {
             for i in 0..new_coords.len() {
                 let c = new_coords[i];

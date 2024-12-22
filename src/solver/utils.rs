@@ -144,7 +144,7 @@ pub fn gen_coords<const VX: usize, const VY: usize, const VZ: usize>() -> Vec<Co
                     z,
                     remaining: 1,
                     error_increases: 0,
-                    max_err: 0.0,
+                    max_err: f64::MAX,
                 });
             }
         }

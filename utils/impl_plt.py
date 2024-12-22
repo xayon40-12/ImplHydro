@@ -23,6 +23,10 @@ np.seterr(invalid='ignore') # disable invalid waring for numpy as NaN are used t
 np.seterr(divide='ignore') # disable divide by zero worining
 
 
+target_case = 1
+def setCase(c):
+    global target_case
+    target_case = int(c)
 animate = False
 def setAnimate():
     global animate
@@ -49,7 +53,7 @@ def setNum2D(i):
     num2D = int(i)
     
 
-argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-s","--schemename"], setUseSchemeName), (["-t","--time_id"], setTimeId), (["-n","--num2D"], setNum2D)]
+argActions = [(["-a","--animate"], setAnimate),(["-m","--manycases"], setManyCases), (["-r","--rejectfails"], setRejectFails), (["-s","--schemename"], setUseSchemeName), (["-t","--time_id"], setTimeId), (["-n","--num2D"], setNum2D), (["-c", "--case"], setCase)]
 for arg in sys.argv[1:]:
     found = False
     for (larg, act) in argActions:
@@ -183,7 +187,7 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
             return None
     diff = find_diff(p)
     
-    if case == 0 and plot_2D:
+    if case == target_case and plot_2D:
         ld = len(ts)
         # num = num2D
         # if dim == "1D":
@@ -770,7 +774,7 @@ greft = defaultdict(lambda: defaultdict(lambda: None))
 def plot2d(l, datadts):
     # [dim,name,visc,t0,tend,t,case,dxn,scheme] = l
     [dim,name,visc,t0,tend,t,case,dxn] = l
-    if case > 0 and not manycases:
+    if case != target_case and not manycases:
         return
     (dx,n) = dxn
     datadts = datadts["GL1"]
@@ -795,7 +799,7 @@ def plot2d(l, datadts):
 
     name = einfo["name"]
     case = einfo["case"]
-    if (("Trento" in name and case == 0) or "Gubser" in name):
+    if (("Trento" in name and case == target_case) or "Gubser" in name):
         datats = np.array(einfo["datats"], dtype=object)
         if heun:
             refdatats = np.array(info["datats"], dtype=object)

@@ -112,7 +112,7 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     temp: Eos<'a>,
-    _implicit: bool,
+    implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_2D]) -> ([f64; F_BOTH_2D], [f64; C_MILNE_BOTH_2D]) + 'a + Sync> {
     Box::new(
         move |t, [tt00, tt01, tt02, utpi11, utpi12, utpi22, utppi]| {
@@ -153,17 +153,22 @@ fn gen_constraints<'a>(
                 //     pi01, pi11, pi12;
                 //     pi02, pi12, pi22;
                 // ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
-                let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
-                    pi11, pi12;
-                    pi12, pi22;
-                ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
-                let mut eigs: Vec<f64> = m
-                    .symmetric_eigenvalues()
-                    .into_iter()
-                    .cloned()
-                    .chain([0.0, pi33].into_iter())
-                    .collect();
-                eigs.sort_by(f64::total_cmp);
+                let eigs = if implicit {
+                    vec![0.0; 4]
+                } else {
+                    let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
+                        pi11, pi12;
+                        pi12, pi22;
+                    ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
+                    let mut eigs: Vec<f64> = m
+                        .symmetric_eigenvalues()
+                        .into_iter()
+                        .cloned()
+                        .chain([0.0, pi33].into_iter())
+                        .collect();
+                    eigs.sort_by(f64::total_cmp);
+                    eigs
+                };
                 let smallest = eigs[0];
 
                 // check that shear viscosity does not make pressure negative
@@ -510,7 +515,9 @@ fn flux<const V: usize>(
     let vgev = gev.max(tc); // viscous temperature [GeV] blocked at tc
     let etaovers = etas_min + etas_slope * (vgev - tc) * (vgev / tc).powf(etas_crv);
     let eta = etaovers * s;
-    let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
+    // let taupi_factor = 5.0;
+    let taupi_factor = 5.0;
+    let taupi = taupi_factor * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
     let zetaovers = (zetas_max) / (1.0 + ((vgev - zetas_peak) / zetas_width).powi(2));
     let zeta = zetaovers * s;
