@@ -71,7 +71,7 @@ pub fn fixpoint<
         d
     };
     *dto = maxdt.min(*dto);
-    let ko = k.clone();
+    let mut ko = k.clone();
     let mut fu = k.clone();
     let mut vdtk: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
     let mut trdtk: Box<[[[[f64; C]; VX]; VY]; VZ]> = boxarray(0.0);
@@ -145,7 +145,6 @@ pub fn fixpoint<
                     }
                 }
                 if is_err {
-                    error_increases += 1;
                     if current_max_err >= max_err {
                         error_increases += 1;
                         if error_increases > max_error_increases {
@@ -174,9 +173,15 @@ pub fn fixpoint<
                         for s in 0..S {
                             for f in 0..F {
                                 vs[z][y][x][f] += dts[z][y][x] * b[s] * k[s][z][y][x][f];
+                                ko[s][z][y][x][f] = k[s][z][y][x][f];
                             }
                         }
                         ts[z][y][x] += dts[z][y][x];
+                        let t = ts[z][y][x];
+                        (vs[z][y][x], trs[z][y][x]) = constraints(t, vs[z][y][x]);
+                        if let Some(post) = post_constraints {
+                            (vs[z][y][x], trs[z][y][x]) = post(t, vs[z][y][x]);
+                        }
                         new_coords.push(Coord {
                             x,
                             y,
