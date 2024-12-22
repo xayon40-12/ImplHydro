@@ -61,7 +61,7 @@ fn gen_constraints<'a>(
     p: Eos<'a>,
     dpde: Eos<'a>,
     temp: Eos<'a>,
-    _implicit: bool,
+    implicit: bool,
 ) -> Box<dyn Fn(f64, [f64; F_BOTH_3D]) -> ([f64; F_BOTH_3D], [f64; C_BOTH_3D]) + 'a + Sync> {
     Box::new(
         move |t, [tt00, tt01, tt02, tt03, utpi11, utpi12, utpi13, utpi22, utpi23, utppi]| {
@@ -116,25 +116,30 @@ fn gen_constraints<'a>(
                 let pi00 = (ux * pi01 + uy * pi02 + uz * pi03) / ut;
                 let pi33 = pi00 - pi11 - pi22;
 
-                let m = matrix![
-                    pi11, pi12, pi13;
-                    pi12, pi22, pi23;
-                    pi13, pi23, pi33;
-                ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
-                let mut eigs: Vec<f64> = m
-                    .symmetric_eigenvalues()
-                    .into_iter()
-                    .cloned()
-                    .chain([0.0].into_iter())
-                    .collect();
-                eigs.sort_by(f64::total_cmp);
-                let smallest = eigs[0];
-
-                // check that shear viscosity does not make pressure negative
-                let r = if epe + ppi + smallest < 0.0 {
-                    -epe / (ppi + smallest) * (1.0 - 1e-10)
+                let (eigs, r) = if implicit {
+                    (vec![0.0; 4], 1.0)
                 } else {
-                    1.0
+                    let m = matrix![
+                        pi11, pi12, pi13;
+                        pi12, pi22, pi23;
+                        pi13, pi23, pi33;
+                    ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
+                    let mut eigs: Vec<f64> = m
+                        .symmetric_eigenvalues()
+                        .into_iter()
+                        .cloned()
+                        .chain([0.0].into_iter())
+                        .collect();
+                    eigs.sort_by(f64::total_cmp);
+                    let smallest = eigs[0];
+
+                    // check that shear viscosity does not make pressure negative
+                    let r = if epe + ppi + smallest < 0.0 {
+                        -epe / (ppi + smallest) * (1.0 - 1e-10)
+                    } else {
+                        1.0
+                    };
+                    (eigs, r)
                 };
 
                 let ppi = r * ppi;
