@@ -27,8 +27,8 @@ use enum_derive::{enum_derive_util, EnumDisplay, EnumFromStr};
 
 // pub const EXACT: bool = false;
 pub const EXACT: bool = true;
-// const ERROR_PROPAGATION: bool = true;
-const ERROR_PROPAGATION: bool = false;
+const ERROR_PROPAGATION: bool = true;
+// const ERROR_PROPAGATION: bool = false;
 
 custom_derive! {
     #[derive(Debug, Clone, Copy, EnumDisplay, EnumFromStr)]

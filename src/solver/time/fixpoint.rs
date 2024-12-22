@@ -50,7 +50,7 @@ pub fn fixpoint<
     }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
     err_thr: ErrThr<F, C, VX, VY, VZ>,
 ) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>)> {
-    let max_error_increases = 10;
+    let max_error_increases = 3;
 
     let b = if let Some(b) = b { *b } else { a[S - 1] };
     let mut coords = gen_coords::<VX, VY, VZ>();
@@ -121,6 +121,7 @@ pub fn fixpoint<
                 );
             });
         }
+        let mut dt_failed = false;
         coords.iter().for_each(
             |&Coord {
                  z,
@@ -140,7 +141,7 @@ pub fn fixpoint<
                         let d = fuf - kf;
                         let e = d.abs();
                         current_max_err = current_max_err.max(e);
-                        is_err |= e.is_nan() || e > er; // * dts[z][y][x] / *dto;
+                        is_err |= e.is_nan() || e > er;
                         k[s][z][y][x][f] = kf + d;
                     }
                 }
@@ -152,6 +153,9 @@ pub fn fixpoint<
                         if error_increases > max_error_increases {
                             remaining *= 2;
                             dts[z][y][x] *= 0.5;
+                            if dts[z][y][x] < 1e-10 {
+                                dt_failed = true;
+                            }
                             for s in 0..S {
                                 for f in 0..F {
                                     k[s][z][y][x][f] = ko[s][z][y][x][f];
@@ -197,6 +201,10 @@ pub fn fixpoint<
                 }
             },
         );
+        if dt_failed {
+            eprintln!("dt too small");
+            return None;
+        }
 
         new_coords.sort_by_key(|&Coord { z, y, x, .. }| (z, y, x));
         const DEBUG: bool = false;
@@ -208,7 +216,7 @@ pub fn fixpoint<
                     y,
                     x,
                     remaining,
-                    error_increases,
+                    error_increases: _,
                     max_err,
                 } = coords[0];
                 println!("k: {:?}", k[0][z][y][x]);
@@ -216,7 +224,8 @@ pub fn fixpoint<
                 println!("remaining: {remaining}");
                 println!("max_err: {max_err:e}");
                 if dts[z][y][x] < 1e-10 || k[0][z][y][x][0].is_nan() {
-                    panic!("dt null or nan");
+                    eprintln!("dt too small or k is nan, abort");
+                    return None;
                 }
             }
         }

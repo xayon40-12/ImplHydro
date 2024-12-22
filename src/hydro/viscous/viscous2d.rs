@@ -514,9 +514,7 @@ fn flux<const V: usize>(
     let vgev = gev.max(tc); // viscous temperature [GeV] blocked at tc
     let etaovers = etas_min + etas_slope * (vgev - tc) * (vgev / tc).powf(etas_crv);
     let eta = etaovers * s;
-    // let taupi_factor = 5.0;
-    let taupi_factor = 5.0;
-    let taupi = taupi_factor * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
+    let taupi = 5.0 * eta / (e + pe) + 1e-100; // the 1e-100 is in case etaovers=0
 
     let zetaovers = (zetas_max) / (1.0 + ((vgev - zetas_peak) / zetas_width).powi(2));
     let zeta = zetaovers * s;
