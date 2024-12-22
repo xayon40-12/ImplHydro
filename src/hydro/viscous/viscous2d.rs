@@ -153,8 +153,8 @@ fn gen_constraints<'a>(
                 //     pi01, pi11, pi12;
                 //     pi02, pi12, pi22;
                 // ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
-                let eigs = if implicit {
-                    vec![0.0; 4]
+                let (eigs, r) = if implicit {
+                    (vec![0.0; 4], 1.0)
                 } else {
                     let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
                         pi11, pi12;
@@ -167,16 +167,15 @@ fn gen_constraints<'a>(
                         .chain([0.0, pi33].into_iter())
                         .collect();
                     eigs.sort_by(f64::total_cmp);
-                    eigs
-                };
-                let smallest = eigs[0];
-
-                // check that shear viscosity does not make pressure negative
-                // let r = if epe + ppi + smallest < 0.0 {
-                let r = if epe + ppi + smallest < 0.0 {
-                    -epe / (ppi + smallest) * (1.0 - 1e-10)
-                } else {
-                    1.0
+                    let smallest = eigs[0];
+                    // check that shear viscosity does not make pressure negative
+                    // let r = if epe + ppi + smallest < 0.0 {
+                    let r = if epe + ppi + smallest < 0.0 {
+                        -epe / (ppi + smallest) * (1.0 - 1e-10)
+                    } else {
+                        1.0
+                    };
+                    (eigs, r)
                 };
 
                 let ppi = r * ppi;
