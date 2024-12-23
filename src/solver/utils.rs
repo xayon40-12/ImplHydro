@@ -117,9 +117,22 @@ pub fn cubical<const F: usize, const VX: usize, const VY: usize, const VZ: usize
     }
 }
 
-pub fn flux_limiter(theta: f64, a: f64, b: f64, c: f64) -> f64 {
+pub fn flux_limiter_minmod(theta: f64, a: f64, b: f64, c: f64) -> f64 {
     let minmod2 = |a: f64, b: f64| (a.signum() + b.signum()) / 2.0 * a.abs().min(b.abs());
     minmod2(theta * (b - a), minmod2((c - a) / 2.0, theta * (c - b)))
+}
+
+pub fn van_albada(e2: f64, a: f64, b: f64) -> f64 {
+    let a2 = a * a;
+    let b2 = b * b;
+    ((a2 + e2) * b + (b2 + e2) * a) / (a2 + b2 + 2.0 * e2)
+}
+pub fn flux_limiter_van_albada(_theta: f64, a: f64, b: f64, c: f64) -> f64 {
+    van_albada(1e-15, b - a, c - b)
+}
+pub fn flux_limiter(theta: f64, a: f64, b: f64, c: f64) -> f64 {
+    // flux_limiter_van_albada(theta, a, b, c)
+    flux_limiter_minmod(theta, a, b, c)
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]

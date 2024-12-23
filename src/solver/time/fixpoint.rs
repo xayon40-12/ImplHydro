@@ -189,6 +189,10 @@ pub fn fixpoint<
                         if let Some(post) = post_constraints {
                             (vs[z][y][x], trs[z][y][x]) = post(t, vs[z][y][x]);
                         }
+                        if remaining % 2 == 0 {
+                            dts[z][y][x] *= 2.0;
+                            remaining /= 2;
+                        }
                         new_coords.push(Coord {
                             x,
                             y,
@@ -243,7 +247,9 @@ pub fn fixpoint<
                             x: i as usize,
                             y: j as usize,
                             z: k as usize,
-                            ..c
+                            remaining: 1,
+                            error_increases: 0,
+                            max_err: f64::MAX,
                         });
                     }
                 }
