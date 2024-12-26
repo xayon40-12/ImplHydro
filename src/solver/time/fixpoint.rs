@@ -1,7 +1,10 @@
-use crate::solver::{
-    context::{Arr, Context},
-    utils::{cfor3d, cfor3d2, gen_coords, Coord},
-    ERROR_PROPAGATION,
+use crate::{
+    solver::{
+        context::{Arr, Context},
+        utils::{cfor3d, cfor3d2, gen_coords, Coord},
+        ERROR_PROPAGATION,
+    },
+    FLOAT,
 };
 use boxarray::boxarray;
 
@@ -14,7 +17,7 @@ pub type ErrThr<
     const VX: usize,
     const VY: usize,
     const VZ: usize,
-> = &'a dyn Fn(f64, &Arr<F, VX, VY, VZ>, &Arr<C, VX, VY, VZ>) -> f64;
+> = &'a dyn Fn(FLOAT, &Arr<F, VX, VY, VZ>, &Arr<C, VX, VY, VZ>) -> FLOAT;
 
 pub fn fixpoint<
     Opt: Clone + Sync,
@@ -49,7 +52,7 @@ pub fn fixpoint<
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
     err_thr: ErrThr<F, C, VX, VY, VZ>,
-) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>)> {
+) -> Option<(FLOAT, Box<[[[usize; VX]; VY]; VZ]>)> {
     let max_error_increases = 3;
 
     let b = if let Some(b) = b { *b } else { a[S - 1] };
@@ -73,12 +76,12 @@ pub fn fixpoint<
     *dto = maxdt.min(*dto);
     let mut ko = k.clone();
     let mut fu = k.clone();
-    let mut vdtk: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
-    let mut trdtk: Box<[[[[f64; C]; VX]; VY]; VZ]> = boxarray(0.0);
+    let mut vdtk: Box<[[[[FLOAT; F]; VX]; VY]; VZ]> = boxarray(0.0);
+    let mut trdtk: Box<[[[[FLOAT; C]; VX]; VY]; VZ]> = boxarray(0.0);
     // let mut errs: Box<[[[bool; VX]; VY]; VZ]> = boxarray(true);
     let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(0);
-    let mut dts: Box<[[[f64; VX]; VY]; VZ]> = boxarray(*dto);
-    let mut ts: Box<[[[f64; VX]; VY]; VZ]> = boxarray(*t);
+    let mut dts: Box<[[[FLOAT; VX]; VY]; VZ]> = boxarray(*dto);
+    let mut ts: Box<[[[FLOAT; VX]; VY]; VZ]> = boxarray(*t);
     while coords.len() > 0 {
         let mut new_coords: Vec<Coord> = Vec::with_capacity(VX * VY * VZ);
         let er = err_thr(*t, &vs, &trs);
@@ -132,7 +135,7 @@ pub fn fixpoint<
                  mut max_err,
              }| {
                 let mut is_err = false;
-                let mut current_max_err = 0.0f64;
+                let mut current_max_err = 0.0 as FLOAT;
                 for s in 0..S {
                     nbiter[z][y][x] += 1;
                     for f in 0..F {
@@ -161,7 +164,7 @@ pub fn fixpoint<
                                     k[s][z][y][x][f] = ko[s][z][y][x][f];
                                 }
                             }
-                            max_err = f64::MAX;
+                            max_err = FLOAT::MAX;
                         }
                     } else {
                         error_increases = 0;
@@ -249,7 +252,7 @@ pub fn fixpoint<
                             z: k as usize,
                             remaining: 1,
                             error_increases: 0,
-                            max_err: f64::MAX,
+                            max_err: FLOAT::MAX,
                         });
                     }
                 }
@@ -279,8 +282,8 @@ pub fn fixpoint<
         .flat_map(|e| e.iter())
         .map(|v| *v)
         .reduce(|acc, a| acc + a)
-        .unwrap()) as f64
-        / (VX * VY * VZ) as f64;
+        .unwrap()) as FLOAT
+        / (VX * VY * VZ) as FLOAT;
     *ot = *t;
     let dt = *dto;
     *t += dt;

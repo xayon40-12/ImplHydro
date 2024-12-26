@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{Result, Write};
 
 use crate::solver::context::{Arr, DIM};
+use crate::FLOAT;
 
 use super::{Freezout, IsoSurfaceHandler};
 
@@ -13,10 +14,10 @@ pub type IsoSurface2DFun<'a, const C: usize, const VX: usize, const VY: usize, c
         [usize; 3],          // ID [ut,ux,uy]
         Option<[usize; 7]>,  // ID [pitt,pitx,pity,pixx,pixy,piyy,pizz]
         Option<usize>,       // ID bulk
-        f64,                 // time for fields
-        [f64; DIM],          // [dx,dy,dz]
-        f64,                 // dt
-        f64,                 // freezeout energy fm^-4
+        FLOAT,               // time for fields
+        [FLOAT; DIM],        // [dx,dy,dz]
+        FLOAT,               // dt
+        FLOAT,               // freezeout energy fm^-4
     ) -> Vec<Surface2D>;
 
 pub struct IsoSurface2DHandler<
@@ -31,8 +32,8 @@ pub struct IsoSurface2DHandler<
     u_ids: [usize; 3],             // [ut,ux,uy]
     shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
     bulk_id: Option<usize>,
-    dxs: [f64; DIM],
-    freezeout_energy: f64, // fm^-4
+    dxs: [FLOAT; DIM],
+    freezeout_energy: FLOAT, // fm^-4
     iso_surface_fun: IsoSurface2DFun<'a, C, VX, VY, VZ>,
 }
 
@@ -45,8 +46,8 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         u_ids: [usize; 3],             // [ut,ux,uy]
         shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
         bulk_id: Option<usize>,
-        dxs: [f64; DIM],
-        freezeout_energy: f64, // fm^-4
+        dxs: [FLOAT; DIM],
+        freezeout_energy: FLOAT, // fm^-4
     ) -> Result<IsoSurface2DHandler<'a, C, VX, VY, VZ>> {
         let file = File::create(filename)?;
         let handler = IsoSurface2DHandler {
@@ -70,8 +71,8 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         &mut self,
         fields: &Arr<C, VX, VY, VZ>,
         new_fields: &Arr<C, VX, VY, VZ>,
-        ot: f64, // time for new_fields
-        nt: f64, // where t+dt is the time of new_fields
+        ot: FLOAT, // time for new_fields
+        nt: FLOAT, // where t+dt is the time of new_fields
     ) -> Freezout {
         let surfaces = (self.iso_surface_fun)(
             fields,
@@ -113,22 +114,22 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
 
 #[derive(Debug)]
 pub struct Surface2D {
-    pub pos: [f64; 3],   // [t,x,y]
-    pub sigma: [f64; 3], // [sigma_t, sigma_x, sigma_y]
-    pub v: [f64; 2],     // [vx, vy]
-    pub pi: Option<[f64; 7]>,
-    pub bulk: Option<f64>,
+    pub pos: [FLOAT; 3],   // [t,x,y]
+    pub sigma: [FLOAT; 3], // [sigma_t, sigma_x, sigma_y]
+    pub v: [FLOAT; 2],     // [vx, vy]
+    pub pi: Option<[FLOAT; 7]>,
+    pub bulk: Option<FLOAT>,
 }
 
 impl Surface2D {
-    pub fn to_column(&self) -> [f64; 8] {
+    pub fn to_column(&self) -> [FLOAT; 8] {
         let mut res = [0.0; 8];
         res[0..3].copy_from_slice(&self.pos);
         res[3..6].copy_from_slice(&self.sigma);
         res[6..8].copy_from_slice(&self.v);
         res
     }
-    pub fn to_column_viscous(&self) -> [f64; 16] {
+    pub fn to_column_viscous(&self) -> [FLOAT; 16] {
         let mut res = [0.0; 16];
         res[0..3].copy_from_slice(&self.pos);
         res[3..6].copy_from_slice(&self.sigma);
@@ -151,18 +152,18 @@ pub fn zigzag2D<const C: usize, const VX: usize, const VY: usize, const VZ: usiz
     u_ids: [usize; 3],             // [ut,ux,uy]
     shear_ids: Option<[usize; 7]>, // [pitt,pitx,pity,pixx,pixy,piyy,pizz]
     bulk_id: Option<usize>,
-    t: f64, // time for fields
-    dxs: [f64; DIM],
-    dt: f64,               // where t+dt is the time of new_fields
-    freezeout_energy: f64, // fm^-4
+    t: FLOAT, // time for fields
+    dxs: [FLOAT; DIM],
+    dt: FLOAT,               // where t+dt is the time of new_fields
+    freezeout_energy: FLOAT, // fm^-4
 ) -> Vec<Surface2D> {
     let mut surfaces: Vec<Surface2D> = vec![];
 
     let dx = dxs[0];
     let dy = dxs[1];
 
-    let vx2 = (VX - 1) as f64 * 0.5;
-    let vy2 = (VY - 1) as f64 * 0.5;
+    let vx2 = (VX - 1) as FLOAT * 0.5;
+    let vy2 = (VY - 1) as FLOAT * 0.5;
 
     let lz: usize = 0;
     for ly in 0..VY - 1 {
@@ -199,8 +200,8 @@ pub fn zigzag2D<const C: usize, const VX: usize, const VY: usize, const VZ: usiz
                     let rvy = fr[u_ids[2]] / rut;
 
                     let t = t + ht * dt;
-                    let x = (lx as f64 - vx2 + hx) * dx;
-                    let y = (ly as f64 - vy2 + hy) * dx;
+                    let x = (lx as FLOAT - vx2 + hx) * dx;
+                    let y = (ly as FLOAT - vy2 + hy) * dx;
 
                     let vx = (lvx + rvx) * 0.5;
                     let vy = (lvy + rvy) * 0.5;

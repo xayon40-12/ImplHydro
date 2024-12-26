@@ -6,16 +6,17 @@ use crate::{
         Eos, HydroOutput, C_IDEAL_3D, F_IDEAL_3D,
     },
     solver::{context::DIM, time::schemes::*, Solver},
+    FLOAT,
 };
 
 fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    dxs: [f64; DIM],
-    maxdt: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    dxs: [FLOAT; DIM],
+    maxdt: FLOAT,
     r: Scheme<S>,
-    init_e: (&[[[f64; XY]; XY]; Z], usize),
-    save_raw: Option<f64>,
+    init_e: (&[[[FLOAT; XY]; XY]; Z], usize),
+    save_raw: Option<FLOAT>,
 ) -> HydroOutput<XY, XY, Z, F_IDEAL_3D, C_IDEAL_3D> {
     let (es, i) = init_e;
 
@@ -27,19 +28,19 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
 }
 
 pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    l: f64,
-    etas_len: f64,
-    dtmin: f64,
-    dtmax: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    etas_len: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
     r: Scheme<S>,
     (nb_trento, first_trento): (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento, first_trento);
-    let dx = l / XY as f64;
-    let detas = etas_len / Z as f64;
+    let dx = l / XY as FLOAT;
+    let detas = etas_len / Z as FLOAT;
     let dxs = dxs.unwrap_or([dx, dx, detas]);
     let dt0 = dtmax;
     println!("{}", r.name);
@@ -53,14 +54,14 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
 
 pub fn run_3d<const XY: usize, const Z: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    etas_len: f64,
-    dtmin: f64,
-    dtmax: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    etas_len: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
     nf_trento: (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let imp = gauss_legendre_1();
     const I: usize = 1;
@@ -91,19 +92,19 @@ pub fn run_3d<const XY: usize, const Z: usize>(
 
 pub fn run_trento_3d<const XY: usize, const Z: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    etas_len: f64,
-    dt: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    etas_len: FLOAT,
+    dt: FLOAT,
     (nb_trento, first_trento): (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento, first_trento);
     let imp = gauss_legendre_1();
     let exp = heun();
-    let dx = l / XY as f64;
-    let detas = etas_len / Z as f64;
+    let dx = l / XY as FLOAT;
+    let detas = etas_len / Z as FLOAT;
     let dxs = dxs.unwrap_or([dx, dx, detas]);
     for i in 0..nb_trento {
         let trento = (trentos[i].as_ref(), first_trento + i);

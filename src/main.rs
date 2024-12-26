@@ -2,6 +2,7 @@ use clap::{command, Parser, Subcommand};
 use impl_hydro::{
     run::{ideal1d, ideal2d, ideal3d, viscous2d, viscous3d},
     solver::Solver,
+    FLOAT,
 };
 
 #[derive(Parser, Debug)]
@@ -11,16 +12,16 @@ struct Cli {
     cells: usize,
 
     #[arg(short, long, default_value_t = 40.0)]
-    physical_length: f64,
+    physical_length: FLOAT,
 
     #[arg(short, long, default_value_t = 5020.0)] // GeV
-    energy: f64,
+    energy: FLOAT,
 
     #[arg(short, long, default_value_t = Solver::Both)]
     solver_type: Solver,
 
     #[arg(short, long)]
-    raw_data_every: Option<f64>,
+    raw_data_every: Option<FLOAT>,
 
     #[command(subcommand)]
     command: Dim,
@@ -30,25 +31,25 @@ struct Cli {
 enum Dim {
     Dim1 {
         #[arg(long, default_value_t = 0.0)]
-        t0: f64,
+        t0: FLOAT,
         #[arg(long, default_value_t = 15.0)]
-        tend: f64,
+        tend: FLOAT,
         #[command(subcommand)]
         command: Hydro,
     },
     Dim2 {
         #[arg(long, default_value_t = 1.0)]
-        t0: f64,
+        t0: FLOAT,
         #[arg(long, default_value_t = 0.0)]
-        tend: f64,
+        tend: FLOAT,
         #[command(subcommand)]
         command: Hydro,
     },
     Dim3 {
         #[arg(long, default_value_t = 1.0)]
-        t0: f64,
+        t0: FLOAT,
         #[arg(long, default_value_t = 0.0)]
-        tend: f64,
+        tend: FLOAT,
         #[command(subcommand)]
         command: Hydro,
     },
@@ -64,21 +65,21 @@ enum Hydro {
     },
     Viscous {
         #[arg(long, default_value_t = 0.11)]
-        etaovers_min: f64,
+        etaovers_min: FLOAT,
         #[arg(long, default_value_t = 1.6)] // GeV^-1
-        etaovers_slope: f64,
+        etaovers_slope: FLOAT,
         #[arg(long, default_value_t = -0.29)]
-        etaovers_crv: f64,
+        etaovers_crv: FLOAT,
         #[arg(long, default_value_t = 0.032)]
-        zetaovers_max: f64,
+        zetaovers_max: FLOAT,
         #[arg(long, default_value_t = 0.024)] // GeV
-        zetaovers_width: f64,
+        zetaovers_width: FLOAT,
         #[arg(long, default_value_t = 0.175)] // GeV
-        zetaovers_peak: f64,
+        zetaovers_peak: FLOAT,
         #[arg(long, default_value_t = 0.020)] // GeV
-        tempcut: f64,
+        tempcut: FLOAT,
         #[arg(long, default_value_t = 0.151)] // GeV
-        freezeout: f64,
+        freezeout: FLOAT,
         #[command(subcommand)]
         command: ToSimulate,
     },
@@ -88,11 +89,11 @@ enum Hydro {
 enum ToSimulate {
     Benchmark {
         #[arg(long, default_value_t = 1e-3)]
-        dtmin: f64,
+        dtmin: FLOAT,
         #[arg(long)]
-        dtmax: Option<f64>,
+        dtmax: Option<FLOAT>,
         #[arg(short, long, default_value_t = 0.1)]
-        dt_over_dx_max: f64,
+        dt_over_dx_max: FLOAT,
         #[arg(short, long, default_value_t = 1)]
         nb_trento: usize,
         #[arg(short, long, default_value_t = 0)]
@@ -100,9 +101,9 @@ enum ToSimulate {
     },
     Trento {
         #[arg(long)]
-        dt: Option<f64>,
+        dt: Option<FLOAT>,
         #[arg(short, long, default_value_t = 0.1)]
-        dt_over_dx: f64,
+        dt_over_dx: FLOAT,
         #[arg(short, long, default_value_t = 1)]
         nb_trento: usize,
         #[arg(short, long, default_value_t = 0)]
@@ -123,17 +124,17 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
     let xy_len = args.physical_length;
     // let sqrts = args.collision_energy;
     let etas_len = xy_len / 2.0; //2.0 * (0.5 * sqrts / 0.2).acosh();
-    let checkdt = |dtmin: f64, dtmax: f64| {
+    let checkdt = |dtmin: FLOAT, dtmax: FLOAT| {
         if dtmin >= dtmax {
             panic!("The smallest time interval 'dtmin={}' must be smaller than the largest 'dtmax={}'.", dtmin, dtmax);
         }
     };
-    let checkt = |_t0: f64, _tend: f64| {
+    let checkt = |_t0: FLOAT, _tend: FLOAT| {
         // if t0 > tend {
         //     panic!("The initial time 't0' must be smaller than the end time 'tend'.");
         // }
     };
-    let dx = xy_len / XY as f64;
+    let dx = xy_len / XY as FLOAT;
     let solver = args.solver_type;
     let save_raw = args.raw_data_every;
     match args.command {

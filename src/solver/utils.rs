@@ -1,5 +1,7 @@
 use boxarray::boxarray;
 
+use crate::FLOAT;
+
 use super::context::{Arr, BArr, DIM};
 
 pub fn zero(_j: i32, _n: usize) -> usize {
@@ -23,7 +25,7 @@ pub fn _periodic(j: i32, n: usize) -> usize {
 pub fn periodic<const F: usize, const VX: usize, const VY: usize, const VZ: usize>(
     [x, y, z]: [i32; DIM],
     vs: &Arr<F, VX, VY, VZ>,
-) -> [f64; F] {
+) -> [FLOAT; F] {
     let k = _periodic(z, VZ);
     let j = _periodic(y, VY);
     let i = _periodic(x, VX);
@@ -42,16 +44,16 @@ pub fn _ghost(j: i32, n: usize) -> usize {
 pub fn ghost<const F: usize, const VX: usize, const VY: usize, const VZ: usize>(
     [x, y, z]: [i32; DIM],
     vs: &Arr<F, VX, VY, VZ>,
-) -> [f64; F] {
+) -> [FLOAT; F] {
     let k = _ghost(z, VZ);
     let j = _ghost(y, VY);
     let i = _ghost(x, VX);
     vs[k][j][i]
 }
 
-pub fn _cubical<const F: usize>(x: i32, vs: [[f64; F]; 4]) -> [f64; F] {
-    let x = x as f64;
-    let mut res = [0.0f64; F];
+pub fn _cubical<const F: usize>(x: i32, vs: [[FLOAT; F]; 4]) -> [FLOAT; F] {
+    let x = x as FLOAT;
+    let mut res = [0.0 as FLOAT; F];
     let mat = [
         [-1.0 / 6.0, 1.0 / 2.0, -1.0 / 2.0, 1.0 / 6.0],
         [1.0, -5.0 / 2.0, 2.0, -1.0 / 2.0],
@@ -75,7 +77,7 @@ pub fn _cubical<const F: usize>(x: i32, vs: [[f64; F]; 4]) -> [f64; F] {
 pub fn cubical<const F: usize, const VX: usize, const VY: usize, const VZ: usize>(
     [x, y, z]: [i32; DIM],
     vs: &Arr<F, VX, VY, VZ>,
-) -> [f64; F] {
+) -> [FLOAT; F] {
     let k = z as usize;
     let j = y as usize;
     let i = x as usize;
@@ -85,7 +87,7 @@ pub fn cubical<const F: usize, const VX: usize, const VY: usize, const VZ: usize
         } else {
             (VX - 5, x - VX as i32 + 4)
         };
-        let mut cvs = [[0.0f64; F]; 4];
+        let mut cvs = [[0.0 as FLOAT; F]; 4];
         for i in 0..4 {
             cvs[i] = vs[k][j][s + i];
         }
@@ -96,7 +98,7 @@ pub fn cubical<const F: usize, const VX: usize, const VY: usize, const VZ: usize
         } else {
             (VY - 5, y - VY as i32 + 4)
         };
-        let mut cvs = [[0.0f64; F]; 4];
+        let mut cvs = [[0.0 as FLOAT; F]; 4];
         for j in 0..4 {
             cvs[j] = vs[k][s + j][i];
         }
@@ -107,7 +109,7 @@ pub fn cubical<const F: usize, const VX: usize, const VY: usize, const VZ: usize
         } else {
             (VZ - 5, z - VZ as i32 + 4)
         };
-        let mut cvs = [[0.0f64; F]; 4];
+        let mut cvs = [[0.0 as FLOAT; F]; 4];
         for k in 0..4 {
             cvs[k] = vs[s + k][j][i];
         }
@@ -117,20 +119,20 @@ pub fn cubical<const F: usize, const VX: usize, const VY: usize, const VZ: usize
     }
 }
 
-pub fn flux_limiter_minmod(theta: f64, a: f64, b: f64, c: f64) -> f64 {
-    let minmod2 = |a: f64, b: f64| (a.signum() + b.signum()) / 2.0 * a.abs().min(b.abs());
+pub fn flux_limiter_minmod(theta: FLOAT, a: FLOAT, b: FLOAT, c: FLOAT) -> FLOAT {
+    let minmod2 = |a: FLOAT, b: FLOAT| (a.signum() + b.signum()) / 2.0 * a.abs().min(b.abs());
     minmod2(theta * (b - a), minmod2((c - a) / 2.0, theta * (c - b)))
 }
 
-pub fn van_albada(e2: f64, a: f64, b: f64) -> f64 {
+pub fn van_albada(e2: FLOAT, a: FLOAT, b: FLOAT) -> FLOAT {
     let a2 = a * a;
     let b2 = b * b;
     ((a2 + e2) * b + (b2 + e2) * a) / (a2 + b2 + 2.0 * e2)
 }
-pub fn flux_limiter_van_albada(_theta: f64, a: f64, b: f64, c: f64) -> f64 {
+pub fn flux_limiter_van_albada(_theta: FLOAT, a: FLOAT, b: FLOAT, c: FLOAT) -> FLOAT {
     van_albada(1e-15, b - a, c - b)
 }
-pub fn flux_limiter(theta: f64, a: f64, b: f64, c: f64) -> f64 {
+pub fn flux_limiter(theta: FLOAT, a: FLOAT, b: FLOAT, c: FLOAT) -> FLOAT {
     // flux_limiter_van_albada(theta, a, b, c)
     flux_limiter_minmod(theta, a, b, c)
 }
@@ -143,7 +145,7 @@ pub struct Coord {
     pub x: usize,
     pub remaining: usize,
     pub error_increases: usize,
-    pub max_err: f64,
+    pub max_err: FLOAT,
 }
 
 pub fn gen_coords<const VX: usize, const VY: usize, const VZ: usize>() -> Vec<Coord> {
@@ -157,7 +159,7 @@ pub fn gen_coords<const VX: usize, const VY: usize, const VZ: usize>() -> Vec<Co
                     z,
                     remaining: 1,
                     error_increases: 0,
-                    max_err: f64::MAX,
+                    max_err: FLOAT::MAX,
                 });
             }
         }

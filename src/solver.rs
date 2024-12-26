@@ -4,6 +4,7 @@ use crate::{
         IsoSurfaceHandler,
     },
     solver::context::{Arr, BArr},
+    FLOAT,
 };
 use boxarray::boxarray;
 use std::collections::HashMap;
@@ -40,8 +41,8 @@ custom_derive! {
 }
 
 pub type Constraint<'a, const F: usize, const C: usize> =
-    &'a (dyn Fn(f64, [f64; F]) -> ([f64; F], [f64; C]) + Sync);
-pub type Transform<'a, const F: usize> = &'a (dyn Fn(f64, [f64; F]) -> [f64; F] + Sync);
+    &'a (dyn Fn(FLOAT, [FLOAT; F]) -> ([FLOAT; F], [FLOAT; C]) + Sync);
+pub type Transform<'a, const F: usize> = &'a (dyn Fn(FLOAT, [FLOAT; F]) -> [FLOAT; F] + Sync);
 pub type Observable<
     'a,
     const F: usize,
@@ -51,7 +52,7 @@ pub type Observable<
     const VZ: usize,
 > = (
     &'a str,
-    &'a (dyn Fn(f64, &Arr<F, VX, VY, VZ>, &Arr<C, VX, VY, VZ>) -> Vec<f64> + Sync),
+    &'a (dyn Fn(FLOAT, &Arr<F, VX, VY, VZ>, &Arr<C, VX, VY, VZ>) -> Vec<FLOAT> + Sync),
 );
 
 pub fn save<
@@ -68,7 +69,7 @@ pub fn save<
     (name, case): &(&str, usize), // simulation name
     foldername: &str,
     viscosity: Viscosity,
-    elapsed: f64,
+    elapsed: FLOAT,
     cost: usize,
     tsteps: usize,
     nbiter: &[[[usize; VX]; VY]; VZ],
@@ -122,15 +123,15 @@ pub fn save<
         // }
 
         let fc4 = F + C + 4;
-        let mut ligne = vec![0.0f64; VY * VX * VZ * fc4];
+        let mut ligne = vec![0.0 as FLOAT; VY * VX * VZ * fc4];
         let f3 = F + 3;
-        let mut ligne_diff = vec![0.0f64; VY * VX * VZ * f3];
+        let mut ligne_diff = vec![0.0 as FLOAT; VY * VX * VZ * f3];
         for k in 0..VZ {
             for j in 0..VY {
                 for i in 0..VX {
-                    let z = (k as f64 - ((VZ - 1) as f64) / 2.0) * dz;
-                    let y = (j as f64 - ((VY - 1) as f64) / 2.0) * dy;
-                    let x = (i as f64 - ((VX - 1) as f64) / 2.0) * dx;
+                    let z = (k as FLOAT - ((VZ - 1) as FLOAT) / 2.0) * dz;
+                    let y = (j as FLOAT - ((VY - 1) as FLOAT) / 2.0) * dy;
+                    let x = (i as FLOAT - ((VX - 1) as FLOAT) / 2.0) * dx;
                     let v = v[k][j][i];
                     let vars = trs[k][j][i];
                     let diffv = diffv[k][j][i];
@@ -150,7 +151,7 @@ pub fn save<
                     ligne[0 + fc4 * (i + VX * (j + VY * k))] = x;
                     ligne[1 + fc4 * (i + VX * (j + VY * k))] = y;
                     ligne[2 + fc4 * (i + VX * (j + VY * k))] = z;
-                    ligne[3 + fc4 * (i + VX * (j + VY * k))] = nbiter[k][j][i] as f64;
+                    ligne[3 + fc4 * (i + VX * (j + VY * k))] = nbiter[k][j][i] as FLOAT;
                     if DIFF {
                         ligne_diff[0 + f3 * (i + VX * (j + VY * k))] = x;
                         ligne_diff[1 + f3 * (i + VX * (j + VY * k))] = y;
@@ -309,10 +310,10 @@ pub fn run<
     names: &([&str; F], [&str; C]),
     observables: &[Observable<F, C, VX, VY, VZ>],
     err_thr: ErrThr<F, C, VX, VY, VZ>,
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) -> Option<(
     (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>),
-    f64,
+    FLOAT,
     usize,
     usize,
 )> {
@@ -431,7 +432,7 @@ pub fn run<
     let now = Instant::now();
 
     let integration = context.r.integration;
-    let save_every = save_raw.unwrap_or(f64::MAX).max(context.maxdt);
+    let save_every = save_raw.unwrap_or(FLOAT::MAX).max(context.maxdt);
     let mut current_save = context.t;
     let mut next_save = current_save + save_every;
     let mut nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
@@ -448,7 +449,7 @@ pub fn run<
             name,
             foldername,
             viscosity,
-            elapsed,
+            elapsed as FLOAT,
             cost as usize,
             tsteps,
             nbiter,
@@ -482,7 +483,7 @@ pub fn run<
                 while d > tmp_ctx.t * m {
                     let n = if d <= tmp_ctx.dt { 1 } else { 2 };
                     for _ in 0..n {
-                        tmp_ctx.dt = d / n as f64;
+                        tmp_ctx.dt = d / n as FLOAT;
                         let res = match integration {
                             Integration::Explicit => explicit(&mut tmp_ctx),
                             Integration::FixPoint => fixpoint(&mut tmp_ctx, err_thr),
@@ -536,10 +537,10 @@ pub fn run<
             again = context.t < context.tend + m;
         }
     }
-    let elapsed = now.elapsed().as_secs_f64();
+    let elapsed = now.elapsed().as_secs_f64() as FLOAT;
     let hour = (elapsed / 3600.0) as u64;
-    let min = ((elapsed - hour as f64 * 3600.0) / 60.0) as u64;
-    let sec = (elapsed - hour as f64 * 3600.0 - min as f64 * 60.0) as u64;
+    let min = ((elapsed - hour as FLOAT * 3600.0) / 60.0) as u64;
+    let sec = (elapsed - hour as FLOAT * 3600.0 - min as FLOAT * 60.0) as u64;
     eprintln!("Elapsed: {}h{}m{}s", hour, min, sec);
     if let Err(err) = std::fs::write(&format!("{}/done", foldername), b"") {
         eprintln!("Could not write done file: {err}");

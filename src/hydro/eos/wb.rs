@@ -1,7 +1,9 @@
 // Coefficients taken from CUDA code https://github.com/bazow/gpu-vh/blob/master/rhic/rhic-trunk/src/main/cuda/edu/osu/rhic/trunk/eos/EquationOfState.cu
 
+use crate::FLOAT;
+
 // Takes energy [fm^-4] and return speed of sound squared
-pub fn dpde(e: f64) -> f64 {
+pub fn dpde(e: FLOAT) -> FLOAT {
     let a_arr = [
         5.191934309650155e-32,
         4.123605749683891e-23,
@@ -42,18 +44,21 @@ pub fn dpde(e: f64) -> f64 {
 pub fn test_wb() {
     let n = 10000;
     let m = 1.0;
+    let e0 = crate::solver::time::newton::newton(1e-4, p, |e| e);
+    println!("@ {e0:e}");
     for i in 0..n {
-        let e = i as f64 / n as f64 * m;
+        let e = i as FLOAT / n as FLOAT * m;
         let t = T(e);
-        let h = p(e);
+        let p = p(e);
         let d = dpde(e);
-        println!("@ {:e} {:e} {:e} {:e}", e, t, h, d);
+        let s = s(e);
+        println!("@ {e:e} {t:e} {p:e} {d:e} {s:e}");
     }
 }
 
 // Takes energy [fm^-4] and return temperature in [fm^-1]
 #[allow(non_snake_case)]
-pub fn T(e: f64) -> f64 {
+pub fn T(e: FLOAT) -> FLOAT {
     let a_arr = [
         1.510073201405604e-29,
         8.014062800678687e-18,
@@ -87,7 +92,7 @@ pub fn T(e: f64) -> f64 {
 }
 
 // Takes energy [fm^-4] and return pressure in [fm^-4]
-pub fn p(e: f64) -> f64 {
+pub fn p(e: FLOAT) -> FLOAT {
     let a_arr = [
         -0.25181736420168666,
         9737.845799644809,
@@ -122,11 +127,11 @@ pub fn p(e: f64) -> f64 {
     from_arr(e, a_arr, b_arr) + 0.25182 / 4.5829e4 // compensate negative values
 }
 
-pub fn s(e: f64) -> f64 {
+pub fn s(e: FLOAT) -> FLOAT {
     (e + p(e)) / T(e)
 }
 
-pub fn from_arr<const N: usize>(e: f64, a_arr: [f64; N], b_arr: [f64; N]) -> f64 {
+pub fn from_arr<const N: usize>(e: FLOAT, a_arr: [FLOAT; N], b_arr: [FLOAT; N]) -> FLOAT {
     let mut a = a_arr[0];
     let mut b = b_arr[0];
     let mut ei = 1.0;

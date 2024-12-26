@@ -4,7 +4,10 @@ use std::{
     io::{BufReader, Read},
 };
 
-use crate::solver::context::{Arr, BArr, DIM};
+use crate::{
+    solver::context::{Arr, BArr, DIM},
+    FLOAT,
+};
 use boxarray::boxarray;
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -16,7 +19,7 @@ pub enum Coordinate {
     Milne,
 }
 
-pub fn eigenvaluesk(dpde: f64, ut: f64, uk: f64) -> f64 {
+pub fn eigenvaluesk(dpde: FLOAT, ut: FLOAT, uk: FLOAT) -> FLOAT {
     let vs2 = dpde;
     let a = ut * uk * (1.0 - vs2);
     let b = (ut * ut - uk * uk - (ut * ut - uk * uk - 1.0) * vs2) * vs2;
@@ -31,9 +34,9 @@ pub fn compare<const VX: usize, const VY: usize, const VZ: usize, const F: usize
     f: usize,
     v1: &Arr<F, VX, VY, VZ>,
     v2: &Arr<F, VX, VY, VZ>,
-) -> (f64, f64) {
-    let mut average: f64 = 0.0;
-    let mut maximum: f64 = 0.0;
+) -> (FLOAT, FLOAT) {
+    let mut average: FLOAT = 0.0;
+    let mut maximum: FLOAT = 0.0;
     for vz in 0..VZ {
         for vy in 0..VY {
             for vx in 0..VX {
@@ -45,7 +48,7 @@ pub fn compare<const VX: usize, const VY: usize, const VZ: usize, const F: usize
             }
         }
     }
-    average /= (VX * VY * VZ) as f64;
+    average /= (VX * VY * VZ) as FLOAT;
 
     (maximum, average)
 }
@@ -57,12 +60,12 @@ pub fn converge<
     const F: usize,
     const C: usize,
 >(
-    mut dt: f64,
-    dtmin: f64,
-    fun: impl Fn(f64) -> HydroOutput<VX, VY, VZ, F, C>,
+    mut dt: FLOAT,
+    dtmin: FLOAT,
+    fun: impl Fn(FLOAT) -> HydroOutput<VX, VY, VZ, F, C>,
 ) -> Option<()> {
     let dtmul = 0.5;
-    let update = |dt: f64| {
+    let update = |dt: FLOAT| {
         let dt = dt * dtmul;
         dt
     };
@@ -89,7 +92,7 @@ pub fn converge<
 
 pub fn load_matrix_2d<const VX: usize, const VY: usize>(
     filename: &str,
-) -> std::io::Result<Box<[[f64; VX]; VY]>> {
+) -> std::io::Result<Box<[[FLOAT; VX]; VY]>> {
     let mut file = File::open(filename)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -99,8 +102,9 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
         .map(|l| {
             l.split(" ")
                 .map(|v| {
-                    v.parse::<f64>().expect(&format!(
-                        "Cannot parse f64 in load_matrix call for file \"{}\"",
+                    v.parse::<FLOAT>().expect(&format!(
+                        "Cannot parse {} in load_matrix call for file \"{}\"",
+                        std::any::type_name::<FLOAT>(),
                         filename
                     ))
                 })
@@ -116,7 +120,7 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
             VX, VY, vx, vy
         );
     }
-    let mut mat: Box<[[f64; VX]; VY]> = boxarray(0.0);
+    let mut mat: Box<[[FLOAT; VX]; VY]> = boxarray(0.0);
     for j in 0..VY {
         for i in 0..VX {
             mat[j][i] = arr[j][i];
@@ -128,7 +132,7 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
 
 pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
     filename: &str,
-) -> std::io::Result<Box<[[[f64; VX]; VY]; VZ]>> {
+) -> std::io::Result<Box<[[[FLOAT; VX]; VY]; VZ]>> {
     let mut file = File::open(filename)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
@@ -139,8 +143,8 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
             l.trim()
                 .split(" ")
                 .map(|v| {
-                    v.parse::<f64>().expect(&format!(
-                        "Cannot parse f64 in load_matrix call for file \"{}\"",
+                    v.parse::<FLOAT>().expect(&format!(
+                        "Cannot parse FLOAT in load_matrix call for file \"{}\"",
                         filename
                     ))
                 })
@@ -162,7 +166,7 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
             VX, VY, VZ, vx, vy, vz
         );
     }
-    let mut mat: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
+    let mut mat: Box<[[[FLOAT; VX]; VY]; VZ]> = boxarray(0.0);
     let sk = (vz - VZ) / 2;
     for k in 0..VZ {
         for j in 0..VY {
@@ -178,8 +182,8 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
 pub fn prepare_trento_2d<const V: usize>(
     nb_trento: usize,
     first_trento: usize,
-) -> Vec<Box<[[f64; V]; V]>> {
-    let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0); nb_trento];
+) -> Vec<Box<[[FLOAT; V]; V]>> {
+    let mut trentos: Vec<Box<[[FLOAT; V]; V]>> = vec![boxarray(0.0); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for ix in 0..nb_trento {
         let i = ix + first_trento;
@@ -193,8 +197,8 @@ pub fn prepare_trento_2d<const V: usize>(
 pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
     nb_trento: usize,
     first_trento: usize,
-) -> (Vec<Box<[[[f64; XY]; XY]; Z]>>, Option<[f64; DIM]>) {
-    let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
+) -> (Vec<Box<[[[FLOAT; XY]; XY]; Z]>>, Option<[FLOAT; DIM]>) {
+    let mut trentos: Vec<Box<[[[FLOAT; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
     let mut dxs = None;
     let path = format!("s{XY}");
     let ls: Vec<String> = std::fs::read_dir(&path)
@@ -221,7 +225,7 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
             "Could not load trento initial condition file \"{path}/{name}\"."
         ));
         if let Ok(str) = std::fs::read_to_string(&format!("{path}/info.txt")) {
-            let m: HashMap<String, f64> = str
+            let m: HashMap<String, FLOAT> = str
                 .trim()
                 .split("\n")
                 .map(|s| {
@@ -242,7 +246,7 @@ pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
 pub fn prepare_trento_2d_freestream<const V: usize>(
     nb_trento: usize,
 ) -> Vec<Arr<FREESTREAM_2D, V, V, 1>> {
-    let mut trentos = vec![[[[[0.0f64; FREESTREAM_2D]; V]; V]; 1]; nb_trento];
+    let mut trentos = vec![[[[[0.0 as FLOAT; FREESTREAM_2D]; V]; V]; 1]; nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for tr in 0..nb_trento {
         let err = format!(
@@ -253,13 +257,15 @@ pub fn prepare_trento_2d_freestream<const V: usize>(
         let file = File::open(&format!("s{V}/data{tr:0>width$}.dat")).expect(&err);
         let mut buf = BufReader::new(file);
         buf.read_exact(&mut bytes).expect(&err);
+        let mut tmp = [0.0f64; FREESTREAM_2D];
         for y in 0..V {
             for x in 0..V {
                 let i = x + y * V;
-                LittleEndian::read_f64_into(
-                    &bytes[i * size..(i + 1) * size],
-                    &mut trentos[tr][0][y][x],
-                );
+                LittleEndian::read_f64_into(&bytes[i * size..(i + 1) * size], &mut tmp);
+                trentos[tr][0][y][x]
+                    .iter_mut()
+                    .zip(&tmp)
+                    .for_each(|(tr, tmp)| *tr = *tmp as FLOAT);
             }
         }
     }

@@ -8,6 +8,7 @@ use crate::{
         utils::{ghost, zeros},
         Constraint, Observable, EXACT,
     },
+    FLOAT,
 };
 use boxarray::boxarray;
 
@@ -16,16 +17,16 @@ use crate::hydro::{Eos, Init3D, VOID};
 use nalgebra::matrix;
 
 pub fn init_from_energy_density_3d<'a, const VX: usize, const VY: usize, const VZ: usize>(
-    t0: f64,
-    s: &'a [[[f64; VX]; VY]; VZ],
+    t0: FLOAT,
+    s: &'a [[[FLOAT; VX]; VY]; VZ],
     p: Eos<'a>,
     dpde: Eos<'a>,
     entropy: Eos<'a>,
     temperature: Eos<'a>,
-) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_BOTH_3D] + 'a> {
+) -> Box<dyn Fn((usize, usize, usize), (FLOAT, FLOAT, FLOAT)) -> [FLOAT; F_BOTH_3D] + 'a> {
     Box::new(move |(i, j, k), _| {
         let s = s[k][j][i] / HBARC / t0;
-        let e = newton(1e-10, s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
+        let e = newton(s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
         // let e = s;
         let vars = [
             e,
@@ -62,7 +63,8 @@ fn gen_constraints<'a>(
     dpde: Eos<'a>,
     temp: Eos<'a>,
     implicit: bool,
-) -> Box<dyn Fn(f64, [f64; F_BOTH_3D]) -> ([f64; F_BOTH_3D], [f64; C_BOTH_3D]) + 'a + Sync> {
+) -> Box<dyn Fn(FLOAT, [FLOAT; F_BOTH_3D]) -> ([FLOAT; F_BOTH_3D], [FLOAT; C_BOTH_3D]) + 'a + Sync>
+{
     Box::new(
         move |t, [tt00, tt01, tt02, tt03, utpi11, utpi12, utpi13, utpi22, utpi23, utppi]| {
             let t00 = tt00 / t;
@@ -72,9 +74,9 @@ fn gen_constraints<'a>(
             let m = (t01 * t01 + t02 * t02 + t03 * t03).sqrt();
             let t00 = t00.max(m * (1.0 + 1e-15));
 
-            let sv = |v: f64| m / (t00 + p((t00 - m * v).max(VOID)));
-            let cv = |v: f64| v.max(0.0).min(1.0);
-            let v = newton(1e-10, 0.5, |v| sv(v) - v, cv);
+            let sv = |v: FLOAT| m / (t00 + p((t00 - m * v).max(VOID)));
+            let cv = |v: FLOAT| v.max(0.0).min(1.0);
+            let v = newton(0.5, |v| sv(v) - v, cv);
 
             let e = (t00 - m * v).max(VOID).min(1e10);
 
@@ -124,13 +126,13 @@ fn gen_constraints<'a>(
                         pi12, pi22, pi23;
                         pi13, pi23, pi33;
                     ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
-                    let mut eigs: Vec<f64> = m
+                    let mut eigs: Vec<FLOAT> = m
                         .symmetric_eigenvalues()
                         .into_iter()
                         .cloned()
                         .chain([0.0].into_iter())
                         .collect();
-                    eigs.sort_by(f64::total_cmp);
+                    eigs.sort_by(FLOAT::total_cmp);
                     let smallest = eigs[0];
 
                     // check that shear viscosity does not make pressure negative
@@ -212,28 +214,31 @@ fn gen_constraints<'a>(
 }
 
 fn eigenvaluesx(
-    _t: f64,
-    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
-) -> f64 {
+    _t: FLOAT,
+    [_, _, dpde, ut, ux, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [FLOAT;
+        C_BOTH_3D],
+) -> FLOAT {
     eigenvaluesk(dpde, ut, ux)
 }
 fn eigenvaluesy(
-    _t: f64,
-    [_, _, dpde, ut, _, uy, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
-) -> f64 {
+    _t: FLOAT,
+    [_, _, dpde, ut, _, uy, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [FLOAT;
+        C_BOTH_3D],
+) -> FLOAT {
     eigenvaluesk(dpde, ut, uy)
 }
 fn eigenvaluesz(
-    _t: f64,
-    [_, _, dpde, ut, _, _, uz, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [f64; C_BOTH_3D],
-) -> f64 {
+    _t: FLOAT,
+    [_, _, dpde, ut, _, _, uz, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _]: [FLOAT;
+        C_BOTH_3D],
+) -> FLOAT {
     eigenvaluesk(dpde, ut, uz)
 }
 
 pub fn fitutpi(
-    t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [f64; C_BOTH_3D],
-) -> [f64; F_BOTH_3D] {
+    t: FLOAT,
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [FLOAT; C_BOTH_3D],
+) -> [FLOAT; F_BOTH_3D] {
     [
         t * ((e + pe) * ut * ut - pe), // no pi in Ttt because it is substracted in the flux
         t * ((e + pe) * ut * ux),
@@ -248,9 +253,9 @@ pub fn fitutpi(
     ]
 }
 fn fxuxpi(
-    t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [f64; C_BOTH_3D],
-) -> [f64; F_BOTH_3D] {
+    t: FLOAT,
+    [e, pe, _, ut, ux, uy, uz, _pi00, pi01, _pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [FLOAT; C_BOTH_3D],
+) -> [FLOAT; F_BOTH_3D] {
     let pe = pe + ppi;
     [
         t * ((e + pe) * ux * ut + pi01),
@@ -266,9 +271,9 @@ fn fxuxpi(
     ]
 }
 fn fyuypi(
-    t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [f64; C_BOTH_3D],
-) -> [f64; F_BOTH_3D] {
+    t: FLOAT,
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, pi02, _pi03, pi11, pi12, pi13, pi22, pi23, _pi33, ppi, _, _, _, _, _, _]: [FLOAT; C_BOTH_3D],
+) -> [FLOAT; F_BOTH_3D] {
     let pe = pe + ppi;
     [
         t * ((e + pe) * uy * ut + pi02),
@@ -285,9 +290,9 @@ fn fyuypi(
 }
 
 fn fzuzpi(
-    t: f64,
-    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi, _, _, _, _, _, _]: [f64; C_BOTH_3D],
-) -> [f64; F_BOTH_3D] {
+    t: FLOAT,
+    [e, pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, pi03, pi11, pi12, pi13, pi22, pi23, pi33, ppi, _, _, _, _, _, _]: [FLOAT; C_BOTH_3D],
+) -> [FLOAT; F_BOTH_3D] {
     let pe = pe + ppi;
     [
         t * ((e + pe) * uz * ut + pi03),
@@ -304,10 +309,10 @@ fn fzuzpi(
 }
 
 fn u(
-    _t: f64,
-    [_e, _pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, _pi11, _pi12, _pi13, _pi22, _pi23, _pi33, _ppi, _, _, _, _, _, _]: [f64;
+    _t: FLOAT,
+    [_e, _pe, _, ut, ux, uy, uz, _pi00, _pi01, _pi02, _pi03, _pi11, _pi12, _pi13, _pi22, _pi23, _pi33, _ppi, _, _, _, _, _, _]: [FLOAT;
         C_BOTH_3D],
-) -> [f64; 4] {
+) -> [FLOAT; 4] {
     [ut, ux, uy, uz]
 }
 
@@ -318,20 +323,26 @@ fn flux<const XY: usize, const VZ: usize>(
     constraints: Constraint<F_BOTH_3D, C_BOTH_3D>,
     bound: Boundary<F_BOTH_3D, XY, XY, VZ>,
     pos: [i32; DIM],
-    dxs: [f64; DIM],
-    [ot, t]: [f64; 2],
-    [_dt, cdt]: [f64; 2],
+    dxs: [FLOAT; DIM],
+    [ot, t]: [FLOAT; 2],
+    [_dt, cdt]: [FLOAT; 2],
     &(
         (etas_min, etas_slope, etas_crv),
         (zetas_max, zetas_width, zetas_peak),
         entropy,
         temperature,
         _tempcut,
-    ): &((f64, f64, f64), (f64, f64, f64), Eos, Eos, f64),
-) -> [f64; F_BOTH_3D] {
+    ): &(
+        (FLOAT, FLOAT, FLOAT),
+        (FLOAT, FLOAT, FLOAT),
+        Eos,
+        Eos,
+        FLOAT,
+    ),
+) -> [FLOAT; F_BOTH_3D] {
     let theta = 1.1;
 
-    let pre = &|_t: f64, mut vs: [f64; F_BOTH_3D]| {
+    let pre = &|_t: FLOAT, mut vs: [FLOAT; F_BOTH_3D]| {
         let t00 = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -341,7 +352,7 @@ fn flux<const XY: usize, const VZ: usize>(
         vs[0] = m;
         vs
     };
-    let post = &|_t: f64, mut vs: [f64; F_BOTH_3D]| {
+    let post = &|_t: FLOAT, mut vs: [FLOAT; F_BOTH_3D]| {
         let m = vs[0];
         let t01 = vs[1];
         let t02 = vs[2];
@@ -414,14 +425,14 @@ fn flux<const XY: usize, const VZ: usize>(
         [0.0, 0.0, 0.0, -1.0],
     ];
     let u = [ut, ux, uy, uz];
-    let mut delta = [[0.0f64; 4]; 4];
+    let mut delta = [[0.0 as FLOAT; 4]; 4];
     for a in 0..4 {
         for b in 0..4 {
             delta[a][b] = g[a][b] - u[a] * u[b];
         }
     }
     let ou = [out, oux, ouy, ouz];
-    let mut odelta = [[0.0f64; 4]; 4];
+    let mut odelta = [[0.0 as FLOAT; 4]; 4];
     for a in 0..4 {
         for b in 0..4 {
             odelta[a][b] = g[a][b] - ou[a] * ou[b];
@@ -506,7 +517,7 @@ fn flux<const XY: usize, const VZ: usize>(
                 (ktt02 - tt02 / t) / t,
                 (ktt03 - tt03 / t) / t,
             ];
-            let mut v = [0.0f64; 4];
+            let mut v = [0.0 as FLOAT; 4];
             for j in 0..4 {
                 for i in 0..4 {
                     v[j] += d123m[j][i] / d123 * k[i];
@@ -586,7 +597,7 @@ fn flux<const XY: usize, const VZ: usize>(
             let dttpi01 = pi01 + t * dtpi01;
             let dttpi02 = pi02 + t * dtpi02;
             let dttpi03 = pi03 + t * dtpi03;
-            let mut dttppideltat = [0.0f64; 4];
+            let mut dttppideltat = [0.0 as FLOAT; 4];
             for i in 0..4 {
                 dttppideltat[i] = ppi * delta[0][i]
                     + t * (delta[0][i] * dtppi - ppi * (u[i] * dtu[0] + u[0] * dtu[i]));
@@ -616,7 +627,7 @@ fn flux<const XY: usize, const VZ: usize>(
         }
     };
     let du = [dtu, dxu, dyu, dzu];
-    let mut ddu = [0.0f64; 4];
+    let mut ddu = [0.0 as FLOAT; 4];
     let mut dcuc = u[0] / t;
     for j in 0..4 {
         dcuc += du[j][j];
@@ -663,7 +674,7 @@ fn flux<const XY: usize, const VZ: usize>(
             2.0 * uz * pimn[0][3],
         ],
     ];
-    let mut spi = [0.0f64; 11];
+    let mut spi = [0.0 as FLOAT; 11];
     {
         let mut i = 0;
         // pi^munu
@@ -673,13 +684,13 @@ fn flux<const XY: usize, const VZ: usize>(
                     let pi_ns = eta
                         * ((0..4)
                             .map(|i| delta[a][i] * du[i][b] + delta[b][i] * du[i][a])
-                            .sum::<f64>()
+                            .sum::<FLOAT>()
                             - 2.0 / 3.0 * delta[a][b] * dcuc);
                     let ipi = -1.0 / 3.0 * pimn[a][b] * dcuc
                         - pimn[a][b] * u[0] / t
                         - (0..4)
                             .map(|i| (u[a] * pimn[b][i] + u[b] * pimn[a][i]) * ddu[i] * g[i][i])
-                            .sum::<f64>()
+                            .sum::<FLOAT>()
                         - t_ipi_g[a][b] / t;
 
                     spi[i] = -(pimn[a][b] - pi_ns) / taupi + ipi;
@@ -711,24 +722,24 @@ fn flux<const XY: usize, const VZ: usize>(
 // viscous hydro is in Milne coordinates
 pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     name: &(&str, usize),
-    maxdt: f64,
-    t: f64,
-    tend: f64,
-    dxs: [f64; DIM],
+    maxdt: FLOAT,
+    t: FLOAT,
+    tend: FLOAT,
+    dxs: [FLOAT; DIM],
     r: Scheme<S>,
     p: Eos,
     dpde: Eos,
     entropy: Eos,
     temperature: Eos,
     init: Init3D<F_BOTH_3D>,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    shear_temp_cut: f64,
-    freezeout_temp: f64,
-    save_raw: Option<f64>,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    shear_temp_cut: FLOAT,
+    freezeout_temp: FLOAT,
+    save_raw: Option<FLOAT>,
 ) -> Option<(
     (BArr<F_BOTH_3D, XY, XY, VZ>, BArr<C_BOTH_3D, XY, XY, VZ>),
-    f64,
+    FLOAT,
     usize,
     usize,
 )> {
@@ -738,8 +749,8 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);
 
-    let mut vs: Box<[[[[f64; F_BOTH_3D]; XY]; XY]; VZ]> = boxarray(0.0);
-    let mut trs: Box<[[[[f64; C_BOTH_3D]; XY]; XY]; VZ]> = boxarray(0.0);
+    let mut vs: Box<[[[[FLOAT; F_BOTH_3D]; XY]; XY]; VZ]> = boxarray(0.0);
+    let mut trs: Box<[[[[FLOAT; C_BOTH_3D]; XY]; XY]; VZ]> = boxarray(0.0);
     let names = (
         [
             "tt00", "tt01", "tt02", "tt03", "utpi11", "utpi12", "utpi13", "utpi22", "utpi23",
@@ -772,9 +783,9 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
             "temperature",
         ],
     );
-    let k: Box<[[[[[f64; F_BOTH_3D]; XY]; XY]; VZ]; S]> = boxarray(0.0);
-    let v2 = ((XY - 1) as f64) / 2.0;
-    let v2z = ((VZ - 1) as f64) / 2.0;
+    let k: Box<[[[[[FLOAT; F_BOTH_3D]; XY]; XY]; VZ]; S]> = boxarray(0.0);
+    let v2 = ((XY - 1) as FLOAT) / 2.0;
+    let v2z = ((VZ - 1) as FLOAT) / 2.0;
     let mut max_e = 0.0;
     let dx = dxs[0];
     let dy = dxs[1];
@@ -782,9 +793,9 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     for k in 0..VZ {
         for j in 0..XY {
             for i in 0..XY {
-                let x = (i as f64 - v2) * dx;
-                let y = (j as f64 - v2) * dy;
-                let z = (k as f64 - v2z) * detas;
+                let x = (i as FLOAT - v2) * dx;
+                let y = (j as FLOAT - v2) * dy;
+                let z = (k as FLOAT - v2z) * detas;
                 vs[k][j][i] = init((i, j, k), (x, y, z));
                 (vs[k][j][i], trs[k][j][i]) = constraints(t, vs[k][j][i]);
                 max_e = trs[k][j][i][0].max(max_e);
@@ -794,7 +805,6 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
 
     let freezeout_temp_fm = freezeout_temp / HBARC;
     let freezeout_energy = newton(
-        1e-10,
         freezeout_temp_fm,
         |e| temperature(e) - freezeout_temp_fm,
         |e| e.max(0.0).min(1e10),
@@ -825,14 +835,14 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
     };
 
     let e = 2e-1;
-    let err_thr = |_t: f64,
-                   vs: &[[[[f64; F_BOTH_3D]; XY]; XY]; VZ],
-                   _trs: &[[[[f64; C_BOTH_3D]; XY]; XY]; VZ]| {
+    let err_thr = |_t: FLOAT,
+                   vs: &[[[[FLOAT; F_BOTH_3D]; XY]; XY]; VZ],
+                   _trs: &[[[[FLOAT; C_BOTH_3D]; XY]; XY]; VZ]| {
         let m = vs
             .iter()
             .flat_map(|v| v.iter().flat_map(|v| v.iter().map(|v| v[0])))
-            .sum::<f64>()
-            / (XY * XY * VZ) as f64;
+            .sum::<FLOAT>()
+            / (XY * XY * VZ) as FLOAT;
         let k = m / maxdt;
         e * k * (maxdt / dx).powi(r.order + 1)
     };
@@ -841,7 +851,6 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
 
     let temp_fm = shear_temp_cut / HBARC;
     let ecut = newton(
-        1e-10,
         temp_fm,
         |e| temperature(e) - temp_fm,
         |e| e.max(0.0).min(1e10),

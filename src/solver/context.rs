@@ -1,10 +1,10 @@
-use crate::hydro::Eos;
+use crate::{hydro::Eos, FLOAT};
 
 use super::{time::schemes::Scheme, Constraint};
 
 pub const DIM: usize = 3;
 pub type Arr<const F: usize, const VX: usize, const VY: usize, const VZ: usize> =
-    [[[[f64; F]; VX]; VY]; VZ];
+    [[[[FLOAT; F]; VX]; VY]; VZ];
 pub type BArr<const F: usize, const VX: usize, const VY: usize, const VZ: usize> =
     Box<Arr<F, VX, VY, VZ>>;
 
@@ -15,7 +15,7 @@ pub enum Integration {
 }
 
 pub type Boundary<'a, const F: usize, const VX: usize, const VY: usize, const VZ: usize> =
-    &'a (dyn Fn([i32; DIM], &Arr<F, VX, VY, VZ>) -> [f64; F] + Sync);
+    &'a (dyn Fn([i32; DIM], &Arr<F, VX, VY, VZ>) -> [FLOAT; F] + Sync);
 pub type Fun<
     'a,
     Opt,
@@ -30,12 +30,12 @@ pub type Fun<
     [&Arr<C, VX, VY, VZ>; 2],
     Constraint<F, C>,
     Boundary<F, VX, VY, VZ>,
-    [i32; DIM], // position in index [x,y]
-    [f64; DIM], // [dx, dy, dz]
-    [f64; 2],   // [old t, current t]
-    [f64; 2],   // [dt, current dt]
+    [i32; DIM],   // position in index [x,y]
+    [FLOAT; DIM], // [dx, dy, dz]
+    [FLOAT; 2],   // [old t, current t]
+    [FLOAT; 2],   // [dt, current dt]
     &Opt,
-) -> [f64; F]
+) -> [FLOAT; F]
          + Sync);
 
 #[derive(Clone)]
@@ -59,15 +59,15 @@ pub struct Context<
     pub total_diff_vs: BArr<F, VX, VY, VZ>,
     pub k: Box<[Arr<F, VX, VY, VZ>; S]>,
     pub r: Scheme<S>,
-    pub dt: f64,
-    pub dxs: [f64; DIM],
-    pub maxdt: f64,
-    pub t: f64,
-    pub ot: f64,
-    pub t0: f64,
-    pub tend: f64,
+    pub dt: FLOAT,
+    pub dxs: [FLOAT; DIM],
+    pub maxdt: FLOAT,
+    pub t: FLOAT,
+    pub ot: FLOAT,
+    pub t0: FLOAT,
+    pub tend: FLOAT,
     pub opt: Opt,
     pub p: Eos<'a>,
     pub dpde: Eos<'a>,
-    pub freezeout_energy: Option<f64>,
+    pub freezeout_energy: Option<FLOAT>,
 }

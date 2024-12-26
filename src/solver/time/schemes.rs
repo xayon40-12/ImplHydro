@@ -1,9 +1,12 @@
-use crate::solver::context::Integration::{self, *};
+use crate::{
+    solver::context::Integration::{self, *},
+    FLOAT,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Scheme<const S: usize> {
-    pub aij: [[f64; S]; S],
-    pub bj: Option<[f64; S]>,
+    pub aij: [[FLOAT; S]; S],
+    pub bj: Option<[FLOAT; S]>,
     pub name: &'static str,
     pub integration: Integration,
     pub order: i32,
@@ -80,7 +83,7 @@ pub fn lobatto_iiic() -> Scheme<2> {
     }
 }
 pub fn pareschi() -> Scheme<2> {
-    let x = 1.0 - 2.0f64.sqrt() / 2.0;
+    let x = 1.0 - (2.0 as FLOAT).sqrt() / 2.0;
     Scheme {
         aij: [[x, 0.0], [1.0 - 2.0 * x, x]],
         bj: Some([0.5, 0.5]),
@@ -108,7 +111,7 @@ pub fn gauss_legendre_1() -> Scheme<1> {
     }
 }
 pub fn gauss_legendre_2() -> Scheme<2> {
-    let sq3 = 3.0f64.sqrt();
+    let sq3 = (3.0 as FLOAT).sqrt();
     Scheme {
         aij: [
             [1.0 / 4.0, 1.0 / 4.0 - 1.0 / 6.0 * sq3],
@@ -122,7 +125,7 @@ pub fn gauss_legendre_2() -> Scheme<2> {
 }
 
 pub fn gauss_legendre_3() -> Scheme<3> {
-    let sq15 = 15.0f64.sqrt();
+    let sq15 = (15.0 as FLOAT).sqrt();
     Scheme {
         aij: [
             [

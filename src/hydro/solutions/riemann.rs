@@ -1,13 +1,14 @@
 use crate::hydro::ideal::ideal1d::f0;
 
 use crate::hydro::{Eos, VOID};
+use crate::FLOAT;
 
 pub fn init_riemann<'a>(
-    t0: f64,
+    t0: FLOAT,
     p: Eos<'a>,
     dpde: Eos<'a>,
     use_void: bool,
-) -> Box<dyn Fn(usize, f64) -> [f64; 2] + 'a> {
+) -> Box<dyn Fn(usize, FLOAT) -> [FLOAT; 2] + 'a> {
     let el = 10.0;
     let er = if use_void { VOID } else { 1.0 };
     Box::new(move |_, x| {

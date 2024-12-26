@@ -1,7 +1,7 @@
 pub mod isosurface2d;
 pub mod isosurface3d;
 
-use crate::solver::context::Arr;
+use crate::{solver::context::Arr, FLOAT};
 
 pub enum Freezout {
     Below,
@@ -13,8 +13,8 @@ pub trait IsoSurfaceHandler<const C: usize, const VX: usize, const VY: usize, co
         &mut self,
         fields: &Arr<C, VX, VY, VZ>,
         new_fields: &Arr<C, VX, VY, VZ>,
-        ot: f64, // time for new_fields
-        nt: f64, // where t+dt is the time of new_fields
+        ot: FLOAT, // time for new_fields
+        nt: FLOAT, // where t+dt is the time of new_fields
     ) -> Freezout;
 }
 

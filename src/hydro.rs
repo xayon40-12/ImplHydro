@@ -1,4 +1,4 @@
-use crate::solver::context::BArr;
+use crate::{solver::context::BArr, FLOAT};
 
 pub mod eos;
 pub mod ideal;
@@ -7,15 +7,15 @@ pub mod solutions;
 pub mod utils;
 pub mod viscous;
 
-pub type Eos<'a> = &'a (dyn Fn(f64) -> f64 + Sync);
+pub type Eos<'a> = &'a (dyn Fn(FLOAT) -> FLOAT + Sync);
 
-pub type Init1D<'a, const F: usize> = &'a dyn Fn(usize, f64) -> [f64; F];
-pub type Init2D<'a, const F: usize> = &'a dyn Fn((usize, usize), (f64, f64)) -> [f64; F];
+pub type Init1D<'a, const F: usize> = &'a dyn Fn(usize, FLOAT) -> [FLOAT; F];
+pub type Init2D<'a, const F: usize> = &'a dyn Fn((usize, usize), (FLOAT, FLOAT)) -> [FLOAT; F];
 pub type Init3D<'a, const F: usize> =
-    &'a dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F];
+    &'a dyn Fn((usize, usize, usize), (FLOAT, FLOAT, FLOAT)) -> [FLOAT; F];
 
-pub const VOID: f64 = 1e-100;
-pub const HBARC: f64 = 0.1973; // GeV.fm
+pub const VOID: FLOAT = FLOAT::EPSILON;
+pub const HBARC: FLOAT = 0.1973; // GeV.fm
 
 #[derive(Debug, Clone, Copy)]
 pub enum Dim {
@@ -37,9 +37,9 @@ impl Dim {
 #[derive(Debug, Clone, Copy)]
 pub enum Viscosity {
     Ideal,
-    Bulk(f64, f64),                              // (bulk,energycut)
-    Shear((f64, f64, f64), f64),                 // ((eta/s_min, eta/s_slope, eta/s_crv),energycut)
-    Both((f64, f64, f64), (f64, f64, f64), f64), // ((eta/s_min, eta/s_slope, eta/s_crv),(zeta/s_max,zeta/s_width,zeta/s_peak),energycut)
+    Bulk(FLOAT, FLOAT),                                        // (bulk,energycut)
+    Shear((FLOAT, FLOAT, FLOAT), FLOAT), // ((eta/s_min, eta/s_slope, eta/s_crv),energycut)
+    Both((FLOAT, FLOAT, FLOAT), (FLOAT, FLOAT, FLOAT), FLOAT), // ((eta/s_min, eta/s_slope, eta/s_crv),(zeta/s_max,zeta/s_width,zeta/s_peak),energycut)
 }
 
 impl Viscosity {
@@ -74,7 +74,7 @@ pub type HydroOutput<
     const C: usize,
 > = Option<(
     (BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>),
-    f64,
+    FLOAT,
     usize,
     usize,
 )>;
@@ -120,25 +120,28 @@ pub const C_BOTH_3D: usize =
 pub mod ideal_gas {
     use std::f64::consts::PI;
 
-    pub fn p(e: f64) -> f64 {
+    use crate::FLOAT;
+
+    pub fn p(e: FLOAT) -> FLOAT {
         e / 3.0
     }
 
-    pub fn dpde(_e: f64) -> f64 {
+    pub fn dpde(_e: FLOAT) -> FLOAT {
         1.0 / 3.0
     }
 
-    pub fn s(e: f64) -> f64 {
+    pub fn s(e: FLOAT) -> FLOAT {
         (e + p(e)) / T(e)
     }
 
     #[allow(non_snake_case)]
-    pub fn T(e: f64) -> f64 {
-        (30.0 * e / (PI * PI * (16.0 + 21.0 / 2.0))).powf(0.25)
+    pub fn T(e: FLOAT) -> FLOAT {
+        let pi = PI as FLOAT;
+        (30.0 * e / (pi * pi * (16.0 + 21.0 / 2.0))).powf(0.25)
     }
 }
 
-pub fn solve_v<'a>(t00: f64, m: f64, p: Eos<'a>) -> Box<dyn Fn(f64) -> f64 + 'a> {
+pub fn solve_v<'a>(t00: FLOAT, m: FLOAT, p: Eos<'a>) -> Box<dyn Fn(FLOAT) -> FLOAT + 'a> {
     Box::new(move |v| {
         let e = (t00 - m * v).max(VOID);
         let v = m / (t00 + p(e));

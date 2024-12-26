@@ -1,3 +1,5 @@
+use crate::FLOAT;
+
 use super::{
     context::{Arr, Boundary, DIM},
     Constraint, Transform,
@@ -18,19 +20,19 @@ pub type SpaceDerivative<
     (&Arr<F, VX, VY, VZ>, &Arr<C, VX, VY, VZ>), // (vrs,trs)
     Boundary<F, VX, VY, VZ>,                    // bound
     [i32; DIM],                                 // [x,y,z]
-    f64,                                        // t
+    FLOAT,                                      // t
     FluxInfos<N, F, C, SD>,                     // flux_infos
     Constraint<F, C>,                           // constraits
     Transform<F>,                               // pre_flux_limiter
     Transform<F>,                               // post_flux_limiter
-    f64,                                        // dx
-    f64,                                        // theta
-) -> [InDir<([f64; F], [f64; SD])>; N];
-pub type Flux<'a, const F: usize, const C: usize> = &'a dyn Fn(f64, [f64; C]) -> [f64; F];
+    FLOAT,                                      // dx
+    FLOAT,                                      // theta
+) -> [InDir<([FLOAT; F], [FLOAT; SD])>; N];
+pub type Flux<'a, const F: usize, const C: usize> = &'a dyn Fn(FLOAT, [FLOAT; C]) -> [FLOAT; F];
 #[derive(Clone, Copy)]
 pub enum Eigenvalues<'a, const C: usize> {
-    Analytical(&'a (dyn Fn(f64, [f64; C]) -> f64 + Sync)), // Fn(time, non dymical variables) -> max eigenvalue
-    ApproxConstraint(&'a (dyn Fn(f64, [f64; C], f64) -> f64 + Sync)), // Fn(time, non dynamical variables, approx eigenvalue) -> constrained eigenvalue
+    Analytical(&'a (dyn Fn(FLOAT, [FLOAT; C]) -> FLOAT + Sync)), // Fn(time, non dymical variables) -> max eigenvalue
+    ApproxConstraint(&'a (dyn Fn(FLOAT, [FLOAT; C], FLOAT) -> FLOAT + Sync)), // Fn(time, non dynamical variables, approx eigenvalue) -> constrained eigenvalue
 }
 
 pub type FluxInfos<'a, const N: usize, const F: usize, const C: usize, const SD: usize> =
@@ -79,6 +81,6 @@ impl<T> InDir<T> {
     }
 }
 
-pub fn id_flux_limiter<const F: usize>(_t: f64, v: [f64; F]) -> [f64; F] {
+pub fn id_flux_limiter<const F: usize>(_t: FLOAT, v: [FLOAT; F]) -> [FLOAT; F] {
     v
 }

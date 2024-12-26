@@ -1,25 +1,26 @@
 use crate::{
     hydro::{
-        eos::{conformal_massless, hotqcd, wb, EOSs},
+        eos::{conformal_massless, wb, EOSs},
         utils::{converge, prepare_trento_3d},
         viscous::viscous3d::{init_from_energy_density_3d, viscous3d},
         Eos, HydroOutput, C_BOTH_3D, F_BOTH_3D,
     },
     solver::{context::DIM, time::schemes::*, Solver},
+    FLOAT,
 };
 
 fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    dxs: [f64; DIM],
-    maxdt: f64,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    tempcut: f64,
-    freezeout_temp_gev: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    dxs: [FLOAT; DIM],
+    maxdt: FLOAT,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    tempcut: FLOAT,
+    freezeout_temp_gev: FLOAT,
     r: Scheme<S>,
-    init_s: (&[[[f64; XY]; XY]; Z], usize),
-    save_raw: Option<f64>,
+    init_s: (&[[[FLOAT; XY]; XY]; Z], usize),
+    save_raw: Option<FLOAT>,
 ) -> HydroOutput<XY, XY, Z, F_BOTH_3D, C_BOTH_3D> {
     let (s, i) = init_s;
     let name = ("InitTrento", i);
@@ -34,13 +35,6 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
             &conformal_massless::T,
         ),
         EOSs::WB => (&wb::p, &wb::dpde, &wb::s, &wb::T),
-        EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::s, &hotqcd::T),
-        EOSs::HotQCDLog => (
-            &hotqcd::log::p,
-            &hotqcd::log::dpde,
-            &hotqcd::log::s,
-            &hotqcd::log::T,
-        ),
     };
     println!("{}{}", name.0, name.1);
     let init = init_from_energy_density_3d(t0, s, p, dpde, entropy, temp);
@@ -65,23 +59,23 @@ fn hydro3d<const XY: usize, const Z: usize, const S: usize>(
 }
 
 pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    l: f64,
-    etas_len: f64,
-    dtmin: f64,
-    dtmax: f64,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    tempcut: f64,
-    freezeout_temp_mev: f64,
-    r: impl Fn(f64) -> Scheme<S>,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    etas_len: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    tempcut: FLOAT,
+    freezeout_temp_mev: FLOAT,
+    r: impl Fn(FLOAT) -> Scheme<S>,
     (nb_trento, first_trento): (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento, first_trento);
-    let dx = l / XY as f64;
-    let detas = etas_len / Z as f64;
+    let dx = l / XY as FLOAT;
+    let detas = etas_len / Z as FLOAT;
     let dxs = dxs.unwrap_or([dx, dx, detas]);
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
@@ -105,18 +99,18 @@ pub fn run_convergence_3d<const XY: usize, const Z: usize, const S: usize>(
 }
 pub fn run_3d<const XY: usize, const Z: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    etas_len: f64,
-    dtmin: f64,
-    dtmax: f64,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    tempcut: f64,
-    freezeout_temp_gev: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    etas_len: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    tempcut: FLOAT,
+    freezeout_temp_gev: FLOAT,
     nf_trento: (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let do_gl1 = || {
         run_convergence_3d::<XY, Z, 1>(
@@ -167,23 +161,23 @@ pub fn run_3d<const XY: usize, const Z: usize>(
 }
 pub fn run_trento_3d<const XY: usize, const Z: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    etas_len: f64,
-    dt: f64,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    tempcut: f64,
-    freezeout_temp_gev: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    etas_len: FLOAT,
+    dt: FLOAT,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    tempcut: FLOAT,
+    freezeout_temp_gev: FLOAT,
     (nb_trento, first_trento): (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let (trentos, dxs) = prepare_trento_3d::<XY, Z>(nb_trento, first_trento);
     let gl1 = gauss_legendre_1();
     let heun = heun();
-    let dx = l / XY as f64;
-    let detas = etas_len / Z as f64;
+    let dx = l / XY as FLOAT;
+    let detas = etas_len / Z as FLOAT;
     let dxs = dxs.unwrap_or([dx, dx, detas]);
     let do_gl1 = |trento| {
         hydro3d::<XY, Z, 1>(

@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{Result, Write};
 
 use crate::solver::context::{Arr, DIM};
+use crate::FLOAT;
 
 use super::{Freezout, IsoSurfaceHandler};
 
@@ -13,10 +14,10 @@ pub type IsoSurface3DFun<'a, const C: usize, const VX: usize, const VY: usize, c
         [usize; 4],          // ID [ut,ux,uy,uz]
         Option<[usize; 10]>, // ID [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
         Option<usize>,       // ID bulk
-        f64,                 // time for fields
-        [f64; DIM],          // [dx, dy, dz]
-        f64,                 // dt
-        f64,                 // freezeout energy fm^-4
+        FLOAT,               // time for fields
+        [FLOAT; DIM],        // [dx, dy, dz]
+        FLOAT,               // dt
+        FLOAT,               // freezeout energy fm^-4
     ) -> Vec<Surface3D>;
 
 pub struct IsoSurface3DHandler<
@@ -31,8 +32,8 @@ pub struct IsoSurface3DHandler<
     u_ids: [usize; 4],              // [ut,ux,uy,uz]
     shear_ids: Option<[usize; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
     bulk_id: Option<usize>,
-    dxs: [f64; DIM],
-    freezeout_energy: f64, // fm^-4
+    dxs: [FLOAT; DIM],
+    freezeout_energy: FLOAT, // fm^-4
     iso_surface_fun: IsoSurface3DFun<'a, C, VX, VY, VZ>,
 }
 
@@ -45,8 +46,8 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         u_ids: [usize; 4],              // [ut,ux,uy,uz]
         shear_ids: Option<[usize; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
         bulk_id: Option<usize>,
-        dxs: [f64; DIM],
-        freezeout_energy: f64, // fm^-4
+        dxs: [FLOAT; DIM],
+        freezeout_energy: FLOAT, // fm^-4
     ) -> Result<IsoSurface3DHandler<'a, C, VX, VY, VZ>> {
         let file = File::create(filename)?;
         let handler = IsoSurface3DHandler {
@@ -70,8 +71,8 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
         &mut self,
         fields: &Arr<C, VX, VY, VZ>,
         new_fields: &Arr<C, VX, VY, VZ>,
-        ot: f64, // time for new_fields
-        nt: f64, // where t+dt is the time of new_fields
+        ot: FLOAT, // time for new_fields
+        nt: FLOAT, // where t+dt is the time of new_fields
     ) -> Freezout {
         let surfaces = (self.iso_surface_fun)(
             fields,
@@ -112,22 +113,22 @@ impl<'a, const C: usize, const VX: usize, const VY: usize, const VZ: usize>
 
 #[derive(Debug)]
 pub struct Surface3D {
-    pub pos: [f64; 4],         // [t,x,y,z]
-    pub sigma: [f64; 4],       // [sigma_t, sigma_x, sigma_y, sigma_z]
-    pub v: [f64; 3],           // [vx, vy, vz]
-    pub pi: Option<[f64; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
-    pub bulk: Option<f64>,
+    pub pos: [FLOAT; 4],         // [t,x,y,z]
+    pub sigma: [FLOAT; 4],       // [sigma_t, sigma_x, sigma_y, sigma_z]
+    pub v: [FLOAT; 3],           // [vx, vy, vz]
+    pub pi: Option<[FLOAT; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
+    pub bulk: Option<FLOAT>,
 }
 
 impl Surface3D {
-    pub fn to_column(&self) -> [f64; 11] {
+    pub fn to_column(&self) -> [FLOAT; 11] {
         let mut res = [0.0; 11];
         res[0..4].copy_from_slice(&self.pos);
         res[4..8].copy_from_slice(&self.sigma);
         res[8..11].copy_from_slice(&self.v);
         res
     }
-    pub fn to_column_viscous(&self) -> [f64; 22] {
+    pub fn to_column_viscous(&self) -> [FLOAT; 22] {
         let mut res = [0.0; 22];
         res[0..4].copy_from_slice(&self.pos);
         res[4..8].copy_from_slice(&self.sigma);
@@ -151,10 +152,10 @@ pub fn zigzag3D<const C: usize, const SX: usize, const SY: usize, const SETA: us
     u_ids: [usize; 4],              // [utau,ux,uy,ueta]
     shear_ids: Option<[usize; 10]>, // [pitt,pitx,pity,pitz,pixx,pixy,pixz,piyy,piyz,pizz]
     bulk_id: Option<usize>,
-    tau: f64, // time for fields
-    dxs: [f64; DIM],
-    dtau: f64,             // where t+dt is the time of new_fields
-    freezeout_energy: f64, // fm^-4
+    tau: FLOAT, // time for fields
+    dxs: [FLOAT; DIM],
+    dtau: FLOAT,             // where t+dt is the time of new_fields
+    freezeout_energy: FLOAT, // fm^-4
 ) -> Vec<Surface3D> {
     let mut surfaces: Vec<Surface3D> = vec![];
 
@@ -162,9 +163,9 @@ pub fn zigzag3D<const C: usize, const SX: usize, const SY: usize, const SETA: us
     let dy = dxs[1];
     let deta = tau * dxs[2];
 
-    let vx2 = (SX - 1) as f64 * 0.5;
-    let vy2 = (SY - 1) as f64 * 0.5;
-    let veta2 = (SETA - 1) as f64 * 0.5;
+    let vx2 = (SX - 1) as FLOAT * 0.5;
+    let vy2 = (SY - 1) as FLOAT * 0.5;
+    let veta2 = (SETA - 1) as FLOAT * 0.5;
 
     for leta in 0..SETA - 1 {
         for ly in 0..SY - 1 {
@@ -206,9 +207,9 @@ pub fn zigzag3D<const C: usize, const SX: usize, const SY: usize, const SETA: us
                         let rveta = fr[u_ids[3]] / rutau;
 
                         let tau = tau + htau * dtau;
-                        let x = (lx as f64 - vx2 + hx) * dx;
-                        let y = (ly as f64 - vy2 + hy) * dx;
-                        let eta = (leta as f64 - veta2 + heta) * dx;
+                        let x = (lx as FLOAT - vx2 + hx) * dx;
+                        let y = (ly as FLOAT - vy2 + hy) * dx;
+                        let eta = (leta as FLOAT - veta2 + heta) * dx;
 
                         let vx = (lvx + rvx) * 0.5;
                         let vy = (lvy + rvy) * 0.5;

@@ -1,6 +1,9 @@
-use crate::solver::{
-    context::Context,
-    utils::{cfor3d, gen_coords, Coord},
+use crate::{
+    solver::{
+        context::Context,
+        utils::{cfor3d, gen_coords, Coord},
+    },
+    FLOAT,
 };
 use boxarray::boxarray;
 
@@ -38,12 +41,12 @@ pub fn explicit<
         dpde: _,
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
-) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>)> {
+) -> Option<(FLOAT, Box<[[[usize; VX]; VY]; VZ]>)> {
     let coords = gen_coords::<VX, VY, VZ>();
     *dt = maxdt.min(*dt);
-    let cost = S as f64;
+    let cost = S as FLOAT;
     let nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
-    let mut fu: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
+    let mut fu: Box<[[[[FLOAT; F]; VX]; VY]; VZ]> = boxarray(0.0);
     let mut vdtk = vs.clone();
     let mut trdtk = trs.clone();
     let mut ovdtk = ovs.clone();

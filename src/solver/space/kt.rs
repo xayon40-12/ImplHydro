@@ -1,5 +1,6 @@
 use crate::solver::context::{Arr, Boundary, DIM};
 use crate::solver::{utils::flux_limiter, Constraint, Transform};
+use crate::FLOAT;
 
 use super::{Dir, Eigenvalues, FluxInfo, InDir};
 
@@ -15,16 +16,16 @@ pub fn kt<
     (vs, _trs): (&Arr<F, VX, VY, VZ>, &Arr<C, VX, VY, VZ>),
     bound: Boundary<F, VX, VY, VZ>,
     [x, y, z]: [i32; DIM],
-    t: f64,
+    t: FLOAT,
     flux_infos: [InDir<FluxInfo<F, C, SD>>; N],
     constraints: Constraint<F, C>,
     pre_flux_limiter: Transform<F>,
     post_flux_limiter: Transform<F>,
-    dxs: [f64; DIM],
-    theta: f64,
-) -> [([f64; F], [f64; SD]); N] {
-    let mut res = [([0.0f64; F], [0.0f64; SD]); N];
-    // let res: [InDir<([f64; F], [f64; SD])>; N];
+    dxs: [FLOAT; DIM],
+    theta: FLOAT,
+) -> [([FLOAT; F], [FLOAT; SD]); N] {
+    let mut res = [([0.0 as FLOAT; F], [0.0 as FLOAT; SD]); N];
+    // let res: [InDir<([FLOAT; F], [FLOAT; SD])>; N];
     // for i in 0..flux_infos.len() {
     for (i, flux_info) in flux_infos.into_iter().enumerate() {
         let dir = flux_info.dir();
@@ -39,10 +40,10 @@ pub fn kt<
             eigenvalues,
         } = flux_info.iner();
         res[i] = {
-            let mut vals: [[f64; F]; 5] = [[0.0; F]; 5];
-            let mut sd: [[f64; SD]; 5] = [[0.0; SD]; 5];
-            let mut pvals: [[f64; F]; 5] = [[0.0; F]; 5];
-            let mut tvals: [[f64; C]; 5] = [[0.0; C]; 5];
+            let mut vals: [[FLOAT; F]; 5] = [[0.0; F]; 5];
+            let mut sd: [[FLOAT; SD]; 5] = [[0.0; SD]; 5];
+            let mut pvals: [[FLOAT; F]; 5] = [[0.0; F]; 5];
+            let mut tvals: [[FLOAT; C]; 5] = [[0.0; C]; 5];
             for l in 0..5 {
                 let (lx, ly, lz) = match dir {
                     Dir::X => (l as i32 - 2, 0, 0),
@@ -53,8 +54,8 @@ pub fn kt<
                 sd[l] = secondary(t, tvals[l]);
                 pvals[l] = pre_flux_limiter(t, vals[l]);
             }
-            let mut deriv: [[f64; F]; 3] = [[0.0; F]; 3];
-            let mut fj: [[f64; F]; 3] = [[0.0; F]; 3];
+            let mut deriv: [[FLOAT; F]; 3] = [[0.0; F]; 3];
+            let mut fj: [[FLOAT; F]; 3] = [[0.0; F]; 3];
             for l in 0..3 {
                 for f in 0..F {
                     deriv[l][f] =
@@ -62,11 +63,11 @@ pub fn kt<
                 }
                 fj[l] = flux(t, tvals[l + 1]);
             }
-            let mut upm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
-            let mut tupm: [[[f64; C]; 2]; 2] = [[[0.0; C]; 2]; 2];
+            let mut upm: [[[FLOAT; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
+            let mut tupm: [[[FLOAT; C]; 2]; 2] = [[[0.0; C]; 2]; 2];
             for jpm in 0..2 {
                 for pm in 0..2 {
-                    let s = pm as f64 - 0.5;
+                    let s = pm as FLOAT - 0.5;
                     let j = jpm + pm;
                     for f in 0..F {
                         upm[jpm][pm][f] = pvals[1 + j][f] - s * deriv[j][f];
@@ -75,13 +76,13 @@ pub fn kt<
                     (upm[jpm][pm], tupm[jpm][pm]) = constraints(t, upm[jpm][pm]);
                 }
             }
-            let mut fpm: [[[f64; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
+            let mut fpm: [[[FLOAT; F]; 2]; 2] = [[[0.0; F]; 2]; 2];
             for jpm in 0..2 {
                 for pm in 0..2 {
                     fpm[jpm][pm] = flux(t, tupm[jpm][pm]);
                 }
             }
-            let mut a: [f64; 2] = [0.0; 2];
+            let mut a: [FLOAT; 2] = [0.0; 2];
             match eigenvalues {
                 Eigenvalues::Analytical(eig_analytical) => {
                     for jpm in 0..2 {
@@ -91,7 +92,7 @@ pub fn kt<
                 }
                 Eigenvalues::ApproxConstraint(eig_constraint) => {
                     for jpm in 0..2 {
-                        let mut n = 0.0f64;
+                        let mut n = 0.0 as FLOAT;
                         for f in 0..F {
                             a[jpm] = a[jpm].max((fj[jpm + 1][f] - fj[jpm][f]).abs());
                             n += (vals[jpm + 2][f] - vals[jpm + 1][f]).powi(2);
@@ -109,8 +110,8 @@ pub fn kt<
                     }
                 }
             }
-            let mut h: [[f64; F]; 2] = [[0.0; F]; 2];
-            let mut sdh: [[f64; F]; 2] = [[0.0; F]; 2];
+            let mut h: [[FLOAT; F]; 2] = [[0.0; F]; 2];
+            let mut sdh: [[FLOAT; F]; 2] = [[0.0; F]; 2];
             let cubic = [-0.0625, 0.5625, 0.5625, -0.0625]; // reconstruct secondary at the boundary using cubic polynomial
             for jpm in 0..2 {
                 for n in 0..F {
@@ -123,8 +124,8 @@ pub fn kt<
                     }
                 }
             }
-            let mut res: [f64; F] = [0.0; F];
-            let mut sdres: [f64; SD] = [0.0; SD];
+            let mut res: [FLOAT; F] = [0.0; F];
+            let mut sdres: [FLOAT; SD] = [0.0; SD];
             for n in 0..F {
                 res[n] = (h[1][n] - h[0][n]) / (2.0 * dx);
             }

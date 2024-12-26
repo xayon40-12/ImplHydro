@@ -1,25 +1,26 @@
 use crate::{
     hydro::{
-        eos::{conformal_massless, hotqcd, wb, EOSs},
+        eos::{conformal_massless, wb, EOSs},
         utils::{converge, prepare_trento_2d},
         viscous::viscous2d::{init_from_entropy_density_2d, viscous2d},
         Eos, HydroOutput, C_MILNE_BOTH_2D, F_BOTH_2D,
     },
     solver::{time::schemes::*, Solver},
+    FLOAT,
 };
 
 fn hydro2d<const V: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    dx: f64,
-    maxdt: f64,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    tempcut: f64,
-    freezeout_temp_gev: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    dx: FLOAT,
+    maxdt: FLOAT,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    tempcut: FLOAT,
+    freezeout_temp_gev: FLOAT,
     r: Scheme<S>,
-    init_s: (&[[f64; V]; V], usize),
-    save_raw: Option<f64>,
+    init_s: (&[[FLOAT; V]; V], usize),
+    save_raw: Option<FLOAT>,
 ) -> HydroOutput<V, V, 1, F_BOTH_2D, C_MILNE_BOTH_2D> {
     let (s, i) = init_s;
     let name = ("InitTrento", i);
@@ -35,13 +36,6 @@ fn hydro2d<const V: usize, const S: usize>(
             &conformal_massless::T,
         ),
         EOSs::WB => (&wb::p, &wb::dpde, &wb::s, &wb::T),
-        EOSs::HotQCD => (&hotqcd::p, &hotqcd::dpde, &hotqcd::s, &hotqcd::T),
-        EOSs::HotQCDLog => (
-            &hotqcd::log::p,
-            &hotqcd::log::dpde,
-            &hotqcd::log::s,
-            &hotqcd::log::T,
-        ),
     };
     println!("{}{}", name.0, name.1);
     let init = init_from_entropy_density_2d(t0, s, p, dpde, entropy, temp);
@@ -66,21 +60,21 @@ fn hydro2d<const V: usize, const S: usize>(
 }
 
 pub fn run_convergence_2d<const V: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    l: f64,
-    dtmin: f64,
-    dtmax: f64,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    tempcut: f64,
-    freezeout_temp_mev: f64,
-    r: impl Fn(f64) -> Scheme<S>,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    tempcut: FLOAT,
+    freezeout_temp_mev: FLOAT,
+    r: impl Fn(FLOAT) -> Scheme<S>,
     (nb_trento, first_trento): (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento, first_trento);
-    let dx = l / V as f64;
+    let dx = l / V as FLOAT;
     println!("{}", r(0.0).name);
     for i in 0..nb_trento {
         let trento = (trentos[i].as_ref(), first_trento + i);
@@ -103,17 +97,17 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
 }
 pub fn run_2d<const V: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    dtmin: f64,
-    dtmax: f64,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    tempcut: f64,
-    freezeout_temp_gev: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    tempcut: FLOAT,
+    freezeout_temp_gev: FLOAT,
     nf_trento: (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let do_gl1 = || {
         run_convergence_2d::<V, 1>(
@@ -162,16 +156,16 @@ pub fn run_2d<const V: usize>(
 }
 pub fn run_trento_2d<const V: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    dt: f64,
-    etaovers: (f64, f64, f64),
-    zetaovers: (f64, f64, f64),
-    tempcut: f64,
-    freezeout_temp_gev: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    dt: FLOAT,
+    etaovers: (FLOAT, FLOAT, FLOAT),
+    zetaovers: (FLOAT, FLOAT, FLOAT),
+    tempcut: FLOAT,
+    freezeout_temp_gev: FLOAT,
     (nb_trento, first_trento): (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento, first_trento);
     let gl1 = gauss_legendre_1();
@@ -180,7 +174,7 @@ pub fn run_trento_2d<const V: usize>(
     // let gl1 = radauiia2();
     let heun = heun();
     // let heun = rk4();
-    let dx = l / V as f64;
+    let dx = l / V as FLOAT;
     let do_gl1 = |trento| {
         hydro2d::<V, 1>(
             // hydro2d::<V, 2>(

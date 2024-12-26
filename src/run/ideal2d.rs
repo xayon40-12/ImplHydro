@@ -8,16 +8,17 @@ use crate::{
         Eos, HydroOutput, C_IDEAL_2D, F_IDEAL_2D,
     },
     solver::{time::schemes::*, Solver},
+    FLOAT,
 };
 
 fn hydro2d<const V: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    dx: f64,
-    maxdt: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    dx: FLOAT,
+    maxdt: FLOAT,
     r: Scheme<S>,
-    init_s: Option<(&[[f64; V]; V], usize)>,
-    save_raw: Option<f64>,
+    init_s: Option<(&[[FLOAT; V]; V], usize)>,
+    save_raw: Option<FLOAT>,
 ) -> HydroOutput<V, V, 1, F_IDEAL_2D, C_IDEAL_2D> {
     let name = if let Some((_, i)) = init_s {
         ("InitTrento", i)
@@ -44,18 +45,18 @@ fn hydro2d<const V: usize, const S: usize>(
 }
 
 pub fn run_convergence_2d<const V: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    l: f64,
-    dtmin: f64,
-    dtmax: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
     r: Scheme<S>,
     gubser: bool,
     (nb_trento, first_trento): (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento, first_trento);
-    let dx = l / V as f64;
+    let dx = l / V as FLOAT;
     let dt0 = dtmax;
     println!("{}", r.name);
     if gubser {
@@ -73,14 +74,14 @@ pub fn run_convergence_2d<const V: usize, const S: usize>(
 
 pub fn run_2d<const V: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    dtmin: f64,
-    dtmax: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
     gubser: bool,
     nf_trento: (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let imp = gauss_legendre_1();
     const I: usize = 1;
@@ -103,17 +104,17 @@ pub fn run_2d<const V: usize>(
 
 pub fn run_trento_2d<const V: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    dt: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    dt: FLOAT,
     (nb_trento, first_trento): (usize, usize),
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
     let trentos = prepare_trento_2d::<V>(nb_trento, first_trento);
     let imp = gauss_legendre_1();
     let exp = heun();
-    let dx = l / V as f64;
+    let dx = l / V as FLOAT;
     for i in 0..nb_trento {
         let trento = Some((trentos[i].as_ref(), first_trento + i));
         match solver {

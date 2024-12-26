@@ -4,16 +4,17 @@ use crate::{
         C_IDEAL_1D, F_IDEAL_1D,
     },
     solver::{time::schemes::*, Solver},
+    FLOAT,
 };
 
 fn hydro1d<const V: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    dx: f64,
-    maxdt: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    dx: FLOAT,
+    maxdt: FLOAT,
     r: Scheme<S>,
     use_void: bool,
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) -> HydroOutput<V, 1, 1, F_IDEAL_1D, C_IDEAL_1D> {
     let void = if use_void { "Void" } else { "" };
     println!("Rieman{}", void);
@@ -35,15 +36,15 @@ fn hydro1d<const V: usize, const S: usize>(
     )
 }
 pub fn run_convergence_1d<const V: usize, const S: usize>(
-    t0: f64,
-    tend: f64,
-    l: f64,
-    dtmin: f64,
-    dtmax: f64,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
     r: Scheme<S>,
-    save_raw: Option<f64>,
+    save_raw: Option<FLOAT>,
 ) {
-    let dx = l / V as f64;
+    let dx = l / V as FLOAT;
     let dt0 = dtmax;
     println!("{}", r.name);
     converge(dt0, dtmin, |dt| {
@@ -55,12 +56,12 @@ pub fn run_convergence_1d<const V: usize, const S: usize>(
 }
 pub fn run_1d<const V: usize>(
     solver: Solver,
-    t0: f64,
-    tend: f64,
-    l: f64,
-    dtmin: f64,
-    dtmax: f64,
-    save_raw: Option<f64>,
+    t0: FLOAT,
+    tend: FLOAT,
+    l: FLOAT,
+    dtmin: FLOAT,
+    dtmax: FLOAT,
+    save_raw: Option<FLOAT>,
 ) {
     // let imp = implicit_euler(); const I: usize = 3;
     // let imp = radauiia2(); const I: usize = 2;

@@ -1,4 +1,11 @@
-pub fn newton(er: f64, mut v: f64, f: impl Fn(f64) -> f64, constraint: impl Fn(f64) -> f64) -> f64 {
+use crate::FLOAT;
+
+pub fn newton(
+    mut v: FLOAT,
+    f: impl Fn(FLOAT) -> FLOAT,
+    constraint: impl Fn(FLOAT) -> FLOAT,
+) -> FLOAT {
+    let er = (10.0 as FLOAT).powi(-(FLOAT::DIGITS as i32));
     let mut fv = f(v);
     let mut e = fv.abs();
     let mut i = 0;
@@ -8,13 +15,13 @@ pub fn newton(er: f64, mut v: f64, f: impl Fn(f64) -> f64, constraint: impl Fn(f
         i += 1;
         let ff = (f(v + er) - fv) / er;
         ov = v;
-        v -= fv / (1e-15 + ff);
+        v -= fv / (er + ff);
         v = constraint(v);
         fv = f(v);
-        e = fv.abs() + (ov - v).abs() / (ov.abs().max(v.abs()) + 1e-15);
+        e = fv.abs() + (ov - v).abs() / (ov.abs().max(v.abs()) + er);
     }
     if i == maxi {
-        f64::NAN
+        FLOAT::NAN
     } else {
         v
     }
