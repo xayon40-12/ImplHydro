@@ -223,8 +223,8 @@ pub fn save<
             .collect::<Vec<&str>>()
             .join(" ");
         let info = format!(
-            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\ndy: {:e}\ndz: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\n{}\nvariables: {}\n",
-            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, dy, dz, maxdt, integration, schemename, stages, name, case, viscosity, freezeout, variables,
+            "elapsed: {:e}\ntsteps: {}\nfails: {}\nt0: {:e}\ntend: {:e}\nt: {:e}\ncost: {}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\ndy: {:e}\ndz: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\n{}\nvariables: {}\nfloat: {}\n",
+            elapsed, tsteps, fails, t0, tend, t, cost, VX, VY, VZ, dx, dy, dz, maxdt, integration, schemename, stages, name, case, viscosity, freezeout, variables, std::mem::size_of::<FLOAT>() * 8,
         );
         std::fs::write(&format!("{}/info.txt", dir), info.as_bytes())?;
     }
@@ -287,9 +287,9 @@ pub fn save_info<
         .collect::<Vec<&str>>()
         .join(" ");
     let info = format!(
-            "t0: {:e}\ntend: {:e}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\ndy: {:e}\ndz: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\n{}variables: {}\n",
-            t0, tend, VX, VY, VZ, dx, dy, dz, maxdt, integration, schemename, stages, name, case, viscosity, freezeout, variables,
-        );
+        "t0: {:e}\ntend: {:e}\nnx: {}\nny: {}\nnz: {}\ndx: {:e}\ndy: {:e}\ndz: {:e}\nmaxdt: {:e}\nintegration: {:?}\nscheme: {}\nstages: {}\nname: {}\ncase: {}\nviscosity: {}\n{}variables: {}\nfloat: {}\n",
+        t0, tend, VX, VY, VZ, dx, dy, dz, maxdt, integration, schemename, stages, name, case, viscosity, freezeout, variables, std::mem::size_of::<FLOAT>() * 8,
+    );
     std::fs::write(&format!("{}/info.txt", foldername), info.as_bytes())?;
 
     Ok(())

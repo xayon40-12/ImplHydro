@@ -2,4 +2,4 @@ pub mod hydro;
 pub mod run;
 pub mod solver;
 
-pub type FLOAT = f64;
+pub type FLOAT = f32;

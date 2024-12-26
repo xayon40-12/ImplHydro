@@ -176,13 +176,15 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
         visc = (info["etaovers"],info["zetaovers"])
         cut = info["energycut"]
     info["visc"] = visc
+    float_bits = info["float"]
+    float_type = "float" + str(float_bits)
 
     # data = np.loadtxt(p+"/data.txt")
-    data0 = np.fromfile(dird+"/"+ts[0]+"/data.dat", dtype="float64").reshape((n,-1))
-    data = np.fromfile(p+"/data.dat", dtype="float64").reshape((n,-1))
+    data0 = np.fromfile(dird+"/"+ts[0]+"/data.dat", dtype=float_type).reshape((n,-1))
+    data = np.fromfile(p+"/data.dat", dtype=float_type).reshape((n,-1))
     def find_diff(dir):
         try:
-            return np.fromfile(dir+"/diff.dat", dtype="float64").reshape((n,-1))
+            return np.fromfile(dir+"/diff.dat", dtype=float_type).reshape((n,-1))
         except FileNotFoundError:
             return None
     diff = find_diff(p)
@@ -195,7 +197,7 @@ for d in filter(lambda d: os.path.isdir(dir+"/"+d), os.listdir(dir)):
         # else:
         #     nums = np.array([i for i in range(ld) if i%int(ld/(num-1)) == 0]+[ld-1])
         nums = np.array(range(ld))
-        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype="float64").reshape((n,-1)),find_diff(dird+"/"+t)) for t in np.array(ts)[nums]]
+        datats = [(float(t), np.fromfile(dird+"/"+t+"/data.dat", dtype=float_type).reshape((n,-1)),find_diff(dird+"/"+t)) for t in np.array(ts)[nums]]
         info["datats"] = datats
 
     e0 = data0[:,vid["e"]]

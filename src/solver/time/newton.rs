@@ -5,7 +5,7 @@ pub fn newton(
     f: impl Fn(FLOAT) -> FLOAT,
     constraint: impl Fn(FLOAT) -> FLOAT,
 ) -> FLOAT {
-    let er = (10.0 as FLOAT).powi(-(FLOAT::DIGITS as i32));
+    let er = (10.0 as FLOAT).powi(-(FLOAT::DIGITS as i32) * 2 / 3);
     let mut fv = f(v);
     let mut e = fv.abs();
     let mut i = 0;
