@@ -145,6 +145,7 @@ pub struct Coord {
     pub x: usize,
     pub remaining: usize,
     pub error_increases: usize,
+    pub error_inc_resets: usize,
     pub max_err: FLOAT,
 }
 
@@ -159,6 +160,7 @@ pub fn gen_coords<const VX: usize, const VY: usize, const VZ: usize>() -> Vec<Co
                     z,
                     remaining: 1,
                     error_increases: 0,
+                    error_inc_resets: 0,
                     max_err: FLOAT::MAX,
                 });
             }

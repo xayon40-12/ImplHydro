@@ -107,6 +107,9 @@ pub fn explicit<
                 let tmp = vs[vz][vy][vx];
                 (vs[vz][vy][vx], trs[vz][vy][vx]) = constraints(*t, vs[vz][vy][vx]);
                 for f in 0..F {
+                    if !vs[vz][vy][vx][f].is_finite() {
+                        return None;
+                    }
                     total_diff_vs[vz][vy][vx][f] += (tmp[f] - vs[vz][vy][vx][f]).abs();
                 }
             }

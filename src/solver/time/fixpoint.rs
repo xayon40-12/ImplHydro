@@ -54,6 +54,7 @@ pub fn fixpoint<
     err_thr: ErrThr<F, C, VX, VY, VZ>,
 ) -> Option<(FLOAT, Box<[[[usize; VX]; VY]; VZ]>)> {
     let max_error_increases = 3;
+    let max_error_resets = 3;
 
     let b = if let Some(b) = b { *b } else { a[S - 1] };
     let mut coords = gen_coords::<VX, VY, VZ>();
@@ -132,6 +133,7 @@ pub fn fixpoint<
                  x,
                  mut remaining,
                  mut error_increases,
+                 mut error_inc_resets,
                  mut max_err,
              }| {
                 let mut is_err = false;
@@ -153,7 +155,9 @@ pub fn fixpoint<
                 if is_err {
                     if error_increased {
                         error_increases += 1;
-                        if error_increases > max_error_increases {
+                        if error_increases > max_error_increases
+                            || error_inc_resets > max_error_resets
+                        {
                             remaining *= 2;
                             dts[z][y][x] *= 0.5;
                             if dts[z][y][x] < 1e-10 {
@@ -165,6 +169,8 @@ pub fn fixpoint<
                                 }
                             }
                             max_err = FLOAT::MAX;
+                            error_increases = 0;
+                            error_inc_resets += 1;
                         }
                     } else {
                         error_increases = 0;
@@ -175,6 +181,7 @@ pub fn fixpoint<
                         z,
                         remaining,
                         error_increases,
+                        error_inc_resets,
                         max_err,
                     });
                 } else {
@@ -202,6 +209,7 @@ pub fn fixpoint<
                             z,
                             remaining,
                             error_increases: 0,
+                            error_inc_resets: 0,
                             max_err,
                         });
                     }
@@ -213,27 +221,17 @@ pub fn fixpoint<
             return None;
         }
 
-        new_coords.sort_by_key(|&Coord { z, y, x, .. }| (z, y, x));
         const DEBUG: bool = false;
         if DEBUG {
             println!("coords.len(): {}", coords.len());
-            if coords.len() == 1 {
-                let Coord {
-                    z,
-                    y,
-                    x,
-                    remaining,
-                    error_increases: _,
-                    max_err,
-                } = coords[0];
-                println!("k: {:?}", k[0][z][y][x]);
-                println!("dt: {:e}", dts[z][y][x]);
-                println!("remaining: {remaining}");
-                println!("max_err: {max_err:e}");
-                if dts[z][y][x] < 1e-10 || k[0][z][y][x][0].is_nan() {
-                    eprintln!("dt too small or k is nan, abort");
-                    return None;
+            if coords.len() <= 5 {
+                for c in &coords {
+                    let Coord { z, y, x, .. } = *c;
+                    println!("k: {:?}", k[0][z][y][x]);
+                    println!("dt: {:e}", dts[z][y][x]);
+                    println!("coords: {:?}", c);
                 }
+                println!("");
             }
         }
         if ERROR_PROPAGATION {
@@ -252,6 +250,7 @@ pub fn fixpoint<
                             z: k as usize,
                             remaining: 1,
                             error_increases: 0,
+                            error_inc_resets: 0,
                             max_err: FLOAT::MAX,
                         });
                     }

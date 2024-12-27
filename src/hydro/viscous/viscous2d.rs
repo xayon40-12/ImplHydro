@@ -143,7 +143,7 @@ fn gen_constraints<'a>(
 
                 // check that bulk viscosity does not make pressure negative
                 let ppi = g * utppi;
-                let epe = e + pe;
+                // let epe = e + pe;
 
                 let pi11 = utpi11 / ut;
                 let pi12 = utpi12 / ut;
@@ -153,35 +153,36 @@ fn gen_constraints<'a>(
                 let pi00 = (ux * pi01 + uy * pi02) / ut;
                 let pi33 = pi00 - pi11 - pi22;
 
-                let (eigs, r) = if implicit {
-                    (vec![0.0; 4], 1.0)
-                } else {
-                    // let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
-                    //     pi00, pi01, pi02;
-                    //     pi01, pi11, pi12;
-                    //     pi02, pi12, pi22;
-                    // ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
-                    let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
-                        pi11, pi12;
-                        pi12, pi22;
-                    ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
-                    let mut eigs: Vec<FLOAT> = m
-                        .symmetric_eigenvalues()
-                        .into_iter()
-                        .cloned()
-                        .chain([0.0, pi33].into_iter())
-                        .collect();
-                    eigs.sort_by(FLOAT::total_cmp);
-                    let smallest = eigs[0];
-                    // check that shear viscosity does not make pressure negative
-                    // let r = if epe + ppi + smallest < 0.0 {
-                    let r = if epe + ppi + smallest < 0.0 {
-                        -epe / (ppi + smallest) * (1.0 - 1e-10)
-                    } else {
-                        1.0
-                    };
-                    (eigs, r)
-                };
+                let (eigs, r) = (vec![0.0; 4], 1.0);
+                // let (eigs, r) = if implicit || true {
+                //     (vec![0.0; 4], 1.0)
+                // } else {
+                //     // let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
+                //     //     pi00, pi01, pi02;
+                //     //     pi01, pi11, pi12;
+                //     //     pi02, pi12, pi22;
+                //     // ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
+                //     let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
+                //         pi11, pi12;
+                //         pi12, pi22;
+                //     ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
+                //     let mut eigs: Vec<FLOAT> = m
+                //         .symmetric_eigenvalues()
+                //         .into_iter()
+                //         .cloned()
+                //         .chain([0.0, pi33].into_iter())
+                //         .collect();
+                //     eigs.sort_by(FLOAT::total_cmp);
+                //     let smallest = eigs[0];
+                //     // check that shear viscosity does not make pressure negative
+                //     // let r = if epe + ppi + smallest < 0.0 {
+                //     let r = if epe + ppi + smallest < 0.0 {
+                //         -epe / (ppi + smallest) * (1.0 - 1e-10)
+                //     } else {
+                //         1.0
+                //     };
+                //     (eigs, r)
+                // };
 
                 let ppi = r * ppi;
                 let pi11 = r * pi11;
