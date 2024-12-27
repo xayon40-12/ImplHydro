@@ -125,11 +125,13 @@ fn gen_constraints<'a>(
             let m = (t01 * t01 + t02 * t02).sqrt();
             let t00 = t00.max(m * (1.0 + 1e-15));
 
-            let sv = |v: FLOAT| m / (t00 + p((t00 - m * v).max(VOID)));
-            let cv = |v: FLOAT| v.max(0.0).min(1.0);
-            let v = newton(0.5, |v| sv(v) - v, cv);
-
-            let e = (t00 - m * v).max(VOID).min(1e10);
+            let se = |e: FLOAT| t00 - m * m / (t00 + p(e));
+            let e = newton(t00, |e| se(e) - e, |e| e.max(VOID).min(1e10));
+            let v = m / (t00 + p(e));
+            // let sv = |v: FLOAT| m / (t00 + p((t00 - m * v).max(VOID)));
+            // let cv = |v: FLOAT| v.max(0.0).min(1.0);
+            // let v = newton(0.5, |v| sv(v) - v, cv);
+            // let e = (t00 - m * v).max(VOID).min(1e10);
 
             {
                 let g = (1.0 - v * v).sqrt();
@@ -151,14 +153,14 @@ fn gen_constraints<'a>(
                 let pi00 = (ux * pi01 + uy * pi02) / ut;
                 let pi33 = pi00 - pi11 - pi22;
 
-                // let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
-                //     pi00, pi01, pi02;
-                //     pi01, pi11, pi12;
-                //     pi02, pi12, pi22;
-                // ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
                 let (eigs, r) = if implicit {
                     (vec![0.0; 4], 1.0)
                 } else {
+                    // let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
+                    //     pi00, pi01, pi02;
+                    //     pi01, pi11, pi12;
+                    //     pi02, pi12, pi22;
+                    // ]; // FIXME this is $\pi^{\mu\nu}$ but we want the eigenvalues of $\pi^\mu_\nu$
                     let m = matrix![ // \pi^{\mu\nu}   \pi^\mu_\nu
                         pi11, pi12;
                         pi12, pi22;

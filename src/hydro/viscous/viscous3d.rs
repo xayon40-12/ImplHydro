@@ -74,11 +74,13 @@ fn gen_constraints<'a>(
             let m = (t01 * t01 + t02 * t02 + t03 * t03).sqrt();
             let t00 = t00.max(m * (1.0 + 1e-15));
 
-            let sv = |v: FLOAT| m / (t00 + p((t00 - m * v).max(VOID)));
-            let cv = |v: FLOAT| v.max(0.0).min(1.0);
-            let v = newton(0.5, |v| sv(v) - v, cv);
-
-            let e = (t00 - m * v).max(VOID).min(1e10);
+            // let sv = |v: FLOAT| m / (t00 + p((t00 - m * v).max(VOID)));
+            // let cv = |v: FLOAT| v.max(0.0).min(1.0);
+            // let v = newton(0.5, |v| sv(v) - v, cv);
+            // let e = (t00 - m * v).max(VOID).min(1e10);
+            let se = |e: FLOAT| t00 - m * m / (t00 + p(e));
+            let e = newton(t00, |e| se(e) - e, |e| e.max(VOID).min(1e10));
+            let v = m / (t00 + p(e));
 
             {
                 let g = (1.0 - v * v).sqrt();
