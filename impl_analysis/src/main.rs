@@ -50,6 +50,7 @@ pub fn jacknife<F: Fn(f64, f64) -> f64>(f: F, aa: Vec<f64>, bb: Vec<f64>) -> (f6
 }
 
 pub fn vn(n: f64, events: &Vec<&Event>) -> (f64, f64) {
+    // arXiv:1010.0233 Flow analysis with cumulants: direct calculations
     let (nums, dens) = events
         .iter()
         .map(|e| {

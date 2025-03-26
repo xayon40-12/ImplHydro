@@ -1,3 +1,6 @@
+# Centrality dependence of the pseudorapidity density distribution for charged particles in Pb-Pb collisions at sqrt(s_NN) = 5.02 TeV
+# Phys.Lett.B 772 (2017) 567-577, 2017
+# https://www.hepdata.net/record/ins1507090: table DN/DETARAP
 dependent_variables:
 - header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
   qualifiers:
