@@ -73,10 +73,10 @@ compare_type = 0 # 0: absolute, 1: relative
 use_square = False
 use_average_ref = False
 plot_meanmax_dx = False
-# plot_conv = True
-plot_conv = False
-# plot_1D = True
-plot_1D = False
+plot_conv = True
+# plot_conv = False
+plot_1D = True
+# plot_1D = False
 plot_2D = True
 # plot_2D = False
 def refName(scs):
