@@ -63,9 +63,6 @@ impl_observables.py
 
 Many useful scripts are located in the `utils` directory.  
 
-TODO:  
-- detail the necessary python packages
-
 Python libraries needed:
 - numpy
 - matplotlib
