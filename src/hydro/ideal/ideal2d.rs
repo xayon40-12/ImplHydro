@@ -1,18 +1,18 @@
 use crate::{
-    boxarray,
     hydro::{
         utils::{eigenvaluesk, Coordinate},
-        C_IDEAL_2D, F_IDEAL_2D,
+        C_IDEAL_2D, F_IDEAL_2D, HBARC,
     },
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
         run,
-        space::{kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Eigenvalues, FluxInfo, InDir::*},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint, Observable,
     },
 };
+use boxarray::boxarray;
 
 use crate::hydro::{solve_v, Eos, Init2D, VOID};
 
@@ -21,9 +21,11 @@ pub fn init_from_entropy_density_2d<'a, const VX: usize, const VY: usize>(
     s: &'a [[f64; VX]; VY],
     p: Eos<'a>,
     dpde: Eos<'a>,
+    _entropy: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize), (f64, f64)) -> [f64; F_IDEAL_2D] + 'a> {
     Box::new(move |(i, j), _| {
-        let s = s[j][i].max(VOID);
+        let s = s[j][i] / HBARC / t0;
+        // let e = newton(1e-10, s, |e| entropy(e) - s, |e| e.max(0.0).min(1e10)).max(VOID);
         let e = s;
         let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0];
         f0(t0, vars)
@@ -90,12 +92,13 @@ fn f2(t: f64, [e, pe, _, ut, ux, uy]: [f64; C_IDEAL_2D]) -> [f64; F_IDEAL_2D] {
 }
 
 fn flux<const V: usize>(
+    _k: &Arr<F_IDEAL_2D, V, V, 1>,
     [_ov, vs]: [&Arr<F_IDEAL_2D, V, V, 1>; 2],
     [_otrs, trs]: [&Arr<C_IDEAL_2D, V, V, 1>; 2],
     constraints: Constraint<F_IDEAL_2D, C_IDEAL_2D>,
     bound: Boundary<F_IDEAL_2D, V, V, 1>,
     pos: [i32; DIM],
-    dx: f64,
+    dxs: [f64; DIM],
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     (coord, [eigx, eigy]): &(Coordinate, [Eigenvalues<C_IDEAL_2D>; 2]),
@@ -125,34 +128,28 @@ fn flux<const V: usize>(
     };
 
     let diff = kt;
-    let (divf1, _) = diff(
+    let flux_infos = [
+        X(FluxInfo {
+            flux: &f1,
+            secondary: &|_, _| [],
+            eigenvalues: *eigx,
+        }),
+        Y(FluxInfo {
+            flux: &f2,
+            secondary: &|_, _| [],
+            eigenvalues: *eigy,
+        }),
+    ];
+    let [(dxf, _), (dyf, _)] = diff(
         (vs, trs),
         bound,
         pos,
-        Dir::X,
         t,
-        &f1,
-        &|_, _| [],
+        flux_infos,
         constraints,
-        *eigx,
         pre,
         post,
-        dx,
-        theta,
-    );
-    let (divf2, _) = diff(
-        (vs, trs),
-        bound,
-        pos,
-        Dir::Y,
-        t,
-        &f2,
-        &|_, _| [],
-        constraints,
-        *eigy,
-        pre,
-        post,
-        dx,
+        dxs,
         theta,
     );
 
@@ -165,11 +162,7 @@ fn flux<const V: usize>(
             pe
         }
     };
-    [
-        -divf1[0] - divf2[0] - s,
-        -divf1[1] - divf2[1],
-        -divf1[2] - divf2[2],
-    ]
+    [-dxf[0] - dyf[0] - s, -dxf[1] - dyf[1], -dxf[2] - dyf[2]]
 }
 
 pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
@@ -198,7 +191,7 @@ pub fn momentum_anisotropy<const VX: usize, const VY: usize>(
 }
 
 pub fn ideal2d<const V: usize, const S: usize>(
-    name: &str,
+    name: &(&str, usize),
     maxdt: f64,
     t: f64,
     tend: f64,
@@ -207,6 +200,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init2D<F_IDEAL_2D>,
+    save_raw: Option<f64>,
 ) -> Option<(
     (BArr<F_IDEAL_2D, V, V, 1>, BArr<C_IDEAL_2D, V, V, 1>),
     f64,
@@ -215,11 +209,11 @@ pub fn ideal2d<const V: usize, const S: usize>(
 )> {
     let coord = Coordinate::Milne;
     let constraints = gen_constraints(&p, &dpde, &coord);
-    let mut vs: Box<[[[[f64; F_IDEAL_2D]; V]; V]; 1]> = boxarray(0.0f64);
-    let mut trs: Box<[[[[f64; C_IDEAL_2D]; V]; V]; 1]> = boxarray(0.0f64);
+    let mut vs: Box<[[[[f64; F_IDEAL_2D]; V]; V]; 1]> = boxarray(0.0);
+    let mut trs: Box<[[[[f64; C_IDEAL_2D]; V]; V]; 1]> = boxarray(0.0);
 
     let names = (["t00", "t01", "t02"], ["e", "pe", "dpde", "ut", "ux", "uy"]);
-    let k: Box<[[[[[f64; F_IDEAL_2D]; V]; V]; 1]; S]> = boxarray(0.0f64);
+    let k: Box<[[[[[f64; F_IDEAL_2D]; V]; V]; 1]; S]> = boxarray(0.0);
     let v2 = ((V - 1) as f64) / 2.0;
     for j in 0..V {
         for i in 0..V {
@@ -245,7 +239,7 @@ pub fn ideal2d<const V: usize, const S: usize>(
         k,
         r,
         dt: 1e10,
-        dx,
+        dxs: [dx, dx, 0.0],
         maxdt,
         t,
         ot: t - 1.0,
@@ -280,5 +274,6 @@ pub fn ideal2d<const V: usize, const S: usize>(
         &names,
         &observables,
         &err_thr,
+        save_raw,
     )
 }

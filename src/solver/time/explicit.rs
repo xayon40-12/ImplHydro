@@ -1,10 +1,8 @@
-use crate::{
-    boxarray,
-    solver::{
-        context::Context,
-        utils::{pfor3d, Coord},
-    },
+use crate::solver::{
+    context::Context,
+    utils::{cfor3d, gen_coords, Coord},
 };
+use boxarray::boxarray;
 
 use super::schemes::Scheme;
 
@@ -29,7 +27,7 @@ pub fn explicit<
         k,
         r: Scheme { aij: a, .. },
         dt,
-        dx,
+        dxs,
         maxdt,
         ot,
         t,
@@ -41,10 +39,11 @@ pub fn explicit<
         freezeout_energy: _,
     }: &mut Context<Opt, F, C, VX, VY, VZ, S>,
 ) -> Option<(f64, Box<[[[usize; VX]; VY]; VZ]>, usize)> {
+    let coords = gen_coords::<VX, VY, VZ>();
     *dt = maxdt.min(*dt);
     let cost = S as f64;
-    let nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1usize);
-    let mut fu: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0f64);
+    let nbiter: Box<[[[usize; VX]; VY]; VZ]> = boxarray(1);
+    let mut fu: Box<[[[[f64; F]; VX]; VY]; VZ]> = boxarray(0.0);
     let mut vdtk = vs.clone();
     let mut trdtk = trs.clone();
     let mut ovdtk = ovs.clone();
@@ -61,14 +60,16 @@ pub fn explicit<
                 }
             }
         }
-        pfor3d(&mut fu, &|(Coord { x, y, z }, fu)| {
+        let es = if s == 0 { S - 1 } else { s - 1 }; // index of last computed k
+        cfor3d(&coords, &mut fu, |&Coord { x, y, z }, fu| {
             *fu = fun(
+                &k[es],
                 [&ovdtk, &vdtk],
                 [&otrdtk, &trdtk],
                 constraints,
                 boundary,
                 [x as i32, y as i32, z as i32],
-                *dx,
+                *dxs,
                 [*ot, ct],
                 [*dt, cdt],
                 opt,
@@ -77,7 +78,7 @@ pub fn explicit<
         otrdtk = trdtk.clone();
         ovdtk = vdtk.clone();
         k[s] = *fu;
-        pfor3d(&mut vdtk, &|(Coord { x, y, z }, vdtk)| {
+        cfor3d(&coords, &mut vdtk, |&Coord { x, y, z }, vdtk| {
             for f in 0..F {
                 vdtk[f] = vs[z][y][x][f];
                 for s1 in 0..S {

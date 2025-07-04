@@ -1,0 +1,170 @@
+# Anisotropic flow of charged particles in Pb-Pb collisions at sqrt(s_NN) = 5.02 TeV
+# Phys.Rev.Lett. 116 (2016) 132302, 2016.
+# https://www.hepdata.net/record/ins1419244: Table 1
+dependent_variables:
+- header: {name: 'V2{2, |DELTAETA|>1}'}
+  qualifiers:
+  - {name: ETARAP, value: -0.8-0.8}
+  - {name: PT, units: GeV c^-1, value: 0.2-5.0}
+  - {name: RE, value: PB PB --> CHARGED X}
+  - {name: SQRT(S)/NUCLEON, units: GeV, value: '5023.0'}
+  values:
+  - errors:
+    - {label: stat, symerror: 0.00057}
+    - {label: sys, symerror: 0.00043}
+    value: 0.02839
+  - errors:
+    - {label: stat, symerror: 0.00064}
+    - {label: sys, symerror: 0.00069}
+    value: 0.04566
+  - errors:
+    - {label: stat, symerror: 0.00037}
+    - {label: sys, symerror: 0.00098}
+    value: 0.06551
+  - errors:
+    - {label: stat, symerror: 0.00044}
+    - {label: sys, symerror: 0.00131}
+    value: 0.08707
+  - errors:
+    - {label: stat, symerror: 0.00055}
+    - {label: sys, symerror: 0.00149}
+    value: 0.0991
+  - errors:
+    - {label: stat, symerror: 0.00073}
+    - {label: sys, symerror: 0.00156}
+    value: 0.10414
+  - errors:
+    - {label: stat, symerror: 0.00107}
+    - {label: sys, symerror: 0.00154}
+    value: 0.10286
+  - errors:
+    - {label: stat, symerror: 0.00186}
+    - {label: sys, symerror: 0.00146}
+    value: 0.09746
+  - errors:
+    - {label: stat, symerror: 0.00438}
+    - {label: sys, symerror: 0.00133}
+    value: 0.08881
+- header: {name: 'V2{4}'}
+  qualifiers:
+  - {name: ETARAP, value: -0.8-0.8}
+  - {name: PT, units: GeV c^-1, value: 0.2-5.0}
+  - {name: RE, value: PB PB --> CHARGED X}
+  - {name: SQRT(S)/NUCLEON, units: GeV, value: '5023.0'}
+  values:
+  - {value: '-'}
+  - errors:
+    - {label: stat, symerror: 0.00258}
+    - {label: sys, symerror: 0.00062}
+    value: 0.03670
+  - errors:
+    - {label: stat, symerror: 0.00033}
+    - {label: sys, symerror: 0.001}
+    value: 0.05867
+  - errors:
+    - {label: stat, symerror: 0.00138}
+    - {label: sys, symerror: 0.00133}
+    value: 0.07798
+  - errors:
+    - {label: stat, symerror: 0.00257}
+    - {label: sys, symerror: 0.00148}
+    value: 0.08673
+  - errors:
+    - {label: stat, symerror: 0.00275}
+    - {label: sys, symerror: 0.00151}
+    value: 0.08903
+  - errors:
+    - {label: stat, symerror: 0.00208}
+    - {label: sys, symerror: 0.00142}
+    value: 0.08351
+  - errors:
+    - {label: stat, symerror: 0.00961}
+    - {label: sys, symerror: 0.00137}
+    value: 0.08062
+  - {value: '-'}
+- header: {name: 'V2{6}'}
+  qualifiers:
+  - {name: ETARAP, value: -0.8-0.8}
+  - {name: PT, units: GeV c^-1, value: 0.2-5.0}
+  - {name: RE, value: PB PB --> CHARGED X}
+  - {name: SQRT(S)/NUCLEON, units: GeV, value: '5023.0'}
+  values:
+  - {value: '-'}
+  - errors:
+    - {label: stat, symerror: 0.00313}
+    - {label: sys, symerror: 0.00061}
+    value: 0.03614
+  - errors:
+    - {label: stat, symerror: 0.00031}
+    - {label: sys, symerror: 0.00099}
+    value: 0.05815
+  - errors:
+    - {label: stat, symerror: 0.00125}
+    - {label: sys, symerror: 0.00132}
+    value: 0.07744
+  - errors:
+    - {label: stat, symerror: 0.00244}
+    - {label: sys, symerror: 0.00147}
+    value: 0.0865
+  - errors:
+    - {label: stat, symerror: 0.00239}
+    - {label: sys, symerror: 0.0015}
+    value: 0.08827
+  - errors:
+    - {label: stat, symerror: 0.00456}
+    - {label: sys, symerror: 0.00141}
+    value: 0.08279
+  - errors:
+    - {label: stat, symerror: 0.01836}
+    - {label: sys, symerror: 0.00117}
+    value: 0.06859
+  - {value: '-'}
+- header: {name: 'V2{8}'}
+  qualifiers:
+  - {name: ETARAP, value: -0.8-0.8}
+  - {name: PT, units: GeV c^-1, value: 0.2-5.0}
+  - {name: RE, value: PB PB --> CHARGED X}
+  - {name: SQRT(S)/NUCLEON, units: GeV, value: '5023.0'}
+  values:
+  - {value: '-'}
+  - errors:
+    - {label: stat, symerror: 0.00298}
+    - {label: sys, symerror: 0.00182}
+    value: 0.03647
+  - errors:
+    - {label: stat, symerror: 0.00035}
+    - {label: sys, symerror: 0.0029}
+    value: 0.05806
+  - errors:
+    - {label: stat, symerror: 0.00127}
+    - {label: sys, symerror: 0.00387}
+    value: 0.07739
+  - errors:
+    - {label: stat, symerror: 0.00241}
+    - {label: sys, symerror: 0.00433}
+    value: 0.08661
+  - errors:
+    - {label: stat, symerror: 0.00223}
+    - {label: sys, symerror: 0.00443}
+    value: 0.08851
+  - errors:
+    - {label: stat, symerror: 0.0061}
+    - {label: sys, symerror: 0.00413}
+    value: 0.08267
+  - errors:
+    - {label: stat, symerror: 0.03986}
+    - {label: sys, symerror: 0.00323}
+    value: 0.06467
+  - {value: '-'}
+independent_variables:
+- header: {name: CENTRALITY, units: PCT}
+  values:
+  - {high: 5.0, low: 0.0}
+  - {high: 10.0, low: 5.0}
+  - {high: 20.0, low: 10.0}
+  - {high: 30.0, low: 20.0}
+  - {high: 40.0, low: 30.0}
+  - {high: 50.0, low: 40.0}
+  - {high: 60.0, low: 50.0}
+  - {high: 70.0, low: 60.0}
+  - {high: 80.0, low: 70.0}

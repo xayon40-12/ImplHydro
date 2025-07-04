@@ -1,0 +1,1539 @@
+# Centrality dependence of the pseudorapidity density distribution for charged particles in Pb-Pb collisions at sqrt(s_NN) = 5.02 TeV
+# Phys.Lett.B 772 (2017) 567-577, 2017
+# https://www.hepdata.net/record/ins1507090: table DN/DETARAP
+dependent_variables:
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 0.0-5.0}
+  - {name: Centrality, units: PCT, value: 0.5}
+  - {name: EM contamination, units: PCT, value: 0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 3.0}
+    - {label: sys, symerror: 74.0}
+    value: 1643.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 75.0}
+    value: 1670.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 77.0}
+    value: 1718.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 81.0}
+    value: 1787.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 83.0}
+    value: 1835.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 86.0}
+    value: 1912.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 64.0}
+    value: 1968.0
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - {label: sys, symerror: 80.0}
+    value: 2001.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 71.0}
+    value: 2021.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 64.0}
+    value: 2017.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 56.0}
+    value: 1995.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 52.0}
+    value: 1970.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 47.0}
+    value: 1943.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 46.0}
+    value: 1929.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 46.0}
+    value: 1929.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 47.0}
+    value: 1943.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 52.0}
+    value: 1970.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 56.0}
+    value: 1995.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 64.0}
+    value: 2017.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 71.0}
+    value: 2021.0
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - {label: sys, symerror: 80.0}
+    value: 2001.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 64.0}
+    value: 1968.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 86.0}
+    value: 1912.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 83.0}
+    value: 1835.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 81.0}
+    value: 1787.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 77.0}
+    value: 1718.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 75.0}
+    value: 1670.0
+  - errors:
+    - {label: stat, symerror: 3.0}
+    - {label: sys, symerror: 74.0}
+    value: 1643.0
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - asymerror: {minus: -106.0, plus: 103.0}
+      label: sys
+    value: 1563.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -100.0, plus: 97.0}
+      label: sys
+    value: 1474.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -93.0, plus: 90.0}
+      label: sys
+    value: 1370.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -90.0, plus: 87.0}
+      label: sys
+    value: 1324.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -87.0, plus: 84.0}
+      label: sys
+    value: 1281.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -85.0, plus: 82.0}
+      label: sys
+    value: 1244.0
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 5.0-10.0}
+  - {name: Centrality, units: PCT, value: 1.0}
+  - {name: EM contamination, units: PCT, value: 0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - {label: sys, symerror: 62.0}
+    value: 1364.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 63.0}
+    value: 1391.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 64.0}
+    value: 1424.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 67.0}
+    value: 1474.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 68.0}
+    value: 1507.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 71.0}
+    value: 1569.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 53.0}
+    value: 1644.0
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - {label: sys, symerror: 67.0}
+    value: 1679.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 59.0}
+    value: 1682.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 52.0}
+    value: 1672.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 47.0}
+    value: 1646.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 42.0}
+    value: 1621.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 39.0}
+    value: 1597.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 37.0}
+    value: 1583.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 37.0}
+    value: 1583.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 39.0}
+    value: 1597.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 42.0}
+    value: 1621.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 47.0}
+    value: 1646.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 52.0}
+    value: 1672.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 59.0}
+    value: 1682.0
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - {label: sys, symerror: 67.0}
+    value: 1679.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 53.0}
+    value: 1644.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 71.0}
+    value: 1569.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 68.0}
+    value: 1507.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 67.0}
+    value: 1474.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 64.0}
+    value: 1424.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 63.0}
+    value: 1391.0
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - {label: sys, symerror: 62.0}
+    value: 1364.0
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - asymerror: {minus: -88.0, plus: 85.0}
+      label: sys
+    value: 1292.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -83.0, plus: 80.0}
+      label: sys
+    value: 1218.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -77.0, plus: 74.0}
+      label: sys
+    value: 1132.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -74.0, plus: 72.0}
+      label: sys
+    value: 1093.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -72.0, plus: 70.0}
+      label: sys
+    value: 1062.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -70.0, plus: 68.0}
+      label: sys
+    value: 1032.0
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 10.0-20.0}
+  - {name: Centrality, units: PCT, value: 1.0}
+  - {name: EM contamination, units: PCT, value: 0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - {label: sys, symerror: 47.0}
+    value: 1038.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 48.0}
+    value: 1061.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 49.0}
+    value: 1080.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 50.0}
+    value: 1114.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 51.0}
+    value: 1136.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 53.0}
+    value: 1178.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 39.0}
+    value: 1229.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 49.0}
+    value: 1253.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 43.0}
+    value: 1256.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 38.0}
+    value: 1247.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 34.0}
+    value: 1229.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 31.0}
+    value: 1210.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 28.0}
+    value: 1191.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 28.0}
+    value: 1181.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 28.0}
+    value: 1181.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 28.0}
+    value: 1191.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 31.0}
+    value: 1210.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 34.0}
+    value: 1229.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 38.0}
+    value: 1247.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 43.0}
+    value: 1256.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 49.0}
+    value: 1253.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 39.0}
+    value: 1229.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 53.0}
+    value: 1178.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 51.0}
+    value: 1136.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 50.0}
+    value: 1114.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 49.0}
+    value: 1080.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 48.0}
+    value: 1061.0
+  - errors:
+    - {label: stat, symerror: 2.0}
+    - {label: sys, symerror: 47.0}
+    value: 1038.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -66.0, plus: 64.0}
+      label: sys
+    value: 977.0
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - asymerror: {minus: -62.6, plus: 60.6}
+      label: sys
+    value: 921.3
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - asymerror: {minus: -58.3, plus: 56.4}
+      label: sys
+    value: 857.7
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - asymerror: {minus: -56.4, plus: 54.5}
+      label: sys
+    value: 829.6
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - asymerror: {minus: -54.9, plus: 53.1}
+      label: sys
+    value: 807.4
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -53.0, plus: 52.0}
+      label: sys
+    value: 787.0
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 20.0-30.0}
+  - {name: Centrality, units: PCT, value: 1.0}
+  - {name: EM contamination, units: PCT, value: 0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 32.0}
+    value: 714.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 33.0}
+    value: 726.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 33.0}
+    value: 738.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 34.0}
+    value: 759.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 35.0}
+    value: 772.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 36.0}
+    value: 797.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 26.0}
+    value: 827.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 31.0}
+    value: 842.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 28.0}
+    value: 844.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 25.0}
+    value: 838.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 22.0}
+    value: 826.0
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 20.1}
+    value: 811.9
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 18.7}
+    value: 799.2
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 17.9}
+    value: 792.4
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 17.9}
+    value: 792.4
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 18.7}
+    value: 799.2
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 20.1}
+    value: 811.9
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 22.0}
+    value: 826.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 25.0}
+    value: 838.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 28.0}
+    value: 844.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 31.0}
+    value: 842.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 26.0}
+    value: 827.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 36.0}
+    value: 797.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 35.0}
+    value: 772.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 34.0}
+    value: 759.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 33.0}
+    value: 738.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 33.0}
+    value: 726.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 32.0}
+    value: 714.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -45.0, plus: 44.0}
+      label: sys
+    value: 665.0
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - asymerror: {minus: -42.5, plus: 41.1}
+      label: sys
+    value: 625.4
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - asymerror: {minus: -39.6, plus: 38.3}
+      label: sys
+    value: 582.6
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - asymerror: {minus: -38.4, plus: 37.2}
+      label: sys
+    value: 565.5
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - asymerror: {minus: -37.5, plus: 36.2}
+      label: sys
+    value: 551.4
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -37.0, plus: 35.0}
+      label: sys
+    value: 538.0
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 30.0-40.0}
+  - {name: Centrality, units: PCT, value: 2.0}
+  - {name: EM contamination, units: PCT, value: 0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 21.0}
+    value: 475.0
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 21.8}
+    value: 482.7
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 22.1}
+    value: 489.7
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 22.7}
+    value: 502.6
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 23.0}
+    value: 510.6
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 23.5}
+    value: 522.0
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 15.9}
+    value: 539.9
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 19.0}
+    value: 549.0
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 16.7}
+    value: 549.3
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 15.1}
+    value: 545.5
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 13.6}
+    value: 537.5
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 12.6}
+    value: 527.6
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 11.7}
+    value: 519.3
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 11.4}
+    value: 514.7
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 11.4}
+    value: 514.7
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 11.7}
+    value: 519.3
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 12.6}
+    value: 527.6
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 13.6}
+    value: 537.5
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 15.1}
+    value: 545.5
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 16.7}
+    value: 549.3
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 19.0}
+    value: 549.0
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 15.9}
+    value: 539.9
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 23.5}
+    value: 522.0
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 23.0}
+    value: 510.6
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 22.7}
+    value: 502.6
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 22.1}
+    value: 489.7
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - {label: sys, symerror: 21.8}
+    value: 482.7
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 21.0}
+    value: 475.0
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - asymerror: {minus: -30.0, plus: 29.0}
+      label: sys
+    value: 440.0
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - asymerror: {minus: -28.1, plus: 27.2}
+      label: sys
+    value: 413.6
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - asymerror: {minus: -26.3, plus: 25.4}
+      label: sys
+    value: 386.7
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - asymerror: {minus: -25.5, plus: 24.7}
+      label: sys
+    value: 375.6
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - asymerror: {minus: -25.0, plus: 24.2}
+      label: sys
+    value: 368.0
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - asymerror: {minus: -24.5, plus: 23.7}
+      label: sys
+    value: 359.9
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 40.0-50.0}
+  - {name: Centrality, units: PCT, value: 3.0}
+  - {name: EM contamination, units: PCT, value: 0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 14.0}
+    value: 302.0
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 13.8}
+    value: 306.3
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 14.0}
+    value: 310.1
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 14.3}
+    value: 317.9
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 14.5}
+    value: 322.3
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 14.8}
+    value: 327.6
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 9.3}
+    value: 335.1
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 11.0}
+    value: 340.0
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 9.6}
+    value: 340.2
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 8.7}
+    value: 337.7
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 7.9}
+    value: 332.5
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 7.4}
+    value: 326.3
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 7.0}
+    value: 320.7
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 6.7}
+    value: 317.5
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 6.7}
+    value: 317.5
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 7.0}
+    value: 320.7
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 7.4}
+    value: 326.3
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 7.9}
+    value: 332.5
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 8.7}
+    value: 337.7
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 9.6}
+    value: 340.2
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 11.0}
+    value: 340.0
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 9.3}
+    value: 335.1
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 14.8}
+    value: 327.6
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 14.5}
+    value: 322.3
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 14.3}
+    value: 317.9
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 14.0}
+    value: 310.1
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 13.8}
+    value: 306.3
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 14.0}
+    value: 302.0
+  - errors:
+    - {label: stat, symerror: 0.5}
+    - asymerror: {minus: -18.9, plus: 18.2}
+      label: sys
+    value: 277.5
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -17.8, plus: 17.2}
+      label: sys
+    value: 261.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -16.6, plus: 16.1}
+      label: sys
+    value: 244.7
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -16.2, plus: 15.7}
+      label: sys
+    value: 238.4
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -15.9, plus: 15.4}
+      label: sys
+    value: 233.8
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - asymerror: {minus: -15.6, plus: 15.1}
+      label: sys
+    value: 229.4
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 50.0-60.0}
+  - {name: Centrality, units: PCT, value: 4.0}
+  - {name: EM contamination, units: PCT, value: 0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 8.0}
+    value: 178.0
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 8.1}
+    value: 179.9
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 8.2}
+    value: 181.7
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 8.4}
+    value: 186.0
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 8.5}
+    value: 188.2
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 8.6}
+    value: 189.8
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.9}
+    value: 193.5
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 5.5}
+    value: 196.4
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 5.0}
+    value: 196.5
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.6}
+    value: 194.8
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.3}
+    value: 191.4
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.0}
+    value: 187.5
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 3.8}
+    value: 184.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 3.7}
+    value: 182.5
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 3.7}
+    value: 182.5
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 3.8}
+    value: 184.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.0}
+    value: 187.5
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.3}
+    value: 191.4
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.6}
+    value: 194.8
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 5.0}
+    value: 196.5
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 5.5}
+    value: 196.4
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.9}
+    value: 193.5
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 8.6}
+    value: 189.8
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 8.5}
+    value: 188.2
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 8.4}
+    value: 186.0
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 8.2}
+    value: 181.7
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 8.1}
+    value: 179.9
+  - errors:
+    - {label: stat, symerror: 1.0}
+    - {label: sys, symerror: 8.0}
+    value: 178.0
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - asymerror: {minus: -11.1, plus: 10.7}
+      label: sys
+    value: 163.2
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -10.4, plus: 10.1}
+      label: sys
+    value: 153.4
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -9.8, plus: 9.5}
+      label: sys
+    value: 143.8
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -9.5, plus: 9.2}
+      label: sys
+    value: 140.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -9.4, plus: 9.1}
+      label: sys
+    value: 138.7
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -9.2, plus: 8.9}
+      label: sys
+    value: 136.0
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 60.0-70.0}
+  - {name: Centrality, units: PCT, value: 6.0}
+  - {name: EM contamination, units: PCT, value: 0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 4.3}
+    value: 94.9
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.3}
+    value: 96.1
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.4}
+    value: 96.8
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.4}
+    value: 98.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.5}
+    value: 98.8
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.5}
+    value: 99.1
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.3}
+    value: 101.2
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 2.5}
+    value: 102.7
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.3}
+    value: 103.1
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.2}
+    value: 102.0
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.1}
+    value: 100.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.0}
+    value: 98.0
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 1.9}
+    value: 96.1
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 1.9}
+    value: 95.2
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 1.9}
+    value: 95.2
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 1.9}
+    value: 96.1
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.0}
+    value: 98.0
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.1}
+    value: 100.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.2}
+    value: 102.0
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.3}
+    value: 103.1
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 2.5}
+    value: 102.7
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.3}
+    value: 101.2
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.5}
+    value: 99.1
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.5}
+    value: 98.8
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.4}
+    value: 98.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.4}
+    value: 96.8
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 4.3}
+    value: 96.1
+  - errors:
+    - {label: stat, symerror: 0.4}
+    - {label: sys, symerror: 4.3}
+    value: 94.9
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -5.9, plus: 5.7}
+      label: sys
+    value: 86.8
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -5.6, plus: 5.4}
+      label: sys
+    value: 81.9
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -5.3, plus: 5.1}
+      label: sys
+    value: 77.3
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -5.2, plus: 5.0}
+      label: sys
+    value: 75.8
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -5.1, plus: 4.9}
+      label: sys
+    value: 75.1
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -5.0, plus: 4.8}
+      label: sys
+    value: 73.8
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 70.0-80.0}
+  - {name: Centrality, units: PCT, value: 7.0}
+  - {name: EM contamination, units: PCT, value: 4.0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.0}
+    value: 45.4
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.0
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.0
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.5
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.8
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.9}
+    value: 47.3
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 1.0}
+    value: 47.9
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 1.0}
+    value: 48.2
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.9}
+    value: 47.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.9}
+    value: 46.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.9}
+    value: 45.5
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 44.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 44.1
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 44.1
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 44.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.9}
+    value: 45.5
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.9}
+    value: 46.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.9}
+    value: 47.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 1.0}
+    value: 48.2
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 1.0}
+    value: 47.9
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.9}
+    value: 47.3
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.8
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.5
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.0
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.1}
+    value: 46.0
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 2.0}
+    value: 45.4
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - asymerror: {minus: -2.8, plus: 2.7}
+      label: sys
+    value: 41.4
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -2.7, plus: 2.6}
+      label: sys
+    value: 39.3
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 2.5}
+    value: 37.4
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -2.5, plus: 2.4}
+      label: sys
+    value: 36.8
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -2.5, plus: 2.4}
+      label: sys
+    value: 36.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -2.4, plus: 2.3}
+      label: sys
+    value: 35.7
+- header: {name: '$\mathrm{d}N_{\mathrm{ch}}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: CENTRALITY, units: PCT, value: 80.0-90.0}
+  - {name: Centrality, units: PCT, value: 9.0}
+  - {name: EM contamination, units: PCT, value: 4.0}
+  - {name: SYS, value: Centrality}
+  - {name: SYS, value: EM contamination}
+  values:
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 0.8}
+    value: 18.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.3}
+    value: 19.2
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 0.4}
+    value: 19.1
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 0.4}
+    value: 19.2
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 0.4}
+    value: 18.9
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 0.4}
+    value: 18.5
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.3}
+    value: 18.0
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.3}
+    value: 17.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.3}
+    value: 17.4
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.3}
+    value: 17.4
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.3}
+    value: 17.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.3}
+    value: 18.0
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 0.4}
+    value: 18.5
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 0.4}
+    value: 18.9
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 0.4}
+    value: 19.2
+  - errors:
+    - {label: stat, symerror: 0.3}
+    - {label: sys, symerror: 0.4}
+    value: 19.1
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.3}
+    value: 19.2
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 0.8}
+    value: 18.7
+  - errors:
+    - {label: stat, symerror: 0.2}
+    - {label: sys, symerror: 0.8}
+    value: 18.7
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -1.2, plus: 1.1}
+      label: sys
+    value: 17.1
+  - errors:
+    - {label: stat, symerror: 0.05}
+    - asymerror: {minus: -1.11, plus: 1.07}
+      label: sys
+    value: 16.27
+  - errors:
+    - {label: stat, symerror: 0.05}
+    - asymerror: {minus: -1.05, plus: 1.02}
+      label: sys
+    value: 15.46
+  - errors:
+    - {label: stat, symerror: 0.05}
+    - asymerror: {minus: -1.05, plus: 1.02}
+      label: sys
+    value: 15.47
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - asymerror: {minus: -1.1, plus: 1.0}
+      label: sys
+    value: 15.6
+  - errors:
+    - {label: stat, symerror: 0.1}
+    - {label: sys, symerror: 1.0}
+    value: 15.4
+independent_variables:
+- header: {name: '$\eta$'}
+  values:
+  - {high: -3.25, low: -3.5}
+  - {high: -3.0, low: -3.25}
+  - {high: -2.75, low: -3.0}
+  - {high: -2.5, low: -2.75}
+  - {high: -2.25, low: -2.5}
+  - {high: -2.0, low: -2.25}
+  - {high: -1.75, low: -2.0}
+  - {high: -1.5, low: -1.75}
+  - {high: -1.25, low: -1.5}
+  - {high: -1.0, low: -1.25}
+  - {high: -0.75, low: -1.0}
+  - {high: -0.5, low: -0.75}
+  - {high: -0.25, low: -0.5}
+  - {high: 0.0, low: -0.25}
+  - {high: 0.25, low: 0.0}
+  - {high: 0.5, low: 0.25}
+  - {high: 0.75, low: 0.5}
+  - {high: 1.0, low: 0.75}
+  - {high: 1.25, low: 1.0}
+  - {high: 1.5, low: 1.25}
+  - {high: 1.75, low: 1.5}
+  - {high: 2.0, low: 1.75}
+  - {high: 2.25, low: 2.0}
+  - {high: 2.5, low: 2.25}
+  - {high: 2.75, low: 2.5}
+  - {high: 3.0, low: 2.75}
+  - {high: 3.25, low: 3.0}
+  - {high: 3.5, low: 3.25}
+  - {high: 3.75, low: 3.5}
+  - {high: 4.0, low: 3.75}
+  - {high: 4.25, low: 4.0}
+  - {high: 4.5, low: 4.25}
+  - {high: 4.75, low: 4.5}
+  - {high: 5.0, low: 4.75}

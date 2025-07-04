@@ -1,15 +1,15 @@
 use crate::{
-    boxarray,
     hydro::{utils::eigenvaluesk, C_IDEAL_1D, F_IDEAL_1D},
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
         run,
-        space::{kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Eigenvalues, FluxInfo, InDir::*},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint,
     },
 };
+use boxarray::boxarray;
 
 use crate::hydro::{solve_v, Eos, Init1D, VOID};
 
@@ -44,13 +44,14 @@ fn f1(_t: f64, [e, pe, _, ut, ux]: [f64; C_IDEAL_1D]) -> [f64; F_IDEAL_1D] {
 }
 
 fn flux<const V: usize>(
+    _k: &Arr<F_IDEAL_1D, V, 1, 1>,
     [_ov, vs]: [&Arr<F_IDEAL_1D, V, 1, 1>; 2],
     [_otrs, trs]: [&Arr<C_IDEAL_1D, V, 1, 1>; 2],
     constraints: Constraint<F_IDEAL_1D, C_IDEAL_1D>,
     bound: Boundary<F_IDEAL_1D, V, 1, 1>,
     pos: [i32; DIM],
-    dx: f64,
-    [_ot, _t]: [f64; 2],
+    dxs: [f64; DIM],
+    [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     _opt: &(),
 ) -> [f64; 2] {
@@ -73,27 +74,29 @@ fn flux<const V: usize>(
 
     let diff = kt;
 
-    let (divf0, _) = diff(
+    let flux_infos = [X(FluxInfo {
+        flux: &f1,
+        secondary: &|_, _| [],
+        eigenvalues: Eigenvalues::Analytical(&eigenvalues),
+    })];
+    let [(dxf, _)] = diff(
         (vs, trs),
         bound,
         pos,
-        Dir::X,
-        1.0,
-        &f1,
-        &|_, _| [],
+        t,
+        flux_infos,
         constraints,
-        Eigenvalues::Analytical(&eigenvalues),
         pre,
         post,
-        dx,
+        dxs,
         theta,
     );
 
-    [-divf0[0], -divf0[1]]
+    [-dxf[0], -dxf[1]]
 }
 
 pub fn ideal1d<const V: usize, const S: usize>(
-    name: &str,
+    name: &(&str, usize),
     maxdt: f64,
     t: f64,
     tend: f64,
@@ -102,6 +105,7 @@ pub fn ideal1d<const V: usize, const S: usize>(
     p: Eos,
     dpde: Eos,
     init: Init1D<2>,
+    save_raw: Option<f64>,
 ) -> Option<(
     (BArr<F_IDEAL_1D, V, 1, 1>, BArr<C_IDEAL_1D, V, 1, 1>),
     f64,
@@ -109,10 +113,10 @@ pub fn ideal1d<const V: usize, const S: usize>(
     usize,
 )> {
     let constraints = gen_constraints(p, dpde);
-    let mut vs: Box<[[[[f64; F_IDEAL_1D]; V]; 1]; 1]> = boxarray(0.0f64);
-    let mut trs: Box<[[[[f64; C_IDEAL_1D]; V]; 1]; 1]> = boxarray(0.0f64);
+    let mut vs: Box<[[[[f64; F_IDEAL_1D]; V]; 1]; 1]> = boxarray(0.0);
+    let mut trs: Box<[[[[f64; C_IDEAL_1D]; V]; 1]; 1]> = boxarray(0.0);
     let names = (["t00", "t01"], ["e", "pe", "dpde", "ut", "ux"]);
-    let k: Box<[[[[[f64; 2]; V]; 1]; 1]; S]> = boxarray(0.0f64);
+    let k: Box<[[[[[f64; 2]; V]; 1]; 1]; S]> = boxarray(0.0);
     let v2 = ((V - 1) as f64) / 2.0;
     for i in 0..V {
         let x = (i as f64 - v2) * dx;
@@ -131,7 +135,7 @@ pub fn ideal1d<const V: usize, const S: usize>(
         k,
         r,
         dt: 1e10,
-        dx,
+        dxs: [dx, 0.0, 0.0],
         maxdt,
         t,
         ot: t - 1.0,
@@ -159,5 +163,6 @@ pub fn ideal1d<const V: usize, const S: usize>(
         &names,
         &[],
         &err_thr,
+        save_raw,
     )
 }

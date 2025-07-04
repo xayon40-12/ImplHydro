@@ -1,11 +1,13 @@
 use std::{
-    fs::File,
+    collections::HashMap,
+    fs::{DirEntry, File},
     io::{BufReader, Read},
+    path::PathBuf,
 };
 
+use crate::solver::context::{Arr, BArr, DIM};
+use boxarray::boxarray;
 use byteorder::{ByteOrder, LittleEndian};
-
-use crate::{boxarray, solver::context::Arr};
 
 use super::{HydroOutput, FREESTREAM_2D};
 
@@ -20,9 +22,9 @@ pub fn eigenvaluesk(dpde: f64, ut: f64, uk: f64) -> f64 {
     let a = ut * uk * (1.0 - vs2);
     let b = (ut * ut - uk * uk - (ut * ut - uk * uk - 1.0) * vs2) * vs2;
     let d = ut * ut - (ut * ut - 1.0) * vs2;
-    if b < 0.0 || d == 0.0 {
-        panic!("\nvs2:\na: {a}, b:{b}, d:{d}\n");
-    }
+    // if b < 0.0 || d == 0.0 {
+    //     panic!("\nvs2:\na: {a}, b:{b}, d:{d}\n");
+    // }
     (a.abs() + b.sqrt()) / d
 }
 
@@ -61,19 +63,24 @@ pub fn converge<
     fun: impl Fn(f64) -> HydroOutput<VX, VY, VZ, F, C>,
 ) -> Option<()> {
     let dtmul = 0.5;
-    let mut f = fun(dt)?.0;
-    println!("error convergence:");
     let update = |dt: f64| {
         let dt = dt * dtmul;
         dt
     };
-    dt = update(dt);
+    let mut f: Option<(BArr<F, VX, VY, VZ>, BArr<C, VX, VY, VZ>)> = None;
+    // let mut f = fun(dt)?.0;
+    // println!("error convergence:");
+    // dt = update(dt);
 
     while dt > dtmin {
-        let f2 = fun(dt)?.0;
-        let (ma, av) = compare(0, &f.0, &f2.0);
-        println!("dt: {:.3e}, max: {:.3e}, average: {:.3e}", dt, ma, av);
-        f = f2;
+        if let Some(f2) = fun(dt) {
+            let f2 = f2.0;
+            if let Some(f) = f {
+                let (ma, av) = compare(0, &f.0, &f2.0);
+                println!("dt: {:.3e}, max: {:.3e}, average: {:.3e}", dt, ma, av);
+            }
+            f = Some(f2);
+        }
         dt = update(dt);
     }
     println!("");
@@ -110,7 +117,7 @@ pub fn load_matrix_2d<const VX: usize, const VY: usize>(
             VX, VY, vx, vy
         );
     }
-    let mut mat: Box<[[f64; VX]; VY]> = boxarray(0.0f64);
+    let mut mat: Box<[[f64; VX]; VY]> = boxarray(0.0);
     for j in 0..VY {
         for i in 0..VX {
             mat[j][i] = arr[j][i];
@@ -142,22 +149,26 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
         })
         .collect::<Vec<Vec<_>>>();
 
-    let vxy = arr.len();
-    let vx = vxy / VY;
+    let vyz = arr.len();
+    let vz = vyz / VY;
     let vy = VY;
-    let vz = arr[0].len();
+    let vx = arr[0].len();
 
-    if vz != VZ || vxy != VX * VY {
+    if vz % 2 != VZ % 2 || VZ > vz {
+        panic!("Wrong matrix size in load_matrix_3d: the number of cells in z/eta direction must be smaller or equal to the loaded data and they should both be the same even or odd, expected {} found {}.", vz, VZ);
+    }
+    if vx != VX || vy != VY {
         panic!(
-            "Wrong matrix size in load_matrix_3d: expected {}x{}x{}, found {}x{}x{}",
+            "Wrong matrix size in load_matrix_3d: expected {}x{}x{}, found {}x{}x{} (the third component is allowed to be smaller)",
             VX, VY, VZ, vx, vy, vz
         );
     }
-    let mut mat: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0f64);
+    let mut mat: Box<[[[f64; VX]; VY]; VZ]> = boxarray(0.0);
+    let sk = (vz - VZ) / 2;
     for k in 0..VZ {
         for j in 0..VY {
             for i in 0..VX {
-                mat[k][j][i] = arr[i + VX * j][k];
+                mat[k][j][i] = arr[j + VY * (sk + k)][i];
             }
         }
     }
@@ -165,12 +176,16 @@ pub fn load_matrix_3d<const VX: usize, const VY: usize, const VZ: usize>(
     Ok(mat)
 }
 
-pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V]; V]>> {
-    let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0f64); nb_trento];
+pub fn prepare_trento_2d<const V: usize>(
+    nb_trento: usize,
+    first_trento: usize,
+) -> Vec<Box<[[f64; V]; V]>> {
+    let mut trentos: Vec<Box<[[f64; V]; V]>> = vec![boxarray(0.0); nb_trento];
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
-    for i in 0..nb_trento {
-        trentos[i] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
-            "Could not load trento initial condition file \"e{V}/{i:0>width$}.dat\"."
+    for ix in 0..nb_trento {
+        let i = ix + first_trento;
+        trentos[ix] = load_matrix_2d(&format!("s{}/{:0>width$}.dat", V, i)).expect(&format!(
+            "Could not load trento initial condition file \"s{V}/{i:0>width$}.dat\"."
         ));
     }
     trentos
@@ -178,15 +193,51 @@ pub fn prepare_trento_2d<const V: usize>(nb_trento: usize) -> Vec<Box<[[f64; V];
 
 pub fn prepare_trento_3d<const XY: usize, const Z: usize>(
     nb_trento: usize,
-) -> Vec<Box<[[[f64; XY]; XY]; Z]>> {
-    let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0f64); nb_trento];
-    let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
-    for i in 0..nb_trento {
-        trentos[i] = load_matrix_3d(&format!("s{}/{:0>width$}.dat", XY, i)).expect(&format!(
-            "Could not load trento initial condition file \"e{XY}/{i:0>width$}.dat\"."
+    first_trento: usize,
+) -> (Vec<Box<[[[f64; XY]; XY]; Z]>>, Option<[f64; DIM]>) {
+    let mut trentos: Vec<Box<[[[f64; XY]; XY]; Z]>> = vec![boxarray(0.0); nb_trento];
+    let mut dxs = None;
+    let path = format!("s{XY}");
+    let ls: Vec<String> = std::fs::read_dir(&path)
+        .expect(&format!("Could not open directory \"{path}\""))
+        .into_iter()
+        .filter_map(|f| f.ok())
+        .map(|f| f.path())
+        .filter_map(|f| {
+            f.file_name()
+                .and_then(|f| f.to_str())
+                .map(|f| f.to_string())
+        })
+        .collect();
+    for ix in 0..nb_trento {
+        let i = ix + first_trento;
+        let ending = format!("{i}.dat");
+        let el = ending.len();
+        let name = ls
+            .iter()
+            .filter(|p| p.ends_with(&ending) && p[..p.len() - el].chars().all(|c| c == '0'))
+            .next()
+            .expect(&format!("Could not find file \"{path}/{i}.dat\"."));
+        trentos[ix] = load_matrix_3d(&format!("{path}/{name}")).expect(&format!(
+            "Could not load trento initial condition file \"{path}/{name}\"."
         ));
+        if let Ok(str) = std::fs::read_to_string(&format!("{path}/info.txt")) {
+            let m: HashMap<String, f64> = str
+                .trim()
+                .split("\n")
+                .map(|s| {
+                    let v = s.split(": ").collect::<Vec<_>>();
+                    (
+                        v[0].to_string(),
+                        v[1].parse()
+                            .expect("Could not parse lattice spacing for trento info.txt."),
+                    )
+                })
+                .collect();
+            dxs = Some([m["dx"], m["dy"], m["detas"]]);
+        }
     }
-    trentos
+    (trentos, dxs)
 }
 
 pub fn prepare_trento_2d_freestream<const V: usize>(
@@ -196,7 +247,7 @@ pub fn prepare_trento_2d_freestream<const V: usize>(
     let width = 1 + (nb_trento - 1).max(1).ilog10() as usize;
     for tr in 0..nb_trento {
         let err = format!(
-            "Could not load freestream trento initial condition file \"e{V}/{tr:0>width$}.dat\"."
+            "Could not load freestream trento initial condition file \"s{V}/{tr:0>width$}.dat\"."
         );
         let size = FREESTREAM_2D * std::mem::size_of::<f64>();
         let mut bytes = vec![0; size * V * V];

@@ -1,0 +1,68 @@
+# Centrality dependence of the charged-particle multiplicity density at mid-rapidity in Pb-Pb collisions at sqrt(s_NN) = 5.02 TeV
+# Phys.Rev.Lett. 116 (2016) 222302, 2016.
+# https://www.hepdata.net/record/ins1410589: Table 2
+dependent_variables:
+- header: {name: '$\mathrm{d}N_\mathrm{ch}/\mathrm{d}\eta$'}
+  qualifiers:
+  - {name: $|\eta|$, value: < 0.5}
+  - {name: RE, value: PB PB --> CHARGED X}
+  - {name: SQRT(S), units: GeV, value: '5020.0'}
+  values:
+  - errors:
+    - {label: stat, symerror: 1.08}
+    - {label: sys, symerror: 52.43}
+    value: 2035.43
+  - errors:
+    - {label: stat, symerror: 1.19}
+    - {label: sys, symerror: 55.23}
+    value: 1850.15
+  - errors:
+    - {label: stat, symerror: 1.12}
+    - {label: sys, symerror: 47.89}
+    value: 1666.32
+  - errors:
+    - {label: stat, symerror: 1.07}
+    - {label: sys, symerror: 43.71}
+    value: 1505.11
+  - errors:
+    - {label: stat, symerror: 0.46}
+    - {label: sys, symerror: 31.18}
+    value: 1180.48
+  - errors:
+    - {label: stat, symerror: 0.36}
+    - {label: sys, symerror: 20.44}
+    value: 786.45
+  - errors:
+    - {label: stat, symerror: 0.28}
+    - {label: sys, symerror: 15.2}
+    value: 511.66
+  - errors:
+    - {label: stat, symerror: 0.22}
+    - {label: sys, symerror: 12.27}
+    value: 318.15
+  - errors:
+    - {label: stat, symerror: 0.16}
+    - {label: sys, symerror: 8.07}
+    value: 183.33
+  - errors:
+    - {label: stat, symerror: 0.12}
+    - {label: sys, symerror: 5.81}
+    value: 96.27
+  - errors:
+    - {label: stat, symerror: 0.08}
+    - {label: sys, symerror: 3.44}
+    value: 44.89
+independent_variables:
+- header: {name: Centrality, units: PCT}
+  values:
+  - {high: 2.5, low: 0.0}
+  - {high: 5.0, low: 2.5}
+  - {high: 7.5, low: 5.0}
+  - {high: 10.0, low: 7.5}
+  - {high: 20.0, low: 10.0}
+  - {high: 30.0, low: 20.0}
+  - {high: 40.0, low: 30.0}
+  - {high: 50.0, low: 40.0}
+  - {high: 60.0, low: 50.0}
+  - {high: 70.0, low: 60.0}
+  - {high: 80.0, low: 70.0}

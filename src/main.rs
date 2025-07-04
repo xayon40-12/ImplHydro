@@ -1,5 +1,5 @@
 use clap::{command, Parser, Subcommand};
-use implhydro::{
+use impl_hydro::{
     run::{ideal1d, ideal2d, ideal3d, viscous2d, viscous3d},
     solver::Solver,
 };
@@ -13,8 +13,14 @@ struct Cli {
     #[arg(short, long, default_value_t = 40.0)]
     physical_length: f64,
 
+    #[arg(short, long, default_value_t = 5020.0)] // GeV
+    energy: f64,
+
     #[arg(short, long, default_value_t = Solver::Both)]
     solver_type: Solver,
+
+    #[arg(short, long)]
+    raw_data_every: Option<f64>,
 
     #[command(subcommand)]
     command: Dim,
@@ -31,17 +37,17 @@ enum Dim {
         command: Hydro,
     },
     Dim2 {
-        #[arg(long, default_value_t = 0.48)]
+        #[arg(long, default_value_t = 1.0)]
         t0: f64,
-        #[arg(long, default_value_t = 10.0)]
+        #[arg(long, default_value_t = 0.0)]
         tend: f64,
         #[command(subcommand)]
         command: Hydro,
     },
     Dim3 {
-        #[arg(long, default_value_t = 0.48)]
+        #[arg(long, default_value_t = 1.0)]
         t0: f64,
-        #[arg(long, default_value_t = 3.0)]
+        #[arg(long, default_value_t = 0.0)]
         tend: f64,
         #[command(subcommand)]
         command: Hydro,
@@ -57,21 +63,21 @@ enum Hydro {
         command: ToSimulate,
     },
     Viscous {
-        #[arg(long, default_value_t = 0.08)]
+        #[arg(long, default_value_t = 0.11)]
         etaovers_min: f64,
-        #[arg(long, default_value_t = 1.23)] // GeV^-1
+        #[arg(long, default_value_t = 1.6)] // GeV^-1
         etaovers_slope: f64,
-        #[arg(long, default_value_t = -0.09)]
+        #[arg(long, default_value_t = -0.29)]
         etaovers_crv: f64,
-        #[arg(long, default_value_t = 0.026)]
+        #[arg(long, default_value_t = 0.032)]
         zetaovers_max: f64,
-        #[arg(long, default_value_t = 0.035)] // GeV
+        #[arg(long, default_value_t = 0.024)] // GeV
         zetaovers_width: f64,
-        #[arg(long, default_value_t = 0.174)] // GeV
+        #[arg(long, default_value_t = 0.175)] // GeV
         zetaovers_peak: f64,
-        #[arg(long, default_value_t = 0.050)] // GeV
+        #[arg(long, default_value_t = 0.020)] // GeV
         tempcut: f64,
-        #[arg(long, default_value_t = 0.148)] // GeV
+        #[arg(long, default_value_t = 0.151)] // GeV
         freezeout: f64,
         #[command(subcommand)]
         command: ToSimulate,
@@ -85,14 +91,22 @@ enum ToSimulate {
         dtmin: f64,
         #[arg(long)]
         dtmax: Option<f64>,
-        #[arg(short, long, default_value_t = 10)]
+        #[arg(short, long, default_value_t = 0.1)]
+        dt_over_dx_max: f64,
+        #[arg(short, long, default_value_t = 1)]
         nb_trento: usize,
+        #[arg(short, long, default_value_t = 0)]
+        first_trento: usize,
     },
     Trento {
         #[arg(long)]
         dt: Option<f64>,
-        #[arg(short, long, default_value_t = 100)]
+        #[arg(short, long, default_value_t = 0.1)]
+        dt_over_dx: f64,
+        #[arg(short, long, default_value_t = 1)]
         nb_trento: usize,
+        #[arg(short, long, default_value_t = 0)]
+        first_trento: usize,
     },
 }
 
@@ -100,25 +114,28 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.cells {
-        100 => run::<100, 51>(cli),
-        200 => run::<200, 101>(cli),
+        100 => run::<100, 25>(cli),
+        200 => run::<200, 51>(cli),
         _ => panic!("The number of cells must be a value from the list {{100,200}}."),
     };
 }
 fn run<const XY: usize, const Z: usize>(args: Cli) {
-    let l = args.physical_length;
+    let xy_len = args.physical_length;
+    // let sqrts = args.collision_energy;
+    let etas_len = xy_len / 2.0; //2.0 * (0.5 * sqrts / 0.2).acosh();
     let checkdt = |dtmin: f64, dtmax: f64| {
         if dtmin >= dtmax {
             panic!("The smallest time interval 'dtmin={}' must be smaller than the largest 'dtmax={}'.", dtmin, dtmax);
         }
     };
-    let checkt = |t0: f64, tend: f64| {
-        if t0 >= tend {
-            panic!("The initial time 't0' must be smaller than the end time 'tend'.");
-        }
+    let checkt = |_t0: f64, _tend: f64| {
+        // if t0 > tend {
+        //     panic!("The initial time 't0' must be smaller than the end time 'tend'.");
+        // }
     };
-    let dx = l / XY as f64;
+    let dx = xy_len / XY as f64;
     let solver = args.solver_type;
+    let save_raw = args.raw_data_every;
     match args.command {
         Dim::Dim1 { t0, tend, command } => {
             checkt(t0, tend);
@@ -130,11 +147,13 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                     ToSimulate::Benchmark {
                         dtmin,
                         dtmax,
+                        dt_over_dx_max,
                         nb_trento: _,
+                        first_trento: _,
                     } => {
-                        let dtmax = dtmax.unwrap_or(dx * 0.1);
+                        let dtmax = dtmax.unwrap_or(dx * dt_over_dx_max);
                         checkdt(dtmin, dtmax);
-                        ideal1d::run_1d::<XY>(solver, t0, tend, l, dtmin, dtmax);
+                        ideal1d::run_1d::<XY>(solver, t0, tend, xy_len, dtmin, dtmax, save_raw);
                     }
                     ToSimulate::Trento { .. } => panic!("No 1D Trento case available."),
                 },
@@ -153,24 +172,36 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                     ToSimulate::Benchmark {
                         dtmin,
                         dtmax,
+                        dt_over_dx_max,
                         nb_trento,
+                        first_trento,
                     } => {
-                        let dtmax = dtmax.unwrap_or(dx * 0.1);
+                        let dtmax = dtmax.unwrap_or(dx * dt_over_dx_max);
                         checkdt(dtmin, dtmax);
+                        let nf_trento = (nb_trento, first_trento);
                         ideal2d::run_2d::<XY>(
                             solver,
                             t0,
                             tend,
-                            l,
+                            xy_len,
                             dtmin,
                             dtmax,
                             enable_gubser,
-                            nb_trento,
+                            nf_trento,
+                            save_raw,
                         );
                     }
-                    ToSimulate::Trento { dt, nb_trento } => {
-                        let dt = dt.unwrap_or(dx * 0.1);
-                        ideal2d::run_trento_2d::<XY>(solver, t0, tend, l, dt, nb_trento);
+                    ToSimulate::Trento {
+                        dt,
+                        dt_over_dx,
+                        nb_trento,
+                        first_trento,
+                    } => {
+                        let dt = dt.unwrap_or(dx * dt_over_dx);
+                        let nf_trento = (nb_trento, first_trento);
+                        ideal2d::run_trento_2d::<XY>(
+                            solver, t0, tend, xy_len, dt, nf_trento, save_raw,
+                        );
                     }
                 },
                 Hydro::Viscous {
@@ -190,20 +221,29 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                         ToSimulate::Benchmark {
                             dtmin,
                             dtmax,
+                            dt_over_dx_max,
                             nb_trento,
+                            first_trento,
                         } => {
-                            let dtmax = dtmax.unwrap_or(dx * 0.1);
+                            let dtmax = dtmax.unwrap_or(dx * dt_over_dx_max);
                             checkdt(dtmin, dtmax);
+                            let nf_trento = (nb_trento, first_trento);
                             viscous2d::run_2d::<XY>(
-                                solver, t0, tend, l, dtmin, dtmax, etaovers, zetaovers, tempcut,
-                                freezeout, nb_trento,
+                                solver, t0, tend, xy_len, dtmin, dtmax, etaovers, zetaovers,
+                                tempcut, freezeout, nf_trento, save_raw,
                             );
                         }
-                        ToSimulate::Trento { dt, nb_trento } => {
-                            let dt = dt.unwrap_or(dx * 0.1);
+                        ToSimulate::Trento {
+                            dt,
+                            dt_over_dx,
+                            nb_trento,
+                            first_trento,
+                        } => {
+                            let dt = dt.unwrap_or(dx * dt_over_dx);
+                            let nf_trento = (nb_trento, first_trento);
                             viscous2d::run_trento_2d::<XY>(
-                                solver, t0, tend, l, dt, etaovers, zetaovers, tempcut, freezeout,
-                                nb_trento,
+                                solver, t0, tend, xy_len, dt, etaovers, zetaovers, tempcut,
+                                freezeout, nf_trento, save_raw,
                             );
                         }
                     }
@@ -220,15 +260,28 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                     ToSimulate::Benchmark {
                         dtmin,
                         dtmax,
+                        dt_over_dx_max,
                         nb_trento,
+                        first_trento,
                     } => {
-                        let dtmax = dtmax.unwrap_or(dx * 0.1);
+                        let dtmax = dtmax.unwrap_or(dx * dt_over_dx_max);
                         checkdt(dtmin, dtmax);
-                        ideal3d::run_3d::<XY, Z>(solver, t0, tend, l, dtmin, dtmax, nb_trento);
+                        let nf_trento = (nb_trento, first_trento);
+                        ideal3d::run_3d::<XY, Z>(
+                            solver, t0, tend, xy_len, etas_len, dtmin, dtmax, nf_trento, save_raw,
+                        );
                     }
-                    ToSimulate::Trento { dt, nb_trento } => {
-                        let dt = dt.unwrap_or(dx * 0.1);
-                        ideal3d::run_trento_3d::<XY, Z>(solver, t0, tend, l, dt, nb_trento);
+                    ToSimulate::Trento {
+                        dt,
+                        dt_over_dx,
+                        nb_trento,
+                        first_trento,
+                    } => {
+                        let dt = dt.unwrap_or(dx * dt_over_dx);
+                        let nf_trento = (nb_trento, first_trento);
+                        ideal3d::run_trento_3d::<XY, Z>(
+                            solver, t0, tend, xy_len, etas_len, dt, nf_trento, save_raw,
+                        );
                     }
                 },
                 Hydro::Viscous {
@@ -248,20 +301,29 @@ fn run<const XY: usize, const Z: usize>(args: Cli) {
                         ToSimulate::Benchmark {
                             dtmin,
                             dtmax,
+                            dt_over_dx_max,
                             nb_trento,
+                            first_trento,
                         } => {
-                            let dtmax = dtmax.unwrap_or(dx * 0.1);
+                            let dtmax = dtmax.unwrap_or(dx * dt_over_dx_max);
                             checkdt(dtmin, dtmax);
+                            let nf_trento = (nb_trento, first_trento);
                             viscous3d::run_3d::<XY, Z>(
-                                solver, t0, tend, l, dtmin, dtmax, etaovers, zetaovers, tempcut,
-                                freezeout, nb_trento,
+                                solver, t0, tend, xy_len, etas_len, dtmin, dtmax, etaovers,
+                                zetaovers, tempcut, freezeout, nf_trento, save_raw,
                             );
                         }
-                        ToSimulate::Trento { dt, nb_trento } => {
-                            let dt = dt.unwrap_or(dx * 0.1);
+                        ToSimulate::Trento {
+                            dt,
+                            dt_over_dx,
+                            nb_trento,
+                            first_trento,
+                        } => {
+                            let dt = dt.unwrap_or(dx * dt_over_dx);
+                            let nf_trento = (nb_trento, first_trento);
                             viscous3d::run_trento_3d::<XY, Z>(
-                                solver, t0, tend, l, dt, etaovers, zetaovers, tempcut, freezeout,
-                                nb_trento,
+                                solver, t0, tend, xy_len, etas_len, dt, etaovers, zetaovers,
+                                tempcut, freezeout, nf_trento, save_raw,
                             );
                         }
                     }

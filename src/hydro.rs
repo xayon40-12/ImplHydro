@@ -93,9 +93,9 @@ pub const F_BOTH_2D: usize =
     Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D2.value());
 pub const F_IDEAL_3D: usize = Viscosity::Ideal.nb_fields(Dim::D3.value());
 pub const F_BULK_3D: usize = Viscosity::Bulk(0.0, 0.0).nb_fields(Dim::D3.value());
-pub const F_SHEAR_3D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value());
+pub const F_SHEAR_3D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value()) - 1;
 pub const F_BOTH_3D: usize =
-    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value());
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_fields(Dim::D3.value()) - 1;
 
 pub const C_IDEAL_1D: usize = Viscosity::Ideal.nb_transforms(Dim::D1.value());
 pub const C_BULK_1D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D1.value());
@@ -110,12 +110,12 @@ pub const C_BOTH_2D: usize =
 pub const C_MILNE_SHEAR_2D: usize =
     Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value()) + 1; // +1 for pi33
 pub const C_MILNE_BOTH_2D: usize =
-    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value()) + 1; // +1 for pi33
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D2.value()) + 1 + 6; // +1 for pi33, +5 for the eigenvalues of pi^{\mu\nu} lam0-1-2-3 and for the renorm factor and temperature
 pub const C_IDEAL_3D: usize = Viscosity::Ideal.nb_transforms(Dim::D3.value());
 pub const C_BULK_3D: usize = Viscosity::Bulk(0.0, 0.0).nb_transforms(Dim::D3.value());
 pub const C_SHEAR_3D: usize = Viscosity::Shear((0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D3.value());
 pub const C_BOTH_3D: usize =
-    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D3.value());
+    Viscosity::Both((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.0).nb_transforms(Dim::D3.value()) + 6; // +6 for the eigenvalues of pi^{\mu\nu} lam0-1-2-3 and for the renorm factor and temperature
 
 pub mod ideal_gas {
     use std::f64::consts::PI;
@@ -126,6 +126,10 @@ pub mod ideal_gas {
 
     pub fn dpde(_e: f64) -> f64 {
         1.0 / 3.0
+    }
+
+    pub fn s(e: f64) -> f64 {
+        (e + p(e)) / T(e)
     }
 
     #[allow(non_snake_case)]

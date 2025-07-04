@@ -1,30 +1,29 @@
 use crate::{
-    boxarray,
     hydro::{
         utils::{eigenvaluesk, Coordinate},
-        C_IDEAL_3D, F_IDEAL_3D,
+        C_IDEAL_3D, F_IDEAL_3D, HBARC,
     },
     solver::{
         context::{Arr, BArr, Boundary, Context, DIM},
         run,
-        space::{kt::kt, Dir, Eigenvalues},
+        space::{kt::kt, Eigenvalues, FluxInfo, InDir::*},
         time::{newton::newton, schemes::Scheme},
         utils::{ghost, zeros},
         Constraint, Observable,
     },
 };
+use boxarray::boxarray;
 
 use crate::hydro::{solve_v, Eos, Init3D, VOID};
 
-pub fn init_from_entropy_density_3d<'a, const VX: usize, const VY: usize, const VZ: usize>(
+pub fn init_from_energy_density_3d<'a, const VX: usize, const VY: usize, const VZ: usize>(
     t0: f64,
-    s: &'a [[[f64; VX]; VY]; VZ],
+    e: &'a [[[f64; VX]; VY]; VZ],
     p: Eos<'a>,
     dpde: Eos<'a>,
 ) -> Box<dyn Fn((usize, usize, usize), (f64, f64, f64)) -> [f64; F_IDEAL_3D] + 'a> {
     Box::new(move |(i, j, k), _| {
-        let s = s[k][j][i].max(VOID);
-        let e = s;
+        let e = e[k][j][i].max(VOID) / HBARC;
         let vars = [e, p(e), dpde(e), 1.0, 0.0, 0.0, 0.0];
         f0(t0, vars)
     })
@@ -69,8 +68,8 @@ fn eigenvaluesx(_t: f64, [_e, _pe, dpde, ut, ux, _uy, _uz]: [f64; C_IDEAL_3D]) -
 fn eigenvaluesy(_t: f64, [_e, _pe, dpde, ut, _ux, uy, _uz]: [f64; C_IDEAL_3D]) -> f64 {
     eigenvaluesk(dpde, ut, uy)
 }
-fn eigenvaluesz(t: f64, [_e, _pe, dpde, ut, _ux, _uy, uz]: [f64; C_IDEAL_3D]) -> f64 {
-    eigenvaluesk(dpde, ut, uz) / t
+fn eigenvaluesz(_t: f64, [_e, _pe, dpde, ut, _ux, _uy, uz]: [f64; C_IDEAL_3D]) -> f64 {
+    eigenvaluesk(dpde, ut, uz)
 }
 
 pub fn f0(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
@@ -100,22 +99,23 @@ fn f2(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D
     ]
 }
 
-fn f3(_t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
+fn f3(t: f64, [e, pe, _, ut, ux, uy, uz]: [f64; C_IDEAL_3D]) -> [f64; F_IDEAL_3D] {
     [
-        (e + pe) * uz * ut,
-        (e + pe) * uz * ux,
-        (e + pe) * uz * uy,
-        (e + pe) * uz * uz + pe,
+        t * ((e + pe) * uz * ut),
+        t * ((e + pe) * uz * ux),
+        t * ((e + pe) * uz * uy),
+        t * ((e + pe) * uz * uz + pe),
     ]
 }
 
-fn flux<const XY: usize, const Z: usize>(
-    [_ov, vs]: [&Arr<F_IDEAL_3D, XY, XY, Z>; 2],
-    [_otrs, trs]: [&Arr<C_IDEAL_3D, XY, XY, Z>; 2],
+fn flux<const XY: usize, const VZ: usize>(
+    _k: &Arr<F_IDEAL_3D, XY, XY, VZ>,
+    [_ov, vs]: [&Arr<F_IDEAL_3D, XY, XY, VZ>; 2],
+    [_otrs, trs]: [&Arr<C_IDEAL_3D, XY, XY, VZ>; 2],
     constraints: Constraint<F_IDEAL_3D, C_IDEAL_3D>,
-    bound: Boundary<F_IDEAL_3D, XY, XY, Z>,
+    bound: Boundary<F_IDEAL_3D, XY, XY, VZ>,
     pos: [i32; DIM],
-    dx: f64,
+    dxs: [f64; DIM],
     [_ot, t]: [f64; 2],
     [_dt, _cdt]: [f64; 2],
     (coord, [eigx, eigy, eigz]): &(Coordinate, [Eigenvalues<C_IDEAL_3D>; 3]),
@@ -141,51 +141,39 @@ fn flux<const XY: usize, const Z: usize>(
     };
 
     let diff = kt;
-    let (divf1, _) = diff(
+    let flux_infos = [
+        X(FluxInfo {
+            flux: &f1,
+            secondary: &|_, _| [],
+            eigenvalues: *eigx,
+        }),
+        Y(FluxInfo {
+            flux: &f2,
+            secondary: &|_, _| [],
+            eigenvalues: *eigy,
+        }),
+        Z(FluxInfo {
+            flux: &f3,
+            secondary: &|_, _| [],
+            eigenvalues: *eigz,
+        }),
+    ];
+    let [(dxf, _), (dyf, _), (mut dzf, _)] = diff(
         (vs, trs),
         bound,
         pos,
-        Dir::X,
         t,
-        &f1,
-        &|_, _| [],
+        flux_infos,
         constraints,
-        *eigx,
         pre,
         post,
-        dx,
+        dxs,
         theta,
     );
-    let (divf2, _) = diff(
-        (vs, trs),
-        bound,
-        pos,
-        Dir::Y,
-        t,
-        &f2,
-        &|_, _| [],
-        constraints,
-        *eigy,
-        pre,
-        post,
-        dx,
-        theta,
-    );
-    let (divf3, _) = diff(
-        (vs, trs),
-        bound,
-        pos,
-        Dir::Z,
-        t,
-        &f3,
-        &|_, _| [],
-        constraints,
-        *eigz,
-        pre,
-        post,
-        dx,
-        theta,
-    );
+    // in this formalism `dz` becomes `(1/t)*dz`
+    for d in &mut dzf {
+        *d /= t;
+    }
 
     let (tee, tte): (f64, f64) = match coord {
         Coordinate::Cartesian => (0.0, 0.0),
@@ -197,47 +185,51 @@ fn flux<const XY: usize, const Z: usize>(
         }
     };
     [
-        -divf1[0] - divf2[0] - divf3[0] - tee,
-        -divf1[1] - divf2[1] - divf3[1],
-        -divf1[2] - divf2[2] - divf3[2],
-        -divf1[3] - divf2[3] - divf3[3] - tte,
+        -dxf[0] - dyf[0] - dzf[0] - tee,
+        -dxf[1] - dyf[1] - dzf[1],
+        -dxf[2] - dyf[2] - dzf[2],
+        -dxf[3] - dyf[3] - dzf[3] - tte,
     ]
 }
 
-pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
-    name: &str,
+pub fn ideal3d<const XY: usize, const VZ: usize, const S: usize>(
+    name: &(&str, usize),
     maxdt: f64,
     t: f64,
     tend: f64,
-    dx: f64,
+    dxs: [f64; DIM],
     r: Scheme<S>,
     p: Eos,
     dpde: Eos,
     init: Init3D<F_IDEAL_3D>,
+    save_raw: Option<f64>,
 ) -> Option<(
-    (BArr<F_IDEAL_3D, XY, XY, Z>, BArr<C_IDEAL_3D, XY, XY, Z>),
+    (BArr<F_IDEAL_3D, XY, XY, VZ>, BArr<C_IDEAL_3D, XY, XY, VZ>),
     f64,
     usize,
     usize,
 )> {
     let coord = Coordinate::Milne;
     let constraints = gen_constraints(&p, &dpde, &coord);
-    let mut vs: Box<[[[[f64; F_IDEAL_3D]; XY]; XY]; Z]> = boxarray(0.0f64);
-    let mut trs: Box<[[[[f64; C_IDEAL_3D]; XY]; XY]; Z]> = boxarray(0.0f64);
+    let mut vs: Box<[[[[f64; F_IDEAL_3D]; XY]; XY]; VZ]> = boxarray(0.0);
+    let mut trs: Box<[[[[f64; C_IDEAL_3D]; XY]; XY]; VZ]> = boxarray(0.0);
 
     let names = (
         ["t00", "t01", "t02", "t03"],
         ["e", "pe", "dpde", "ut", "ux", "uy", "uz"],
     );
-    let k: Box<[[[[[f64; F_IDEAL_3D]; XY]; XY]; Z]; S]> = boxarray(0.0f64);
+    let k: Box<[[[[[f64; F_IDEAL_3D]; XY]; XY]; VZ]; S]> = boxarray(0.0);
     let v2 = ((XY - 1) as f64) / 2.0;
-    let v2z = ((Z - 1) as f64) / 2.0;
-    for k in 0..Z {
+    let v2z = ((VZ - 1) as f64) / 2.0;
+    let dx = dxs[0];
+    let dy = dxs[1];
+    let dz = dxs[2];
+    for k in 0..VZ {
         for j in 0..XY {
             for i in 0..XY {
                 let x = (i as f64 - v2) * dx;
-                let y = (j as f64 - v2) * dx;
-                let z = (k as f64 - v2z) * dx;
+                let y = (j as f64 - v2) * dy;
+                let z = (k as f64 - v2z) * dz;
                 vs[k][j][i] = init((i, j, k), (x, y, z));
                 (vs[k][j][i], trs[k][j][i]) = constraints(t, vs[k][j][i]);
             }
@@ -260,7 +252,7 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
         k,
         r,
         dt: 1e10,
-        dx,
+        dxs,
         maxdt,
         t,
         ot: t - 1.0,
@@ -272,20 +264,20 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
         freezeout_energy: None,
     };
 
-    let e = 1e-2;
+    let e = 5e-3;
     let err_thr = |_t: f64,
-                   vs: &[[[[f64; F_IDEAL_3D]; XY]; XY]; Z],
-                   _trs: &[[[[f64; C_IDEAL_3D]; XY]; XY]; Z]| {
+                   vs: &[[[[f64; F_IDEAL_3D]; XY]; XY]; VZ],
+                   _trs: &[[[[f64; C_IDEAL_3D]; XY]; XY]; VZ]| {
         let m = vs
             .iter()
             .flat_map(|v| v.iter().flat_map(|v| v.iter().map(|v| v[0])))
             .sum::<f64>()
-            / (XY * XY * Z) as f64;
+            / (XY * XY * VZ) as f64;
         let k = m / maxdt;
         e * k * (maxdt / dx).powi(r.order)
     };
 
-    let observables: [Observable<F_IDEAL_3D, C_IDEAL_3D, XY, XY, Z>; 0] = [];
+    let observables: [Observable<F_IDEAL_3D, C_IDEAL_3D, XY, XY, VZ>; 0] = [];
 
     run(
         context,
@@ -294,5 +286,6 @@ pub fn ideal3d<const XY: usize, const Z: usize, const S: usize>(
         &names,
         &observables,
         &err_thr,
+        save_raw,
     )
 }
