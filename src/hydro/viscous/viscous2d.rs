@@ -613,6 +613,7 @@ pub fn viscous2d<const V: usize, const S: usize>(
 )> {
     let implicit = match r.integration {
         Integration::FixPoint => true,
+        Integration::FixPointAnderson => true,
         Integration::Explicit => false,
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);

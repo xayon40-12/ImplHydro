@@ -103,7 +103,8 @@ pub fn gauss_legendre_1() -> Scheme<1> {
         aij: [[0.5]],
         bj: Some([1.0]),
         name: "GL1",
-        integration: FixPoint,
+        integration: FixPointAnderson,
+        // integration: FixPoint,
         order: 2,
     }
 }

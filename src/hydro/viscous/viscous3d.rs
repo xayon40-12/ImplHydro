@@ -729,6 +729,7 @@ pub fn viscous3d<const XY: usize, const VZ: usize, const S: usize>(
 )> {
     let implicit = match r.integration {
         Integration::FixPoint => true,
+        Integration::FixPointAnderson => true,
         Integration::Explicit => false,
     };
     let constraints = gen_constraints(&p, &dpde, temperature, implicit);

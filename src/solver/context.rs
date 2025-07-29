@@ -12,6 +12,7 @@ pub type BArr<const F: usize, const VX: usize, const VY: usize, const VZ: usize>
 pub enum Integration {
     Explicit,
     FixPoint,
+    FixPointAnderson,
 }
 
 pub type Boundary<'a, const F: usize, const VX: usize, const VY: usize, const VZ: usize> =

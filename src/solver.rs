@@ -7,6 +7,7 @@ use crate::{
 };
 use boxarray::boxarray;
 use std::collections::HashMap;
+use time::fixpoint_anderson::fixpoint_anderson;
 
 use crate::hydro::Viscosity;
 
@@ -484,6 +485,9 @@ pub fn run<
                         let res = match integration {
                             Integration::Explicit => explicit(&mut tmp_ctx),
                             Integration::FixPoint => fixpoint(&mut tmp_ctx, err_thr),
+                            Integration::FixPointAnderson => {
+                                fixpoint_anderson(&mut tmp_ctx, err_thr)
+                            }
                         };
                         if res.is_none() {
                             eprintln!("Integration failed, abort current run.");
@@ -503,6 +507,7 @@ pub fn run<
         let res = match integration {
             Integration::Explicit => explicit(&mut context),
             Integration::FixPoint => fixpoint(&mut context, err_thr),
+            Integration::FixPointAnderson => fixpoint_anderson(&mut context, err_thr),
         };
         if let Some((c, nbi, nbf)) = res {
             cost += c;

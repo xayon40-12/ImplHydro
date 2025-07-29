@@ -421,7 +421,7 @@ def convall(l, cnds):
                     handles += [p]
                     labels += [l]
             leg = ax.legend(handles, labels, loc="upper right")
-            for lh in leg.legendHandles:
+            for lh in leg.legend_handles:
                 lh.set_alpha(1)
         clean(axs[0])
         labels = ["max"]
@@ -450,8 +450,11 @@ def convall(l, cnds):
                 last = em
                 fmt_e_max = "{},{:.2f}".format(fmt_e_max, em)
         fmt_e_max = fmt_e_max[1:]
-        e_frz = info["freezeoutenergy"]
-        fig.suptitle(r"$\tau = {}$   $\epsilon_m = {}$   $\epsilon_f = {:.2f}$".format(t, fmt_e_max, e_frz))
+        e_frz = info.get("freezeoutenergy", None)
+        if e_frz == None:
+            fig.suptitle(r"$\tau = {}$   $\epsilon_m = {}$".format(t, fmt_e_max))
+        else:
+            fig.suptitle(r"$\tau = {}$   $\epsilon_m = {}$   $\epsilon_f = {:.2f}$".format(t, fmt_e_max, e_frz))
         fig.savefig("figures/{}convergence_{}_meanmax_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
         if plot_meanmax_dx:
             fig2.savefig("figures/{}convergence_{}_meanmax_dx_crop={}_{}.pdf".format(prefix,dtcost, crop, info2name(info, False)))
