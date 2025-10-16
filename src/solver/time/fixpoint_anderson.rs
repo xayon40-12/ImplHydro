@@ -82,7 +82,8 @@ pub fn fixpoint_anderson<
     let dt = *dto;
     let mut count = 0;
     let max_iter = 100;
-    while iserr {
+    while iserr && count < 2 {
+            // while iserr {
         // let main_time = Instant::now();
         let mut new_coords: Vec<Coord> = Vec::with_capacity(VX * VY * VZ);
         if count > max_iter {
