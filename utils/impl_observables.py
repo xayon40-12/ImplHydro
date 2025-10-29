@@ -5,6 +5,7 @@ import numpy as np
 import yaml
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 
 def parse_value(vs):
     return [float(v) for v in vs.split(":")]
@@ -44,8 +45,8 @@ def plot_dndeta_eta(dndeta_eta):
             name = fst and "ALICE 5.02TeV" or ""
             fst = False
             plt.errorbar(pos[pi:], value[pi:], err[pi:], linestyle="", marker="o", color="black", label=name)
-    plt.xlabel("$\eta$")
-    plt.ylabel("$\mathrm{dN}_{\mathrm{ch}}/\mathrm{d}\eta$")
+    plt.xlabel(r"$\eta$")
+    plt.ylabel(r"$\mathrm{dN}_{\mathrm{ch}}/\mathrm{d}\eta$")
     plt.legend()
     plt.savefig("dndeta-eta.pdf")
 
@@ -67,8 +68,8 @@ def plot_d2ndetadpt_pt(d2ndetadpt_pt):
             fst = False
             plt.errorbar(pos[pi:], np.array(value[pi:])*10**n, np.array(err[pi:])*10**n, linestyle="", marker="o", markersize = 2, color="black", label=name)
         n -= 1
-    plt.xlabel("$p_T$")
-    plt.ylabel("$1/\mathrm{N_{evt}}\mathrm{d^2N}_{\mathrm{ch}}/\mathrm{d}\eta\mathrm{dp_T}$")
+    plt.xlabel(r"$p_T$")
+    plt.ylabel(r"$1/\mathrm{N_{evt}}\mathrm{d^2N}_{\mathrm{ch}}/\mathrm{d}\eta\mathrm{dp_T}$")
     plt.legend()
     plt.yscale("log")
     plt.xscale("log")
@@ -81,8 +82,13 @@ def plot_dndeta_mid(dndeta_mid):
     centralities_c = [(l+r)/2 for [l,r] in centralities]
     values = [v[0] for v in valuess]
     errs = [v[1] for v in valuess]
-    # plt.yscale('log')
     plt.errorbar(centralities_c, values, errs, label="numerics")
+
+    valuess = bayesian["dndeta"]
+    centralities_c = [v[0] for v in valuess]
+    values = [v[1] for v in valuess]
+    cols = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    plt.plot(centralities_c, values, linestyle="--", color=cols[0], label="VISH2+1")
 
     centralities, valuess = alice5020["dndeta"]
     centralities_c = [(l+r)/2 for [l,r] in centralities]
@@ -91,14 +97,16 @@ def plot_dndeta_mid(dndeta_mid):
     plt.errorbar(centralities_c, values, errs, linestyle="", marker="o", color="black", label="ALICE 5.02TeV")
 
     plt.xlabel("centrality (%)")
-    plt.ylabel("$\mathrm{dN}_{\mathrm{ch}}/\mathrm{d}\eta$")
+    plt.ylabel(r"$\mathrm{dN}_{\mathrm{ch}}/\mathrm{d}\eta$")
     plt.legend()
+    plt.yscale("log")
     plt.savefig("dndeta-mid.pdf")
 
 def plot_vn(vns):
     alice = [alice5020[n[0:2]] for (n, _, _) in vns]
     def name(n):
         return "$v_{{{}}}${{2}}".format(n[1])
+    bayes = [(name(n), *bayesian[n[0:2]]) for (n, _, _) in vns]
     vns = [(name(n), c, v) for (n, c, v) in vns]
     plt.close()
     for name, centralities, valuess in vns:
@@ -106,6 +114,10 @@ def plot_vn(vns):
         values = [v[0] for v in valuess]
         errs = [v[1] for v in valuess]
         plt.errorbar(centralities_c, values, errs, label=name)
+    cols = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    for name, centralities_c, values in bayes:
+        plt.plot(centralities_c, values, linestyle="--", color = cols[0])
+        cols = cols[1:]
     fst = True
     for centralities, valuess in alice:
         centralities_c = [(l+r)/2 for [l,r] in centralities]
@@ -114,9 +126,13 @@ def plot_vn(vns):
         name = fst and "ALICE 5.02TeV" or ""
         fst = False
         plt.errorbar(centralities_c, values, errs, linestyle="", marker="o", color="black", label=name)
+        
+    dashed_line = mlines.Line2D([], [], color='black', linestyle='--', label='VISH2+1')
+    handles, labels = plt.gca().get_legend_handles_labels()
+    handles.append(dashed_line)
     plt.xlabel("centrality (%)")
-    plt.ylabel("$v_n${2}")
-    plt.legend()
+    plt.ylabel(r"$v_n${2}")
+    plt.legend(handles=handles)
     plt.savefig("vn.pdf")
 
 def tosym(err):
@@ -182,6 +198,17 @@ with open(alice5020_path+"/ALICE_5.02TeV-pT-spectra.yaml", "r") as f:
         errs = [v["errors"][0]["symerror"]+tosym(v["errors"][1]) for v in dvs]
         d2ndetadpt_pt += [(c, (pts, vs, errs))]
     alice5020["d2ndetadpt-pt"] = d2ndetadpt_pt
+
+bayesian_path = os.environ.get("BAYESIAN2020",".")
+bayesian = {"v2": None, "v3": None, "v4": None, "dndeta": None}
+with open(bayesian_path+"/dNchdeta.txt", "r") as f:
+    bayesian["dndeta"] = [[float(f) for f in i.split(" ")] for i in f.read().strip().split("\n")]
+with open(bayesian_path+"/vn.txt", "r") as f:
+    vns = [[float(f) for f in i.split(" ")] for i in f.read().strip().split("\n")]
+    c = [v[0] for v in vns]
+    bayesian["v2"] = (c, [v[1] for v in vns])
+    bayesian["v3"] = (c, [v[2] for v in vns])
+    bayesian["v4"] = (c, [v[3] for v in vns])
     
 with open("observables.txt") as f:
     obs = [parse(lines) for lines in f.read().split("\n\n")]
