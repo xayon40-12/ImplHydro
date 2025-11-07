@@ -8,7 +8,7 @@ edition = "2021"
 [workspace]
 
 members = [
-    "impl_analysis",
+    "impl_analysis", "impl_benchmark",
 ]
 
 [dependencies]
