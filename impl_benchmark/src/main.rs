@@ -9,8 +9,10 @@ pub enum Integration {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Info {
+    elapsed: f64,
     t0: f64,
     tend: f64,
+    cost: u64,
     nx: u64,
     ny: u64,
     nz: u64,
@@ -39,11 +41,71 @@ impl Info {
         self.nb_variables = Some(self.variables.chars().filter(|&c| c == ' ').count() + 1);
         self
     }
+
+    pub fn dim(&self) -> usize {
+        let mut dim = 0;
+        if self.nx > 1 {
+            dim += 1;
+        }
+        if self.ny > 1 {
+            dim += 1;
+        }
+        if self.nz > 1 {
+            dim += 1;
+        }
+        dim
+    }
+
+    pub fn full_name(&self) -> String {
+        let visc = match self.viscosity.as_str() {
+            "Shear" => format!("Shear({})", self.etaovers),
+            "Bulk" => format!("Bulk({})", self.zetaovers),
+            "Both" => format!("Both({},{})", self.etaovers, self.zetaovers),
+            a => format!("{a}"),
+        };
+        format!(
+            "absolute_{}ref_{}D_{}_{}_{}t0_{}tend_{}dx_{}nx",
+            self.scheme,
+            self.dim(),
+            self.name,
+            visc,
+            self.t0,
+            self.tend,
+            self.dx,
+            self.nx
+        )
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Analysis {
+    name: String,
+    dxs: Vec<Dxs>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Dxs {
+    dx: f64,
+    cases: Vec<Cases>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Cases {
+    case: u64,
+    integrations: Vec<Integrations>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Integrations {
+    integration: Integration,
+    analysis: Vec<Data>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Data {
     dt: f64,
+    cost: u64,
+    elapsed: f64,
     relative_tot_energy: f64,
     mean_error: f64,
     max_error: f64,
@@ -55,10 +117,6 @@ fn main() {
         .into_iter()
         .map(|path| {
             let p = path.unwrap().path();
-            let info_str = std::fs::read_to_string(p.join("info.txt")).unwrap();
-            let info = serde_yaml::from_str::<Info>(&info_str)
-                .unwrap()
-                .post_process();
             let stmax = std::fs::read_dir(&p)
                 .unwrap()
                 .filter_map(|d| {
@@ -69,6 +127,10 @@ fn main() {
                 .max_by(|(x, _), (y, _)| x.total_cmp(y))
                 .unwrap()
                 .1;
+            let info_str = std::fs::read_to_string(p.join(&stmax).join("info.txt")).unwrap();
+            let info = serde_yaml::from_str::<Info>(&info_str)
+                .unwrap()
+                .post_process();
             let p = p.join(&stmax).join("data.dat");
 
             let eid = info.energy_index.unwrap();
@@ -92,44 +154,56 @@ fn main() {
             .then(a.maxdt.total_cmp(&b.maxdt))
     });
 
-    let res = analysis(
-        &values,
-        |i| i.dx,
-        |_, values| {
-            analysis(
-                values,
-                |i| i.case,
-                |_, values| {
-                    analysis(
-                        values,
-                        |i| i.integration,
-                        |reference, values| {
-                            let data_ref = &reference[0].1;
-                            let e_tot_ref = data_ref.iter().sum::<f64>();
-                            values
-                                .iter()
-                                .map(|(info, d)| {
-                                    let (etot, tot, max) = d.iter().zip(data_ref.iter()).fold(
-                                        (0.0f64, 0.0f64, 0.0f64),
-                                        |(etot, tot, max), (e, r)| {
-                                            let diff = (e - r).abs();
-                                            (etot + e, tot + diff, max.max(diff))
-                                        },
-                                    );
-                                    Analysis {
-                                        dt: info.maxdt,
-                                        relative_tot_energy: (e_tot_ref - etot).abs() / e_tot_ref,
-                                        mean_error: tot / d.len() as f64,
-                                        max_error: max,
-                                    }
-                                })
-                                .collect::<Vec<_>>()
-                        },
-                    )
-                },
-            )
-        },
-    );
+    let res = Analysis {
+        name: values[0].0.full_name(),
+        dxs: analysis(
+            &values,
+            |i| i.dx,
+            |dx, _, values| Dxs {
+                dx,
+                cases: analysis(
+                    values,
+                    |i| i.case,
+                    |case, _, values| Cases {
+                        case,
+                        integrations: analysis(
+                            values,
+                            |i| i.integration,
+                            |integration, reference, values| Integrations {
+                                integration,
+                                analysis: {
+                                    let data_ref = &reference[0].1;
+                                    let e_tot_ref = data_ref.iter().sum::<f64>();
+                                    values
+                                        .iter()
+                                        .map(|(info, d)| {
+                                            let (etot, tot, max) =
+                                                d.iter().zip(data_ref.iter()).fold(
+                                                    (0.0f64, 0.0f64, 0.0f64),
+                                                    |(etot, tot, max), (e, r)| {
+                                                        let diff = (e - r).abs();
+                                                        (etot + e, tot + diff, max.max(diff))
+                                                    },
+                                                );
+                                            Data {
+                                                dt: info.maxdt,
+                                                elapsed: info.elapsed,
+                                                cost: info.cost,
+                                                relative_tot_energy: (e_tot_ref - etot).abs()
+                                                    / e_tot_ref,
+                                                mean_error: tot / d.len() as f64,
+                                                max_error: max,
+                                            }
+                                        })
+                                        .collect::<Vec<_>>()
+                                },
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+    };
     let serialized = serde_yaml::to_string(&res).unwrap();
     std::fs::write("benchmark.txt", serialized).unwrap();
 }
@@ -138,12 +212,12 @@ pub fn analysis<
     FO: PartialEq,
     Find: Fn(&Info) -> FO,
     D,
-    Do: Fn(&[(Info, Vec<f64>)], &[(Info, Vec<f64>)]) -> D,
+    Do: Fn(FO, &[(Info, Vec<f64>)], &[(Info, Vec<f64>)]) -> D,
 >(
     mut values: &[(Info, Vec<f64>)],
     f: Find,
     d: Do,
-) -> Vec<(FO, D)> {
+) -> Vec<D> {
     let mut res = vec![];
     let mut first = None;
     while values.len() > 0 {
@@ -155,7 +229,7 @@ pub fn analysis<
         if first.is_none() {
             first = Some(&values[..pos]);
         }
-        res.push((start, d(first.unwrap(), &values[..pos])));
+        res.push(d(start, first.unwrap(), &values[..pos]));
         values = &values[pos..];
     }
     res
