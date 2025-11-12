@@ -130,7 +130,8 @@ fn main() {
             )
         },
     );
-    println!("{res:?}");
+    let serialized = serde_yaml::to_string(&res).unwrap();
+    std::fs::write("benchmark.txt", serialized).unwrap();
 }
 
 pub fn analysis<
