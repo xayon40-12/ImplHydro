@@ -4,6 +4,12 @@ ImplHydro is a 1+1D, 2+1D and 3+1D implicit in time relativistic hydrodynamics s
 Its purpose is to compare the efficiency of explicit and implicit Runge-Kutta 
 method used to integrate the conservation equation of the energy momentum tensor $T^{\mu\nu}$.
 
+## Publication
+
+If you want to use this project, please cite:
+
+> Nathan Touroux, Masakiyo Kitazawa, Koichi Murase, Marlene Nahrgang, Efficient Solver of Relativistic Hydrodynamics with an Implicit Runge–Kutta Method, Progress of Theoretical and Experimental Physics, Volume 2024, Issue 6, June 2024, 063D01, [https://doi.org/10.1093/ptep/ptae058](https://doi.org/10.1093/ptep/ptae058)
+
 ## Installation
 
 
