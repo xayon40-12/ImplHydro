@@ -1,6 +1,6 @@
 # ImplHydro
 
-ImplHydro is a 1+1D, 2+1D and 3+1D implicit in time relativistic hydrodynamics solver. It also includes an explicit solver for completeness.  
+ImplHydro is a (1+1)-, (2+1)- and (3+1)-dimensions implicit in time relativistic hydrodynamics solver. It also includes an explicit solver for completeness.  
 Its purpose is to compare the efficiency of explicit and implicit Runge-Kutta 
 method used to integrate the conservation equation of the energy momentum tensor $T^{\mu\nu}$.
 
@@ -82,7 +82,7 @@ Python libraries needed:
 | `impl_post_hydro.py` | Must be used next to the `results` folder. It will execute [`frzout`](https://github.com/Duke-QCD/frzout) on all the `surface.dat` hyper-surface outputs to create a `particles_in.dat` file, then it will execute the [`UrQMD`](https://github.com/jbernhard/urqmd-afterburner) afterburner to create the `particles_out.dat` file which contains the final particles.|
 | `plt_setting.py` | Settings for matplotlib from [Saizensen](https://github.com/MasakiyoK/Saizensen) |
 
-In addition, there is another rust program that is install with the `./install` command called `analysis`. After running the `impl_post_hydro.py` script, the `analysis` progam can be executed next to the `results` folder to generate a file named `observables.txt` which will contains the observables $\mathrm{dN}_\mathrm{ch}/\mathrm{d}\eta$ and $v_2\{2\}$ as function of centrality.  
+In addition, there is another rust program that is install with the `./install` command called `analysis`. After running the `impl_post_hydro.py` script, the `analysis` progam can be executed next to the `results` folder to generate a file named `observables.txt` which will contains the observables $\mathrm{dN}_\mathrm{ch}/\mathrm{d}\eta$ and $v_2\\{2\\}$ as function of centrality.  
 
 ## File formats
 
@@ -96,7 +96,7 @@ For the 2+1D case, the columns correpsond to the X direction and the lines to th
 
 #### 3+1D matrix format
 
-For the 3+1D case, the columns correspond to the X direction and the lines to the Y and Z/$\eta$ direction, where the X-Y plane correspond to the collision plane or tranverse plone in a heavy-ion collision. The Y direction comes first and is repeated for each cells in the Z/$\eta$ direction.
+For the 3+1D case, the columns correspond to the X direction and the lines to the Y and Z/$\eta$ direction, where the X-Y plane correspond to the collision plane or tranverse plone in a heavy-ion collision. The Y direction comes first and is repeated for each cells in the Z / $\eta$ direction.
 
 ### Output format
 
@@ -106,11 +106,11 @@ A file named `info.txt` is stored next to the outputed data. It contains all the
 #### Raw data
 
 The raw data can be outputed by using the `-r <every>` flag where `<every>` is the physical time between each save. The raw data is a binary file of double precison floating point numbers.   
-All the data of one cell are stored together and every cell come in order where the X direction is first, Y second and Z/$\eta$ last. The `variables:` field of the `info.txt` file contains the name of the variables stored in every cells. There will be one double precision floating point number for each of these variables. As the first variables for each cells are the coordinates x, y, z, it is not necessary to take care about the order in which each cells are stored
+All the data of one cell are stored together and every cell come in order where the X direction is first, Y second and Z / $\eta$ last. The `variables:` field of the `info.txt` file contains the name of the variables stored in every cells. There will be one double precision floating point number for each of these variables. As the first variables for each cells are the coordinates x, y, z, it is not necessary to take care about the order in which each cells are stored
 
 #### Hypersurface data
 
-In the case of 2+1D and 3+1D viscous with TrENTO initial conditions, the hypersurface data needed for the freezeout are stored in binary format in the `surface.dat` file. The data are stored in order as double precision floating point numbers: time $\tau$, space coordinate $x-y-\eta$, covariant normal vector $\sigma_\mu$ with length equal to the transverse volume, velocity $v^i$,  upper triangle part of the shear tensor$\pi^{\mu\nu}$, shear pressure.  
+In the case of 2+1D and 3+1D viscous with TrENTO initial conditions, the hypersurface data needed for the freezeout are stored in binary format in the `surface.dat` file. The data are stored in order as double precision floating point numbers: time $\tau$, space coordinate $x-y-\eta$, covariant normal vector $\sigma_\mu$ with length equal to the transverse volume, velocity $v^i$,  upper triangle part of the shear tensor $\pi^{\mu\nu}$, shear pressure.  
 In 2+1D it corresponds to:  
 
 
